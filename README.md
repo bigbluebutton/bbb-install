@@ -1,6 +1,6 @@
 
 # bbb-install 
-The `bbb-install.sh` script automates the [install steps](/2.0/20install.html) for installing BigBlueButton 2.0-beta (referred hereafter as BigBlueButton 2.0) on a Ubuntu 16.04 64-bit server that has a single public IP address.
+The `bbb-install.sh` script automates the [install steps](/2.0/20install.html) for [BigBlueButton 2.0-beta](http://docs.bigbluebutton.org/2.0/20overview.html) (referred hereafter as BigBlueButton 2.0) on a Ubuntu 16.04 64-bit server that has a single public IP address.
 
 Why the requirement of a single public IP address?  If your server is behind a firewall, then there are additional steps, such as configuring you firewall, that are beyond the scope of an installation. These steps are covered in detail in the [install documentation](/2.0/20install.html).
 
