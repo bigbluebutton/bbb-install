@@ -1,16 +1,19 @@
 
 # bbb-install 
-The `bbb-install.sh` script automates the [install steps](http://docs.bigbluebutton.org/2.0/20install.html#step-by-step-install) for [BigBlueButton 2.0-beta](http://docs.bigbluebutton.org/2.0/20overview.html) (referred hereafter as BigBlueButton 2.0) on a Ubuntu 16.04 64-bit server that has a single public IP address.
 
-Why the requirement of a single public IP address?  If your server is behind a firewall, then there are additional steps, such as configuring you firewall, that are beyond the scope of an installation. These steps are covered in detail in the [install documentation](http://docs.bigbluebutton.org/2.0/20install.html#step-by-step-install).
+Want to setup your own [BigBlueButton 2.0-beta](http://docs.bigbluebutton.org/2.0/20overview.html) (referred hereafter as BigBlueButton 2.0) server?  Got a Ubuntu 16.04 64-bit server that is not behind a firewall?  (If your server is behind a firewall, then there are additional steps, such as configuring you firewall, that are beyond the scope of a script -- such as changing the settings on your firewall. These steps are covered in detail in the [install documentation](http://docs.bigbluebutton.org/2.0/20install.html#step-by-step-install).)
 
-Still, many companies that offer virtual and bare metal servers can provide a Ubuntu 16.04 64-bit server single public IP address.  [Digital Ocean](https://www.digitalocean.com/) is an example of such provider. For such servers, you can use `bbb-install.sh` to setup a new BigBlueButton server in a few minutes.
+`bbb-install.sh` is a shell script that automates the [install steps](http://docs.bigbluebutton.org/2.0/20install.html#step-by-step-install) for installing BigBlueButton 2.0.
 
-Furthermore, if you configure a fully qualified domain name (FQDN), such as `bbb.my-server.com`, to resolve to the public IP address of your server, then `bbb-install.sh` can use Let's Encrypt to install a secure socket layers (SSL) certificate on the server and configure BigBlueButton to serve the BigBlueButton client via HTTPS.  You want your BigBlueButton server configure to use HTTPS an Chome require HTTPS before allowing a web application to access the user's microphone via web real-time communications (WebRTC).
+Many companies that offer virtual and bare metal servers can provide a Ubuntu 16.04 64-bit server with single public IP address (no firewall).  [Digital Ocean](https://www.digitalocean.com/) is an example of such companies.  For these servers, you can use `bbb-install.sh` to setup a new BigBlueButton 2.0 server in a few minutes.
+
+Furthermore, if you configure a fully qualified domain name (FQDN), such as `bbb.my-server.com`, then resolves to the public IP address of your server, then `bbb-install.sh` can also use Let's Encrypt to generate a 4096 bit secure socket layers (SSL) certificate and configure BigBlueButton to use it to serve content via HTTPS.  We recommend using a SSL certificate for production servers.  Chome require HTTPS before allowing users to share their microphone via web real-time communications (WebRTC).
+
+If you are quickly setting up a BigBlueButton server for testing, you can still configure the server with only an IP address.  If so, test the WebRTC with FireFox (at the time of this writing it still let's the user use WebRTC without a HTTPS).
 
 ## Overview
 
-If you have a server that meets the [minimual server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements) and the server has a single IP address, then you can use `bbb-install.sh` to install the latest build of BigBlueButton 2.0 with a single command.
+If you have a server that meets the [minimual server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements) and that server has a single IP address with no firewall, then you can use `bbb-install.sh` to install the latest build of BigBlueButton 2.0 with a single command.
 
 If you have a fully qualified domain name (FQDN), such as `bbb.my-server.com`, that resolves to the server, then you can use `bbb-install.sh` to install
   * an SSL certificate from Let's Encrypt, 
