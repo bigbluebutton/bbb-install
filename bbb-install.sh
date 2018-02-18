@@ -99,9 +99,11 @@ main() {
 
       s)
         HOST=$OPTARG
+        check_host $HOST
         ;;
       v)
         VERSION=$OPTARG
+        check_version $VERSION
         ;;
       e)
         EMAIL=$OPTARG
@@ -134,9 +136,7 @@ main() {
     exit 0
   fi
 
-  check_version $VERSION
-  install_apt-get-key
-
+  install_bigbluebutton_apt-get-key
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
   if [ ! -z "$PROXY" ]; then
@@ -226,11 +226,17 @@ check_version() {
   echo "deb https://ubuntu.bigbluebutton.org/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
+check_host() {
+  DIG_IP=$(dig +short $1)
+  if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
+  if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
+}
+
 check_apache2() {
   if dpkg -l | grep -q apache2; then err "You must unisntall apache2 first"; fi
 }
 
-install_apt-get-key() {
+install_bigbluebutton_apt-get-key() {
  need_pkg apt-transport-https
  if ! apt-key list | grep -q BigBlueButton; then
     wget https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc -O- | apt-key add -
@@ -374,12 +380,14 @@ install_ssl_letsencrypt() {
 
   need_pkg letsencrypt
 
-  if [ ! -f /etc/nginx/ssl/dhp-2048.pem ]; then
-    openssl dhparam -out /etc/nginx/ssl/dhp-2048.pem 2048
+  if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
+    openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
   fi
 
   if [ ! -f /etc/letsencrypt/live/$HOST/fullchain.pem ]; then
-    letsencrypt --email $EMAIL --agree-tos --webroot -w /var/www/bigbluebutton-default/ -d $HOST certonly
+    if ! letsencrypt --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ -d $HOST certonly; then
+      err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
+    fi
   fi
 
   cat <<HERE > /etc/nginx/sites-available/bigbluebutton
@@ -398,7 +406,7 @@ server {
     ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
     ssl_ciphers "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS:!AES256";
     ssl_prefer_server_ciphers on;
-    ssl_dhparam /etc/nginx/ssl/dhp-2048.pem;
+    ssl_dhparam /etc/nginx/ssl/dhp-4096.pem;
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
