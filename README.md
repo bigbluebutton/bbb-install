@@ -1,36 +1,39 @@
 
 # bbb-install 
-The `bbb-install.sh` script automates the [steps to install](/2.0/20install.html) BigBlueButton 2.0-beta (referred hereafter as BigBlueButton 2.0) on a Ubuntu 16.04 64-bit server that has a single public IP address.
+The `bbb-install.sh` script automates the [install steps](/2.0/20install.html) for installing BigBlueButton 2.0-beta (referred hereafter as BigBlueButton 2.0) on a Ubuntu 16.04 64-bit server that has a single public IP address.
 
-Why the requirement of the server having a single public IP address?  If you intend to install BigBlueButton 2.0 on a server behind a firewall, then there are additional steps (which are covered in detail in the [install documentation](/2.0/20install.html), that are beyond the scope of an installation
- script.  
+Why the requirement of a single public IP address?  If your server is behind a firewall, then there are additional steps, such as configuring you firewall, that are beyond the scope of an installation. These steps are covered in detail in the [install documentation](/2.0/20install.html).
 
-Still, many hosting providers -- both bare metal and virtual -- give you servers with a single public IP address (Digital Ocean is an example of such provider). For these servers, you can use `bbb-install.sh` to setup a new BigBlueButton server in a few minutes.
+Still, many companies that offer virtual and bare metal servers can provide a Ubuntu 16.04 64-bit server single public IP address.  [Digital Ocean](https://www.digitalocean.com/) is an example of such provider. For such servers, you can use `bbb-install.sh` to setup a new BigBlueButton server in a few minutes.
 
-Furthermore, if you configure a fully qualified domain name (FQDN), such as `bbb.my-server.com`, to resolve to the public IP address of your server, then the script can use Let's Encrypt to install a secure socket layers (SSL) certificate and configure BigBlueButton to server content via HTTPS.  Chome (and soon FireFox) will require the website to support HTTPS before it enables sharing of audio via web real-time communications (WebRTC).
+Furthermore, if you configure a fully qualified domain name (FQDN), such as `bbb.my-server.com`, to resolve to the public IP address of your server, then `bbb-install.sh` can use Let's Encrypt to install a secure socket layers (SSL) certificate on the server and configure BigBlueButton to serve the BigBlueButton client via HTTPS.  You want your BigBlueButton server configure to use HTTPS an Chome require HTTPS before allowing a web application to access the user's microphone via web real-time communications (WebRTC).
 
 ## Overview
 
-If you have a  server that meets the [minimual server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements) and has a single IP address, then you can use `bbb-install.sh` to install the latest build of BigBlueButton 2.0 with a single command.
+If you have a server that meets the [minimual server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements) and the server has a single IP address, then you can use `bbb-install.sh` to install the latest build of BigBlueButton 2.0 with a single command.
 
-Furthermore, if you have a fully qualified domain name (FQDN), such as `bbb.my-server.com`, that resolves to the server, then you can use `bbb-install.sh` to install
+If you have a fully qualified domain name (FQDN), such as `bbb.my-server.com`, that resolves to the server, then you can use `bbb-install.sh` to install
   * an SSL certificate from Let's Encrypt, 
   * the latest developer build of the HTML5 client, and/or
   * the GreenLight front-end.
 
-We also put together this [YouTube Video Overview of bbb-install.sh](https://youtu.be/D1iYEwxzk0M) to walk through using the script.
+To run this script, you can fork [this github repository](https://github.com/bigbluebutton/bbb-install) an execute `bbb-install.sh` at the command line.  
+
+We've also host the script at `https://ubuntu.bigbluebutton.org/bbb-install.sh` so you can use `wget` to install BigBlueButton 2.0 with a single command on any server that meets the above requirements.
+
+## Intallation Video
+
+We put together this [YouTube Video](https://youtu.be/D1iYEwxzk0M) that shows using `bbb-install.sh` to setup a BigBlueButton server with all the above options.  For the video, we used a virtual server from Digital Ocean.
 
 ## Usage
 
-To run this script, you can fork [this github repository](https://github.com/bigbluebutton/bbb-install) an execute `bbb-install.sh`.  We've also hosted the script at `https://ubuntu.bigbluebutton.org/bbb-install.sh` so you can use `wget` install BigBlueButton 2.0 with a single command on any server that meets the above requirements.
-
-To install BigBlueButton with server's external IP address:
+To install BigBlueButton on a Ubuntu 16.04 64-bit server with an external IP address:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 ~~~
 
-That's it.  Depending on the server's internet connection, after about 10 minutes, you'll have the latest build of BigBlueButton 2.0 running on the server.  The installation should finish with the message
+That's it.  After about 10 minutes (depending on the server's internet connection) you'll have the latest build of BigBlueButton 2.0 running and ready to use.  The installation should finish with the following message:
 
 ~~~
 ** Potential problems described below **
@@ -47,7 +50,7 @@ That's it.  Depending on the server's internet connection, after about 10 minute
 #    sudo apt-get purge bbb-demo
 ~~~
 
-Since we didn't specify a hostname for the installation, the `bbb-install.sh` script will configure BigBlueButton to use the servers public IP address.  The script also installs the `bbb-demo` package, so you can immediately test out the install.
+Notice since we didn't specify a hostname for the installation, the `bbb-install.sh` script configured BigBlueButton server to use the servers public IP address.  The script also installs the `bbb-demo` package, so you can immediately test out the install.  Since the server does not have a SSL certificate, use FireFox (which at the time of this writing does not require SSL to use WebRTC audio).
 
 If you want to remove the API demos, do the command
 
@@ -67,8 +70,7 @@ If you want to use this server with a front-end, such as Moodle, you can get the
       http://mconf.github.io/api-mate/#server=http://xxx.xxx.xxx.xxx/bigbluebutton/&sharedSecret=yyy
 ~~~
 
-
-While the core BigBlueButton server can run using just an IP address, you really want to have the server configured with a hostname and SSL certificate.  
+While the core BigBlueButton server can run using just an IP address, you really want to have the server configured with a SSL certificate.  
 
 Let's say you have configured the domain name `bbb.my-server.com` to resolve to the public IP address of your server.  That is, the command `dig bbb.my-server.com @8.8.8.8` resolves to the IP address of your server.  And you have a valid e-mail address, such as `info@my-server.com`, to receive updates from Let's Encrypt.  Then, with these two pieces of information, you can use `bbb-install.sh` to configure BigBlueButton server with an SSL certificate with a single command.
 
