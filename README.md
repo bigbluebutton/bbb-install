@@ -28,6 +28,11 @@ We've also host the script at `https://ubuntu.bigbluebutton.org/bbb-install.sh` 
 
 We put together this [YouTube Video](https://youtu.be/D1iYEwxzk0M) that shows using `bbb-install.sh` to setup a BigBlueButton server with all the above options.  For the video, we used a virtual server from Digital Ocean.
 
+## Configuring your firwall on EC2
+If you are installing on Amazon's EC2, you need to configure the server's security group (Amazon's term for its firewall) so it matches the following setup
+
+![Security Group](images/security-group.png?raw=true "Security Group")
+
 ## Usage
 
 To install BigBlueButton on a Ubuntu 16.04 64-bit server with an external IP address:
