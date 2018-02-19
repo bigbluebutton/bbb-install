@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 # BlueButton open source conferencing system - http://www.bigbluebutton.org/   
 #
@@ -87,7 +87,7 @@ main() {
   need_x64
   check_apache2
   
-  IP=$(get_IP)
+  get_IP
   if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi  
 
   while builtin getopts "hs:v:e:p:gt" opt "${@}"; do
@@ -150,9 +150,13 @@ main() {
   need_pkg build-essential
 
   need_pkg bigbluebutton
+  while [ ! -f /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; done
+
   check_lxc
+  check_ec2
 
   need_pkg bbb-demo
+  while [ ! -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; done
 
   if [ ! -z "$HTML5" ]; then
     install_HTML5
@@ -170,10 +174,11 @@ main() {
 
   if [ ! -z "$HOST" ]; then
     bbb-conf --setip $HOST
-    bbb-conf --check
   else
-    bbb-conf --restart
+    bbb-conf --setip $IP
   fi
+
+  bbb-conf --check
 }
 
 say() {
@@ -211,7 +216,13 @@ get_IP() {
   else
     local ip=$(echo "$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^et.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^en.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^wl.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^bo.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')"  | head -n1)
   fi
-  echo $ip
+
+  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
+    INTERNAL_IP=$ip
+    IP=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
+  else
+    IP=$ip
+  fi
 }
 
 need_pkg() {
@@ -274,6 +285,20 @@ HERE
 fi
 }
 
+# Check if running on ec2 and setup FreeSWITCH for internal/external IP addresses
+check_ec2() {
+  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
+    INTERNAL_IP=$IP
+    IP=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
+
+    sed -i "s/stun:stun.freeswitch.org/$IP/g" /opt/freeswitch/etc/freeswitch/vars.xml
+    sed -i "s/ext-rtp-ip\" value=\"\$\${local_ip_v4/ext-rtp-ip\" value=\"\$\${external_rtp_ip/g" /opt/freeswitch/conf/sip_profiles/external.xml
+    sed -i "s/ext-sip-ip\" value=\"\$\${local_ip_v4/ext-sip-ip\" value=\"\$\${external_sip_ip/g" /opt/freeswitch/conf/sip_profiles/external.xml
+    sed -i "s/<param name=\"ws-binding\".*/<param name=\"ws-binding\"  value=\"$IP:5066\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
+    sed -i "s/$INTERNAL_IP:5066/$IP:5066/g" /etc/bigbluebutton/nginx/sip.nginx
+    ip addr add $IP dev lo
+  fi
+}
 
 install_HTML5() {
   if ! apt-key list | grep -q MongoDB; then
@@ -292,6 +317,11 @@ install_HTML5() {
 
   need_pkg nodejs
   need_pkg bbb-html5
+
+  if [ ! -z "$INTERNAL_IP" ]; then
+   sed -i 's/.*stunServerAddress.*/stunServerAddress=64.233.177.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
+   sed -i 's/.*stunServerPort.*/stunServerPort=19302/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
+  fi
 }
 
 install_greenlight(){
@@ -368,9 +398,6 @@ HERE
 
 install_ssl_letsencrypt() {
   sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
-
-  while [ ! -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; done
-  while [ ! -f /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; done
 
   if ! grep -q $HOST /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
     bbb-conf --setip $HOST
@@ -475,9 +502,7 @@ HERE
   fi
 
   # Setup rest of BigBlueButton Configuration for SSL
-  if ! grep -q wss-binding /opt/freeswitch/conf/sip_profiles/external.xml; then
-    sed -i 's/<param name="ws-binding"  value=":5066"\/>/<param name="wss-binding"  value=":7443"\/>/g' /opt/freeswitch/conf/sip_profiles/external.xml
-  fi
+  sed -i "s/<param name=\"ws[s]*-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
 
   sed -i 's/http:/https:/g' /etc/bigbluebutton/nginx/sip.nginx
   sed -i 's/5066/7443/g'    /etc/bigbluebutton/nginx/sip.nginx
