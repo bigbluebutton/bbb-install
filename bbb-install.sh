@@ -295,7 +295,7 @@ check_ec2() {
     sed -i "s/ext-rtp-ip\" value=\"\$\${local_ip_v4/ext-rtp-ip\" value=\"\$\${external_rtp_ip/g" /opt/freeswitch/conf/sip_profiles/external.xml
     sed -i "s/ext-sip-ip\" value=\"\$\${local_ip_v4/ext-sip-ip\" value=\"\$\${external_sip_ip/g" /opt/freeswitch/conf/sip_profiles/external.xml
     sed -i "s/<param name=\"ws-binding\".*/<param name=\"ws-binding\"  value=\"$IP:5066\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
-    sed -i "s/$INTERNAL_IP:5066/$IP:5066/g" /etc/bigbluebutton/nginx/sip.nginx
+    sed -i "s/$INTERNAL_IP:/$IP:/g" /etc/bigbluebutton/nginx/sip.nginx
     ip addr add $IP dev lo
   fi
 }
