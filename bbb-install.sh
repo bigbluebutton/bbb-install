@@ -238,6 +238,7 @@ check_version() {
 }
 
 check_host() {
+  need_pkg dnsutils
   DIG_IP=$(dig +short $1)
   if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
   if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
