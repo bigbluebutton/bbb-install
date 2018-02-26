@@ -42,6 +42,8 @@ Here's a screen shot of what the server's security group configuration should lo
 
 The script will detect the EC2 instance environment and automatically configure BigBlueButton to use the servers private/public address pairs.  As described above, you can use the server with only an IP address, but you should setup an Elastic IP for the server (so the IP does not change on reboot) and a FQDN for the server (so `bbb-install.sh` can use Let's Encrypt to install a SSL certificate for HTTPS).
 
+We also created in [installation video on EC2](https://youtu.be/-E9WIrH_yTs) going through the above steps.
+
 ## Usage
 
 To install BigBlueButton on a Ubuntu 16.04 64-bit server with an external IP address or on an EC2 instance, login as root and run the following command:
