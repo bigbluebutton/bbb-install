@@ -226,6 +226,7 @@ get_IP() {
 }
 
 need_pkg() {
+  if [ ! -f /var/lib/apt/periodic/update-success-stamp ]; then sudo apt-get update; fi
   if ! dpkg -l | grep -q $1; then sudo apt-get install -y $1; fi
 }
 
