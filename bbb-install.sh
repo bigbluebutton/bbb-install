@@ -243,7 +243,7 @@ get_IP() {
       cd /var/www/html
       local tmp_file="$(mktemp XXXXXX.html)"
       chown www-data:www-data $tmp_file
-      if wget -qS --spider "http://$external_ip/$tmp_file"; then
+      if wget -qS --spider "http://$external_ip/$tmp_file" > /dev/null 2>&1; then
         INTERNAL_IP=$IP
         IP=$external_ip
       fi
@@ -253,7 +253,6 @@ get_IP() {
       ln -s /etc/nginx/sites-available/bigbluebutton /etc/nginx/sites-enabled/bigbluebutton
       systemctl restart nginx
     fi
-  echo "$INTERNAL_IP"
   fi
 }
 

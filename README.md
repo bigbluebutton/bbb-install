@@ -71,6 +71,39 @@ We also created in [installation video on EC2](https://youtu.be/-E9WIrH_yTs) goi
 
 # Sample Usage
 
+You can get help by passing the `-h` option.
+
+~~~
+BigBlueButon 2.0-beta (or later) install script
+
+USAGE:
+    bbb-install.sh [OPTIONS]
+
+OPTIONS:
+
+  -v <version>     Install given version of BigBlueButton (e.g. 'xenial-200') (required)
+
+  -s <hostname>    Configure server with <hostname>
+  -e <email>       Install SSL certificate from Let's Encrypt using <email>
+
+  -t               Install HTML5 client (currently under development)
+  -g               Install GreenLight
+
+  -p <host>        Use apt-get proxy at <host>
+
+  -h               Print help
+
+EXAMPLES:
+
+    ./bbb-install.sh -v xenial-200
+    ./bbb-install.sh -v xenial-200 -s bbb.my-server.com -e info@my-server.com
+    ./bbb-install.sh -v xenial-200 -s bbb.my-server.com -e info@my-server.com -t -g
+
+SUPPORT:
+     Source: https://github.com/bigbluebutton/bbb-install
+   Commnity: https://bigbluebutton.org/support
+~~~
+
 ## Single IP address (no SSL)
 
 To install BigBlueButton on a Ubuntu 16.04 64-bit server with an external IP address, login as root and run the following command:
