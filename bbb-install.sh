@@ -74,9 +74,10 @@ EXAMPLES:
     ./bbb-install.sh -v xenial-200 -s bbb.my-server.com -e info@my-server.com
     ./bbb-install.sh -v xenial-200 -s bbb.my-server.com -e info@my-server.com -t -g
 
-ADDITIONAL HELP:
+SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
-    Support: https://bigbluebutton.org/support 
+   Commnity: https://bigbluebutton.org/support 
+
 HERE
 }
 
@@ -86,9 +87,6 @@ main() {
   need_ubuntu
   need_x64
   check_apache2
-  
-  get_IP
-  if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi  
 
   while builtin getopts "hs:v:e:p:gt" opt "${@}"; do
     case $opt in
@@ -135,6 +133,9 @@ main() {
     usage
     exit 0
   fi
+  
+  get_IP
+  if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi  
 
   install_bigbluebutton_apt-get-key
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
@@ -150,13 +151,13 @@ main() {
   need_pkg build-essential
 
   need_pkg bigbluebutton
-  while [ ! -f /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; done
+  while [ ! -f /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; echo -n '.'; done
 
   check_lxc
-  check_ec2
+  check_nat
 
   need_pkg bbb-demo
-  while [ ! -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; done
+  while [ ! -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
 
   if [ ! -z "$HTML5" ]; then
     install_HTML5
@@ -211,26 +212,59 @@ need_x64() {
 }
 
 get_IP() {
+  if [ ! -z "$IP" ]; then return 0; fi
+
   if LANG=c ifconfig | grep -q 'venet0:0'; then
-    local ip=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
+    IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
   else
-    local ip=$(echo "$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^et.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^en.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^wl.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^bo.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')"  | head -n1)
+    IP=$(echo "$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^et.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^en.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^wl.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^bo.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')"  | head -n1)
   fi
 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
-    INTERNAL_IP=$ip
-    IP=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
+    # EC2
+    local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
+  elif [ -r /sys/firmware/dmi/tables/smbios_entry_point ] && which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
+    # Google Compute Cloud
+    local external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
   else
-    IP=$ip
+    # Try and determine the external IP
+    need_pkg dnsutils
+    local external_ip=$(dig +short myip.opendns.com @resolver1.opendns.com)
+  fi
+
+  if [ ! -z "$external_ip" ] && [ "$ip" != "$external_ip" ]; then
+    need_pkg nginx
+
+    if [ -L /etc/nginx/sites-enabled/bigbluebutton ]; then
+      rm -f /etc/nginx/sites-enabled/bigbluebutton 
+      systemctl restart nginx
+    fi
+      # Test if we can we reach this server from the external IP
+      cd /var/www/html
+      local tmp_file="$(mktemp XXXXXX.html)"
+      chown www-data:www-data $tmp_file
+      if wget -qS --spider "http://$external_ip/$tmp_file"; then
+        INTERNAL_IP=$IP
+        IP=$external_ip
+      fi
+      rm -f $temp_file
+
+    if [ -f /etc/nginx/sites-available/bigbluebutton ]; then
+      ln -s /etc/nginx/sites-available/bigbluebutton /etc/nginx/sites-enabled/bigbluebutton
+      systemctl restart nginx
+    fi
+  echo "$INTERNAL_IP"
   fi
 }
 
 need_pkg() {
-  if [ ! -f /var/lib/apt/periodic/update-success-stamp ]; then sudo apt-get update; fi
+  if [ ! -f /var/cache/apt/pkgcache.bin ]; then sudo apt-get update; fi
+  if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
   if ! dpkg -l | grep -q $1; then sudo apt-get install -y $1; fi
 }
 
 check_version() {
+  if ! echo $1 | grep -q xenial; then err "This script can only install BigBlueButton 2.0 (or later)"; fi
   DISTRO=$(echo $1 | sed 's/-.*//g')
   if ! wget -qS --spider "https://ubuntu.bigbluebutton.org/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1."
@@ -242,6 +276,7 @@ check_host() {
   need_pkg dnsutils
   DIG_IP=$(dig +short $1)
   if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
+  get_IP
   if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
 }
 
@@ -287,12 +322,9 @@ HERE
 fi
 }
 
-# Check if running on ec2 and setup FreeSWITCH for internal/external IP addresses
-check_ec2() {
-  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
-    INTERNAL_IP=$IP
-    IP=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
-
+# Check if running externally with internal/external IP addresses
+check_nat() {
+  if [ ! -z "$INTERNAL_IP" ]; then
     sed -i "s/stun:stun.freeswitch.org/$IP/g" /opt/freeswitch/etc/freeswitch/vars.xml
     sed -i "s/ext-rtp-ip\" value=\"\$\${local_ip_v4/ext-rtp-ip\" value=\"\$\${external_rtp_ip/g" /opt/freeswitch/conf/sip_profiles/external.xml
     sed -i "s/ext-sip-ip\" value=\"\$\${local_ip_v4/ext-sip-ip\" value=\"\$\${external_sip_ip/g" /opt/freeswitch/conf/sip_profiles/external.xml
