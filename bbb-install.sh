@@ -82,6 +82,8 @@ HERE
 }
 
 main() {
+  export DEBIAN_FRONTEND=noninteractive
+
   need_root
   need_mem
   need_ubuntu
@@ -259,7 +261,7 @@ get_IP() {
 need_pkg() {
   if [ ! -f /var/cache/apt/pkgcache.bin ]; then sudo apt-get update; fi
   if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
-  if ! dpkg -l | grep -q $1; then sudo apt-get install -y $1; fi
+  if ! dpkg -l | grep -q $1; then sudo apt-get install -yq $1; fi
 }
 
 check_version() {
