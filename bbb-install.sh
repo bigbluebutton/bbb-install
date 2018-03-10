@@ -135,6 +135,13 @@ main() {
     usage
     exit 0
   fi
+
+  if [ ! -z "$GREENLIGHT" ]; then
+    if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -g option requires both the -s and -e options"; fi
+  fi
+  if [ ! -z "$HTML5" ]; then
+    if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -t option requires both the -s and -e options"; fi
+  fi
   
   get_IP
   if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi  
@@ -147,7 +154,7 @@ main() {
   fi
 
   apt-get update 
-  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold"  install grub-pc
+  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc
   apt-get dist-upgrade -yq 
 
   need_pkg curl
@@ -349,7 +356,7 @@ install_HTML5() {
   service mongod start
 
   if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then 
-    curl -sL https://deb.nodesource.com/setup_8.x | -E bash -
+    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
   fi
 
   need_pkg nodejs
