@@ -1,13 +1,13 @@
 
 # bbb-install 
 
-Want to setup your own [BigBlueButton 2.0-beta](http://docs.bigbluebutton.org/2.0/20overview.html) on a server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements)?  If your server is accessible by an external IP address without a firewall, then you can install BigBlueButton 2.0 with a single command
+Want to setup your own [BigBlueButton 2.0-beta](http://docs.bigbluebutton.org/2.0/20overview.html) on a server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements)?  If your server is not behind a firewall (and don't worry if so, you just need to open some ports on the firewall as described later in this page), then you can install BigBlueButton 2.0 with a single command
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 ~~~
 
-After it runs (takes about 15 minutes depending on your server's internet connection), you'll see a confirmation message that BigBlueButton 2.0 is running and listening on the server's external IP address.
+This will take about 15 minutes (depending on your server's internet connection).  After it finishes, you'll see a confirmation message that BigBlueButton 2.0 is running and listening on the server's external IP address.  The script also installs the bbb-api demos so you can immediately try out the server. 
 
 ~~~
 # Warning: The API demos are installed and accessible from:
@@ -21,7 +21,10 @@ After it runs (takes about 15 minutes depending on your server's internet connec
 #    sudo apt-get purge bbb-demo
 ~~~
 
-The API demos let you easily try out your new server at the provided URL.  Use FireFox as it does not require a SSL certificate to use web real-time communications (WebRTC) audio.
+To test the server, open the above URL in FireFox as it doesn't need a SSL certificate to use web real-time communications (WebRTC).  You'll want to use WebRTC as it provides the highest quality, lowest latency audio in BigBlueButton.
+
+The sections below go into futther details on quickly configuring your server with `bbb-install.sh`.
+
 
 ## Overview
 
@@ -29,47 +32,50 @@ The `bbb-install.sh` is a shell script that automates the [install steps](http:/
 
 You'll need a server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements).  This can be a dedicated or virtual server.  
 
-If you setup a fully qualified domain name (FQDN), such as `bbb.my-server.com`, that resolves to the external IP address of the server, then you can use `bbb-install.sh` to install 
+Furthermore, if you setup a fully qualified domain name (FQDN), such as `bbb.my-server.com`, that resolves to the external IP address of the server, then you can use `bbb-install.sh` to also install 
   * a 4096 bit secure socket layers (SSL) certificate from Let's Encrypt, 
   * the latest developer build of the HTML5 client, and/or
   * the GreenLight front-end.
 
-We recommend installing a SSL certificate for production BigBlueButton servers.  Chrome require HTTPS before allowing users to share their microphone via WebRTC.
+We recommend installing a SSL certificate for production BigBlueButton servers as the certificate is a requirement for both Chrome and Safari to enable WebRTC audio for the user.
 
-The source for the script is at [this github repository](https://github.com/bigbluebutton/bbb-install).  While you could clone this repository an execute `bbb-install.sh` at the command line, to make it easy for anyone to run the script with a single command, we host the latest version at `https://ubuntu.bigbluebutton.org/bbb-install.sh`.
+The source for the script is hosted at [github](https://github.com/bigbluebutton/bbb-install).  While you could clone this repository an execute `bbb-install.sh` at the command line, to make it easy for anyone to run the script with a single command, we host the latest version at `https://ubuntu.bigbluebutton.org/bbb-install.sh`.
 
 ### Server choices
 
-Many companies, such as [Digital Ocean](https://www.digitalocean.com/), offer virtual and bare metal servers that provide a Ubuntu 16.04 64-bit server with single public IP address (no firewall).  In these cases, the script can automate the installation.  
+Many companies, such as [Digital Ocean](https://www.digitalocean.com/), offer virtual and bare metal servers that provide a Ubuntu 16.04 64-bit server with single public IP address (no firewall).  
 
-Other companies, such as [ScaleWay](https://www.scaleway.com/), [Google Compute Engine](https://cloud.google.com/compute/) offer servers that are setup behind network address translation (NAT).  That is, they have an internal and external IP address.  The `bbb-install.sh` will detect if the server has internal/external address and configure BigBlueButton accordingly.  
+Other companies, such as [ScaleWay](https://www.scaleway.com/), [Google Compute Engine](https://cloud.google.com/compute/) offer servers that are setup behind network address translation (NAT).  That is, they have both an internal and external IP address.  The `bbb-install.sh` will do a bit of sluthing detect if the server has internal/external address and configure BigBlueButton accordingly.  
 
-However, if you are installing on an Amazon EC2 instance -- we recommend a c5.xlarge instance type (or faster) -- then there are a few additional steps to configure the settings on your firewall (given below).  
+If your server is behind a firewall, such as on Amazon EC2 instance, then there are a few additional steps to configure the settings on your firewall (given below).  
 
-If you find `bbb-install.sh` is unable to configure server behind NAT, we recommend going through the [step-by-step](http://docs.bigbluebutton.org/2.0/20install.html#step-by-step-install) for installing BigBlueButton.
+Finaly, if you find `bbb-install.sh` is unable to configure server behind NAT, we recommend going through the [step-by-step](http://docs.bigbluebutton.org/2.0/20install.html#step-by-step-install) for installing BigBlueButton.
 
-
-### Installation Video
-
-We created this [bbb-install.sh overview video](https://youtu.be/D1iYEwxzk0M) to demonstrate setting up BigBlueButton 2.0 on a Digital Ocean droplet with a single command.
 
 ### Configuring the EC2 firewall
-If you want to install BigBlueButton 2.0 on an Amazon's EC2 instance using this script, then before your run `bbb-install.sh` you first need to configure the server's security group (Amazon's term for a firewall) to allow incoming traffic on the following ports:
+
+If you want to install BigBlueButton 2.0 on an Amazon's EC2 instance -- we recommend a c5.xlarge instance type (or faster) when using EC2 -- then before your run `bbb-install.sh` you first need to configure the server's security group (a 'security group' is Amazon's term for a firewall) to allow incoming traffic on the following ports:
 
   * TCP/IP port 22 (for SSH)
   * TCP/IP ports 80/443 (for HTTP/HTTPS)
   * TCP/IP port 1935 (for RTMP)
   * UDP ports in the range 16384 - 32768 (for FreeSWITCH/HTML5 client RTP streams)
 
-Here's a screen shot of what the server's security group configuration should look like to allow incoming traffic on the above ports:
+Here's a screen shot of what the security group configuration should look like to allow incoming traffic on the above ports:
 
 ![Security Group](images/security-group.png?raw=true "Security Group")
 
-The script will detect the EC2 instance environment and automatically configure BigBlueButton to use the servers private/public address pairs.  As described above, you can use the server with only an IP address, but you should setup an Elastic IP for the server (so the IP does not change on reboot) and a FQDN for the server (so `bbb-install.sh` can use Let's Encrypt to install a SSL certificate for HTTPS).
+Before setting up a hostname, you need to assign an Elastic IP to the server so the IP does not change on reboot.   
 
 We also created in [installation video on EC2](https://youtu.be/-E9WIrH_yTs) going through the above steps.
 
-# Sample Usage
+### Installation Videos
+
+Watch this [Install using bbb-install.sh on Digital Ocean](https://youtu.be/D1iYEwxzk0M) for a walkthrough of the configuration options for installing BigBlueButton 2.0 on Digital Ocean with `bbb-install.sh`.   
+
+Watch this [Install using bbb-install.sh on EC2](https://youtu.be/-E9WIrH_yTs) for a walkthrough of installing BigBlueButton 2.0 on Amazon EC2 using `bbb-install.sh`.
+
+# Command options
 
 You can get help by passing the `-h` option.
 
@@ -104,9 +110,9 @@ SUPPORT:
    Commnity: https://bigbluebutton.org/support
 ~~~
 
-## Single IP address (no SSL)
+## Install and configure with an IP address (no SSL)
 
-To install BigBlueButton on a Ubuntu 16.04 64-bit server with an external IP address, login as root and run the following command:
+To install BigBlueButton on a Ubuntu 16.04 64-bit server, login as root and run the following command:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
