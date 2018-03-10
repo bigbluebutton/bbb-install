@@ -146,7 +146,8 @@ main() {
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
 
-  sudo apt-get update && sudo apt-get dist-upgrade -y
+  rm /boot/grub/menu.lst
+  sudo apt-get update && sudo apt-get dist-upgrade -qq --force-yes
 
   need_pkg curl
   need_pkg haveged
