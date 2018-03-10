@@ -146,7 +146,6 @@ main() {
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
 
-  #rm /boot/grub/menu.lst
   apt-get update 
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold"  install grub-pc
   apt-get dist-upgrade -yq 
@@ -262,9 +261,9 @@ get_IP() {
 }
 
 need_pkg() {
-  if [ ! -f /var/cache/apt/pkgcache.bin ]; then sudo apt-get update; fi
+  if [ ! -f /var/cache/apt/pkgcache.bin ]; then apt-get update; fi
   if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
-  if ! dpkg -l | grep -q $1; then sudo apt-get install -yq $1; fi
+  if ! dpkg -l | grep -q $1; then apt-get install -yq $1; fi
 }
 
 check_version() {
@@ -298,7 +297,7 @@ install_bigbluebutton_apt-get-key() {
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
 check_lxc() {
-  if sudo grep -qa container=lxc /proc/1/environ; then
+  if grep -qa container=lxc /proc/1/environ; then
     if grep IOSchedulingClass /lib/systemd/system/freeswitch.service > /dev/null; then
       cat > /lib/systemd/system/freeswitch.service << HERE
 [Unit]
@@ -343,14 +342,14 @@ install_HTML5() {
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
   fi
 
-  echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+  echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
   apt-get update
 
   need_pkg mongodb-org
   service mongod start
 
   if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then 
-    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+    curl -sL https://deb.nodesource.com/setup_8.x | -E bash -
   fi
 
   need_pkg nodejs
@@ -372,7 +371,7 @@ install_greenlight(){
   fi
 
   if ! apt-key list | grep -q Docker; then
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
   fi
 
   if ! dpkg -l | grep -q docker-ce; then
