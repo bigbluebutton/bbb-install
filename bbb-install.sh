@@ -146,8 +146,10 @@ main() {
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
 
-  rm /boot/grub/menu.lst
-  sudo apt-get update && sudo apt-get dist-upgrade -qq --force-yes
+  #rm /boot/grub/menu.lst
+  apt-get update 
+  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold"  install grub-pc
+  apt-get dist-upgrade -yq 
 
   need_pkg curl
   need_pkg haveged
