@@ -355,6 +355,10 @@ install_HTML5() {
   need_pkg mongodb-org
   service mongod start
 
+  if dpkg -s nodejs | grep Version | grep -q 4.2.6; then 
+    apt-get purge -y nodejs
+  fi
+
   if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then 
     curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
   fi
