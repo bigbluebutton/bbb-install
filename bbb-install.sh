@@ -258,7 +258,7 @@ get_IP() {
         INTERNAL_IP=$IP
         IP=$external_ip
       fi
-      rm -f $temp_file
+      rm -f $tmp_file
 
     if [ -f /etc/nginx/sites-available/bigbluebutton ]; then
       ln -s /etc/nginx/sites-available/bigbluebutton /etc/nginx/sites-enabled/bigbluebutton
