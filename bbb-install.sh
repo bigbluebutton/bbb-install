@@ -395,6 +395,7 @@ install_greenlight(){
     apt-get update
     need_pkg docker-ce
   fi
+  if ! which docker; then err "Docker did not install"; fi
 
   mkdir -p ~/greenlight
 
@@ -402,6 +403,7 @@ install_greenlight(){
     # This will trigger the download of GreenLight docker image (if needed)
     echo "SECRET_KEY_BASE=$(docker run --rm bigbluebutton/greenlight rake secret)" > /var/tmp/secret
   fi
+  if [ ! -s /var/tmp/secret ]; then err "Invalid secret file in /var/tmp/secret for GreenLight"; fi
   source /var/tmp/secret
 
   if [ ! -f ~/greenlight/env ]; then
