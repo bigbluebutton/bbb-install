@@ -270,7 +270,7 @@ get_IP() {
 need_pkg() {
   if [ ! -f /var/cache/apt/pkgcache.bin ]; then apt-get update; fi
   if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
-  if ! dpkg -l | grep -q $1; then apt-get install -yq $1; fi
+  if ! dpkg -s $1 > /dev/null 2>&1; then apt-get install -yq $1; fi
 }
 
 check_version() {
