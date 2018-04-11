@@ -365,6 +365,7 @@ install_HTML5() {
 
   need_pkg nodejs
   need_pkg bbb-html5
+  need_pkg bbb-webrtc-sfu
 
   if [ ! -z "$INTERNAL_IP" ]; then
    sed -i 's/.*stunServerAddress.*/stunServerAddress=64.233.177.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini

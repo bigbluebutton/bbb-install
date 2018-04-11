@@ -203,6 +203,19 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 
 # Troubleshooting and Feedback
 
+## GreenLight not running
+
+If after the initial installation GreenLight does not run (you get a 500 error when accessing it), you can restart GreenLight with the following steps
+
+~~~
+docker stop greenlight
+docker rm greenlight
+docker run -d -p 5000:80 --restart=unless-stopped -v $(pwd)/db/production:/usr/src/app/db/production -v $(pwd)/assets:/usr/src/app/public/system --env-file env --name greenlight bigbluebutton/greenlight
+~~~
+
+After which, you should be able to open the URL for your server and see the GreenLight interface.
+
+## Getting Help
 If you have feedback on the script, or need help using it, please post to the [BigBlueButton Setup](https://bigbluebutton.org/support/community/) mailing list and we'll help you there.
 
 If you encounter an error with this script, please open [GitHub issue](https://github.com/bigbluebutton/bbb-install/issues) and provide steps to reproduce the issue.
