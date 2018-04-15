@@ -341,6 +341,28 @@ check_nat() {
     sed -i "s/<param name=\"ws-binding\".*/<param name=\"ws-binding\"  value=\"$IP:5066\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
     sed -i "s/$INTERNAL_IP:/$IP:/g" /etc/bigbluebutton/nginx/sip.nginx
     ip addr add $IP dev lo
+
+    if [ -f /lib/systemd/system/dummy-nic.service ]; then RELOAD=true; fi
+    if ! grep -q $IP /lib/systemd/system/dummy-nic.service > /dev/null 2>&1; then
+      cat > /lib/systemd/system/dummy-nic.service << HERE
+[Unit]
+Description=Configure dummy NIC for FreeSWITCH
+After=network.target
+
+[Service]
+ExecStart=/sbin/ip addr add $IP dev lo
+
+[Install]
+WantedBy=multi-user.target
+HERE
+      if [ "$RELOAD" == "true" ]; then
+        systemctl dameon-reload
+        systemctl restart dummy-nic
+      else
+        systemctl enable dummy-nic
+        systemctl start dummy-nic
+      fi
+    fi
   fi
 }
 
