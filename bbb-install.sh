@@ -388,6 +388,7 @@ install_HTML5() {
   need_pkg nodejs
   need_pkg bbb-html5
   apt-get install -yq bbb-webrtc-sfu
+  apt-get purge -yq kms-core-6.0 kms-elements-6.0	# Remove older packages
 
   if [ ! -z "$INTERNAL_IP" ]; then
    sed -i 's/.*stunServerAddress.*/stunServerAddress=64.233.177.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
@@ -485,7 +486,38 @@ install_ssl_letsencrypt() {
   fi
 
   if [ ! -f /etc/letsencrypt/live/$HOST/fullchain.pem ]; then
+    rm -f /tmp/bigbluebutton.bak
+    if ! grep -q $HOST /etc/nginx/sites-available/bigbluebutton; then  # make sure we can do the challenge
+      cp /etc/nginx/sites-available/bigbluebutton /tmp/bigbluebutton.bak
+      cat <<HERE > /etc/nginx/sites-available/bigbluebutton
+server {
+  listen 80;
+  listen [::]:80;
+  server_name $HOST;
+
+  access_log  /var/log/nginx/bigbluebutton.access.log;
+
+  # BigBlueButton landing page.
+  location / {
+    root   /var/www/bigbluebutton-default;
+    index  index.html index.htm;
+    expires 1m;
+  }
+
+  # Redirect server error pages to the static page /50x.html
+  #
+  error_page   500 502 503 504  /50x.html;
+  location = /50x.html {
+    root   /var/www/nginx-default;
+  }
+}
+HERE
+      systemctl restart nginx
+    fi
+
     if ! letsencrypt --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ -d $HOST certonly; then
+      cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
+      systemctl restart nginx
       err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
     fi
   fi
