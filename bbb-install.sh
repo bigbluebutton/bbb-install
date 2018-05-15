@@ -466,6 +466,7 @@ HERE
       -v ~/greenlight/db/production:/usr/src/app/db/production -v ~/greenlight/assets:/usr/src/app/public/system \
       --env-file ~/greenlight/env \
       --name greenlight bigbluebutton/greenlight
+      sleep 5
   fi
 }
 
