@@ -26,13 +26,13 @@
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 #  
-#  To install BigBlueButton and configure the server with the hostname bbb.my-server.com:
+#  To install BigBlueButton and configure the server with the hostname bbb.example.com:
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.my-server.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com 
 #  
-#  To install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@my-server.com:
+#  To install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.my-server.com -e info@my-server.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com
 #
 #  To install latest build of HTML5 client 
 #
@@ -44,7 +44,7 @@
 #
 #  To do all of the above with a single command:
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.my-server.com -e info@my-server.com -t -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g
 #
 
 usage() {
@@ -71,8 +71,8 @@ OPTIONS:
 EXAMPLES:
   
     ./bbb-install.sh -v xenial-200
-    ./bbb-install.sh -v xenial-200 -s bbb.my-server.com -e info@my-server.com
-    ./bbb-install.sh -v xenial-200 -s bbb.my-server.com -e info@my-server.com -t -g
+    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
+    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
 
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install

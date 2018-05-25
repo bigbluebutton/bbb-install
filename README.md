@@ -32,7 +32,7 @@ The `bbb-install.sh` is a shell script that automates the [install steps](http:/
 
 You'll need a server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements).  This can be a dedicated or virtual server.  
 
-Furthermore, if you setup a fully qualified domain name (FQDN), such as `bbb.my-server.com`, that resolves to the external IP address of the server, then you can use `bbb-install.sh` to also install 
+Furthermore, if you setup a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of the server, then you can use `bbb-install.sh` to also install 
   * a 4096 bit secure socket layers (SSL) certificate from Let's Encrypt, 
   * the latest developer build of the HTML5 client, and/or
   * the GreenLight front-end.
@@ -102,8 +102,8 @@ OPTIONS:
 EXAMPLES:
 
     ./bbb-install.sh -v xenial-200
-    ./bbb-install.sh -v xenial-200 -s bbb.my-server.com -e info@my-server.com
-    ./bbb-install.sh -v xenial-200 -s bbb.my-server.com -e info@my-server.com -t -g
+    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
+    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
 
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
@@ -161,14 +161,14 @@ We recommend installing an SSL certificate (see next section).
  
 ## Install with SSL
 
-Before `bbb-install.sh` can install a SSL certificate, you first need to configure a domain name, such as `bbb.my-server.com`, to resolve to the public IP address of your server.  That is, the command `dig bbb.my-server.com @8.8.8.8` should resolves to the public IP address of your server.  
+Before `bbb-install.sh` can install a SSL certificate, you first need to configure a domain name, such as `bbb.example.com`, to resolve to the public IP address of your server.  That is, the command `dig bbb.example.com @8.8.8.8` should resolves to the public IP address of your server.  
 
-Next, you need a valid e-mail address, such as `info@my-server.com`, to receive updates from Let's Encrypt.  
+Next, you need a valid e-mail address, such as `info@example.com`, to receive updates from Let's Encrypt.  
 
 With these two pieces of information, you can use `bbb-install.sh` to automate the configuration of BigBlueButton server with an SSL certificate using the following command (here we using the sample hostname and e-mail in the command, but you would need to substitute your serverès hostname and your e-mail address):
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.my-server.com -e info@my-server.com
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com
 ~~~
 
 The `bbb-install.sh` script will also install a cron job for you to automatically renew the Let's Encrypt certificate so it doesn't expire. 
@@ -178,17 +178,17 @@ The `bbb-install.sh` script will also install a cron job for you to automaticall
 To try out the latest build of the latest developer build of the [HTML5 client](http://docs.bigbluebutton.org/html/html5-overview.html), add the `-t` option when setting up SSL (the HTML5 client needs SSL installed on the server).
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.my-server.com -e info@my-server.com -t
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t
 ~~~
 
-After a few minutes, you'll have the HTML5 client is installed.  Use an Android or iOS (iOS 11+) phone/tablet to access your BigBlueButton server at `https://bbb.my-server.com/demo/demo1.jsp` and join using the HTML5 client.  The BigBlueButton server will detect when you are connecting from a mobile browser and automatically load the HTML5 client instead of the default Flash client.  Note: the HTML5 client is under [active development](http://docs.bigbluebutton.org/html/html5-overview.html) and is not ready (yet) for production.
+After a few minutes, you'll have the HTML5 client is installed.  Use an Android or iOS (iOS 11+) phone/tablet to access your BigBlueButton server at `https://bbb.example.com/demo/demo1.jsp` and join using the HTML5 client.  The BigBlueButton server will detect when you are connecting from a mobile browser and automatically load the HTML5 client instead of the default Flash client.  Note: the HTML5 client is under [active development](http://docs.bigbluebutton.org/html/html5-overview.html) and is not ready (yet) for production.
 
 ## Install GreenLight
 
 If you want to add a frontend to your BigBlueButton server, where users can easily create meetings and invite others, you can install [GreenLight](http://docs.bigbluebutton.org/install/green-light.html) by adding the `-g` option to the SSL options (GreenLight needs SSL installed on the server).
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.my-server.com -e info@my-server.com -g
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -g
 ~~~
 
 You can go to `https://<hostname>/` (where <hostname> is the host name for your BigBlueButton server) to launch the GreenLight interface.  To give users the ability to create and manage recorded meetings, See the GreenLight documentation for [setting up OAuth2 authentication](http://docs.bigbluebutton.org/install/green-light.html#6-configure-oauth2-optional).
@@ -198,7 +198,7 @@ You can go to `https://<hostname>/` (where <hostname> is the host name for your 
 Lastly, you could do all the above with a single command:
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.my-server.com -e info@my-server.com -t -g
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g
 ~~~
 
 # Troubleshooting and Feedback
@@ -223,8 +223,6 @@ If you encounter an error with this script, please open [GitHub issue](https://g
 
 # Limitations
 
-This script has the following limitations:
+If you are running your BigBlueButton behind a firewall, such as on EC2, this script will not configure your firewall. 
 
-  * It will not configure your firewall 
-  * Currently, HTML5 client does not launch from GreenLight
 
