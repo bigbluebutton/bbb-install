@@ -1,13 +1,13 @@
 
 # bbb-install 
 
-Want to setup your own [BigBlueButton 2.0-beta](http://docs.bigbluebutton.org/2.0/20overview.html) on a server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements)?  If your server is not behind a firewall (and don't worry if so, you just need to open some ports on the firewall as described later in this page), then you can install BigBlueButton 2.0 with a single command
+`bbb-install` is a BASH script that will install BigBlueButton [BigBlueButton 2.0-beta](http://docs.bigbluebutton.org/2.0/20overview.html) on a Ubuntu 16.04 64-bit server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements)?  If your server has the necessary ports open to your users (see previous like for requirements), then you can install BigBlueButton with a single command.
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 ~~~
 
-This will take about 15 minutes (depending on your server's internet connection).  After it finishes, you'll see a confirmation message that BigBlueButton 2.0 is running and listening on the server's external IP address.  The script also installs the bbb-api demos so you can immediately try out the server. 
+This will take about 15 minutes (depending on your server's internet connection).  After it finishes, you'll see a confirmation message that BigBlueButton is running and listening on the server's external IP address.  The script also installs the bbb-api demos so you can immediately try out the server. 
 
 ~~~
 # Warning: The API demos are installed and accessible from:
@@ -21,7 +21,7 @@ This will take about 15 minutes (depending on your server's internet connection)
 #    sudo apt-get purge bbb-demo
 ~~~
 
-To test the server, open the above URL in FireFox as it doesn't need a SSL certificate to use web real-time communications (WebRTC).  You'll want to use WebRTC as it provides the highest quality, lowest latency audio in BigBlueButton.
+To test the server, open the above URL in FireFox (use FireFox initially until you have a secure socket layer (SSL) certificate) and you can join the demo meeting. 
 
 The sections below go into futther details on quickly configuring your server with `bbb-install.sh`.
 

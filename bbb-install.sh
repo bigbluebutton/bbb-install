@@ -149,6 +149,10 @@ main() {
   install_bigbluebutton_apt-get-key
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
+  if [ ! -f jonathonf-ubuntu-ffmpeg-4-xenial.list ]; then  # Use ffmpeg 4.0
+    add-apt-repository ppa:jonathonf/ffmpeg-4 -y
+  fi
+
   if [ ! -z "$PROXY" ]; then
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
