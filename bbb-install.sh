@@ -22,34 +22,39 @@
 #
 #  Examples
 #  
-#  To install BigBlueButton with server's external IP address:
+#  Install BigBlueButton using server's external IP address
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
+#
 #  
-#  To install BigBlueButton and configure the server with the hostname bbb.example.com:
+#  Install BigBlueButton using hostname bbb.example.com
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com 
-#  
-#  To install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
+#
+#
+#  Install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com
 #
-#  To install latest build of HTML5 client 
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -t
+#  Install BigBlueButton with SSL + latest build of HTML5 client 
 #
-#  To install GreenLight (requires previous install of SSL certificate):
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -g
 #
-#  To do all of the above with a single command:
+#  Install BigBlueButton with SSL + GreenLight
+#
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -g
+#
+#
+#  All of the above
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g
 #
 
 usage() {
     cat 1>&2 <<HERE
-BigBlueButon 2.0-beta (or later) install script
+BigBlueButon 2.0 installer script
 
 USAGE:
     bbb-install.sh [OPTIONS]
@@ -149,8 +154,11 @@ main() {
   install_bigbluebutton_apt-get-key
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
-  if [ ! -f jonathonf-ubuntu-ffmpeg-4-xenial.list ]; then  # Use ffmpeg 4.0
+  if [ ! -f /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list ]; then  # Use ffmpeg 4.0
     add-apt-repository ppa:jonathonf/ffmpeg-4 -y
+    if ! apt-key list F06FC659 | grep -q F06FC659; then
+      err "Unable to download apt-get key for ffmpeg 4.0"
+    fi
   fi
 
   if [ ! -z "$PROXY" ]; then
@@ -258,7 +266,7 @@ get_IP() {
       cd /var/www/html
       local tmp_file="$(mktemp XXXXXX.html)"
       chown www-data:www-data $tmp_file
-      if wget -qS --spider "http://$external_ip/$tmp_file" > /dev/null 2>&1; then
+      if timeout 5 wget -qS --spider "http://$external_ip/$tmp_file" > /dev/null 2>&1; then
         INTERNAL_IP=$IP
         IP=$external_ip
       fi

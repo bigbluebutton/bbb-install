@@ -1,7 +1,9 @@
 
+![bbb-install.sh](images/bbb-install.png?raw=true "bbb-install.sh")
+
 # bbb-install 
 
-`bbb-install` is a BASH script that will install BigBlueButton [BigBlueButton 2.0-beta](http://docs.bigbluebutton.org/2.0/20overview.html) on a Ubuntu 16.04 64-bit server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements)?  If your server has the necessary ports open to your users (see previous like for requirements), then you can install BigBlueButton with a single command.
+`bbb-install` is a BASH script that will install BigBlueButton [BigBlueButton 2.0](http://docs.bigbluebutton.org/2.0/20overview.html) on a Ubuntu 16.04 64-bit server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements)?  If your server has the necessary ports open to your users (see previous like for requirements), then you can install BigBlueButton with a single command.
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
@@ -80,7 +82,7 @@ Watch this [Install using bbb-install.sh on EC2](https://youtu.be/-E9WIrH_yTs) f
 You can get help by passing the `-h` option.
 
 ~~~
-BigBlueButon 2.0-beta (or later) install script
+BigBlueButon 2.0 installer script
 
 USAGE:
     bbb-install.sh [OPTIONS]
