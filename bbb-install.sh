@@ -643,9 +643,9 @@ HERE
   if [ -f ~/greenlight/env ]; then
     BIGBLUEBUTTONENDPOINT=$(cat /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
     sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/env
-    docker stop greenlight
-    docker rm greenlight
-    docker run -d -p 5000:80 --restart=unless-stopped -v ~/greenlight/db/production:/usr/src/app/db/production -v ~/greenlight/assets:/usr/src/app/public/system --env-file ~/greenlight/env --name greenlight bigbluebutton/greenlight
+    docker stop greenlight-v2
+    docker rm greenlight-v2
+    docker run -d -p 5000:80 --restart=unless-stopped -v ~/greenlight/db/production:/usr/src/app/db/production --env-file ~/greenlight/env --name greenlight-v2 bigbluebutton/greenlight:v2
   fi
 
   # Update HTML5 client (if installed) to use SSL
