@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
-# BlueButton open source conferencing system - http://www.bigbluebutton.org/   
+# BlueButton open source conferencing system - http://www.bigbluebutton.org/
 #
-# Copyright (c) 2018 BigBlueButton Inc. 
+# Copyright (c) 2018 BigBlueButton Inc.
 #
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU Lesser General Public License as published by the Free Software
@@ -21,15 +21,15 @@
 
 #
 #  Examples
-#  
+#
 #  Install BigBlueButton using server's external IP address
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200
 #
-#  
+#
 #  Install BigBlueButton using hostname bbb.example.com
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com
 #
 #
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
@@ -37,7 +37,7 @@
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com
 #
 #
-#  Install BigBlueButton with SSL + latest build of HTML5 client 
+#  Install BigBlueButton with SSL + latest build of HTML5 client
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t
 #
@@ -63,25 +63,25 @@ OPTIONS:
 
   -v <version>     Install given version of BigBlueButton (e.g. 'xenial-200') (required)
 
-  -s <hostname>    Configure server with <hostname> 
+  -s <hostname>    Configure server with <hostname>
   -e <email>       Install SSL certificate from Let's Encrypt using <email>
 
   -t               Install HTML5 client (currently under development)
-  -g               Install GreenLight 
+  -g               Install GreenLight
 
   -p <host>        Use apt-get proxy at <host>
 
   -h               Print help
 
 EXAMPLES:
-  
+
     ./bbb-install.sh -v xenial-200
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
 
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
-   Commnity: https://bigbluebutton.org/support 
+   Commnity: https://bigbluebutton.org/support
 
 HERE
 }
@@ -97,7 +97,7 @@ main() {
 
   while builtin getopts "hs:v:e:p:gt" opt "${@}"; do
     case $opt in
-      h) 
+      h)
         usage
         exit 0
         ;;
@@ -147,9 +147,9 @@ main() {
   if [ ! -z "$HTML5" ]; then
     if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -t option requires both the -s and -e options"; fi
   fi
-  
+
   get_IP
-  if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi  
+  if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
 
   install_bigbluebutton_apt-get-key
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
@@ -165,9 +165,9 @@ main() {
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
 
-  apt-get update 
+  apt-get update
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc
-  apt-get dist-upgrade -yq 
+  apt-get dist-upgrade -yq
 
   need_pkg curl
   need_pkg haveged
@@ -231,7 +231,7 @@ need_ubuntu(){
 
 need_x64() {
   UNAME=`uname -m`
-  if [ "$UNAME" != "x86_64" ]; then err "You must run this command on a 64-bit server."; fi  
+  if [ "$UNAME" != "x86_64" ]; then err "You must run this command on a 64-bit server."; fi
 }
 
 get_IP() {
@@ -259,7 +259,7 @@ get_IP() {
     need_pkg nginx
 
     if [ -L /etc/nginx/sites-enabled/bigbluebutton ]; then
-      rm -f /etc/nginx/sites-enabled/bigbluebutton 
+      rm -f /etc/nginx/sites-enabled/bigbluebutton
       systemctl restart nginx
     fi
       # Test if we can we reach this server from the external IP
@@ -312,7 +312,7 @@ install_bigbluebutton_apt-get-key() {
     wget https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc -O- | apt-key add -
   fi
 }
-  
+
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
 check_lxc() {
@@ -389,11 +389,11 @@ install_HTML5() {
   need_pkg mongodb-org
   service mongod start
 
-  if dpkg -s nodejs | grep Version | grep -q 4.2.6; then 
+  if dpkg -s nodejs | grep Version | grep -q 4.2.6; then
     apt-get purge -y nodejs
   fi
 
-  if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then 
+  if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
     curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
   fi
 
@@ -436,15 +436,15 @@ install_greenlight(){
 
   if [ ! -f /var/tmp/secret ]; then
     # This will trigger the download of GreenLight docker image (if needed)
-    echo "SECRET_KEY_BASE=$(docker run --rm bigbluebutton/greenlight rake secret)" > /var/tmp/secret
+    echo "SECRET_KEY_BASE=$(docker run --rm bigbluebutton/greenlight:v2 bundle exec rake secret)" > /var/tmp/secret
   fi
   if [ ! -s /var/tmp/secret ]; then err "Invalid secret file in /var/tmp/secret for GreenLight"; fi
   source /var/tmp/secret
 
   if [ ! -f ~/greenlight/env ]; then
-    docker run --rm bigbluebutton/greenlight cat ./sample.env > ~/greenlight/env
+    docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/env
   fi
-  
+
   BIGBLUEBUTTONENDPOINT=$(cat /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
   BIGBLUEBUTTONSECRET=$(cat /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | grep securitySalt | cut -d= -f2)
 
@@ -453,14 +453,14 @@ install_greenlight(){
   sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/env
   sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTONSECRET|"       ~/greenlight/env
 
-  need_pkg bbb-webhooks
+  # need_pkg bbb-webhooks
 
   if [ ! -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight cat ./scripts/greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx
+    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx
     cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
-  return 301 /b;
-}     
+  return 307 /b;
+}
 HERE
     systemctl restart nginx
   fi
@@ -469,15 +469,16 @@ HERE
     gem install jwt java_properties
   fi
 
-  if [ ! -f /usr/local/bigbluebutton/core/scripts/post_publish/greenlight_recording_notify.rb ]; then
-    docker run --rm bigbluebutton/greenlight cat ./scripts/greenlight_recording_notify.rb > /usr/local/bigbluebutton/core/scripts/post_publish/greenlight_recording_notify.rb
-  fi
+  # Greenlight 2.0 currently does not support recording notifications.
+  #if [ ! -f /usr/local/bigbluebutton/core/scripts/post_publish/greenlight_recording_notify.rb ]; then
+  #  docker run --rm bigbluebutton/greenlight cat ./scripts/greenlight_recording_notify.rb > /usr/local/bigbluebutton/core/scripts/post_publish/greenlight_recording_notify.rb
+  #fi
 
   if ! docker ps | grep -q greenlight; then
     docker run -d -p 5000:80 --restart=unless-stopped \
-      -v ~/greenlight/db/production:/usr/src/app/db/production -v ~/greenlight/assets:/usr/src/app/public/system \
+      -v ~/greenlight/db/production:/usr/src/app/db/production \
       --env-file ~/greenlight/env \
-      --name greenlight bigbluebutton/greenlight
+      --name greenlight-v2 bigbluebutton/greenlight:v2
       sleep 5
   fi
 }
@@ -634,9 +635,9 @@ HERE
 
   sed -i 's/playback_protocol: http$/playback_protocol: https/g' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
 
-  if [ -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; then 
+  if [ -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; then
     sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp
-  fi  
+  fi
 
   # Update GreenLight (if installed) to use SSL
   if [ -f ~/greenlight/env ]; then
