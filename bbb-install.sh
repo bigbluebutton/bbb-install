@@ -156,6 +156,10 @@ main() {
 
   if [ ! -f /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list ]; then  # Use ffmpeg 4.0
     add-apt-repository ppa:jonathonf/ffmpeg-4 -y
+  fi
+
+  if ! apt-key list F06FC659 | grep -q F06FC659; then
+    add-apt-repository ppa:jonathonf/ffmpeg-4 -y
     if ! apt-key list F06FC659 | grep -q F06FC659; then
       err "Unable to download apt-get key for ffmpeg 4.0"
     fi
@@ -543,7 +547,7 @@ server {
   server_name $HOST;
 
   listen 443 ssl;
-  listen [::]:443;
+  listen [::]:443 ssl;
 
     ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$HOST/privkey.pem;
