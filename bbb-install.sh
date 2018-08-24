@@ -625,8 +625,6 @@ HERE
   fi
 
   # Setup rest of BigBlueButton Configuration for SSL
-  sed -i "s/<param name=\"ws[s]*-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
-
   sed -i 's/http:/https:/g' /etc/bigbluebutton/nginx/sip.nginx
   sed -i 's/5066/7443/g'    /etc/bigbluebutton/nginx/sip.nginx
 
