@@ -238,6 +238,10 @@ need_x64() {
   if [ "$UNAME" != "x86_64" ]; then err "You must run this command on a 64-bit server."; fi
 }
 
+change_yml_value () {
+  sed -i "s<^\([[:blank:]#]*\)\(${2}\): .*<\1\2: ${3}<" $1
+}
+
 get_IP() {
   if [ ! -z "$IP" ]; then return 0; fi
 
@@ -656,6 +660,10 @@ HERE
   if [ -f  /usr/share/meteor/bundle/programs/server/assets/app/config/settings-production.json ]; then
     sed -i "s|\"wsUrl.*|\"wsUrl\": \"wss://$HOST/bbb-webrtc-sfu\",|g" \
       /usr/share/meteor/bundle/programs/server/assets/app/config/settings-production.json
+  fi
+
+  if [ -f /usr/local/bigbluebutton/bbb-webrtc-sfu/config/default.yml ]; then
+    change_yml_value /usr/local/bigbluebutton/bbb-webrtc-sfu/config/default.yml ip $IP
   fi
 }
 
