@@ -409,12 +409,14 @@ install_HTML5() {
   need_pkg nodejs
   need_pkg bbb-html5
   apt-get install -yq bbb-webrtc-sfu
-  apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0	# Remove older packages
+  apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0 > /dev/null  # Remove older packages
 
   if [ ! -z "$INTERNAL_IP" ]; then
    sed -i 's/.*stunServerAddress.*/stunServerAddress=64.233.177.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
    sed -i 's/.*stunServerPort.*/stunServerPort=19302/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
   fi
+
+  sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
 }
 
 install_greenlight(){

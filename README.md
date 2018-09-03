@@ -9,7 +9,7 @@
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 ~~~
 
-This command can run on a Ubuntu 16.04 64-bit server that meets the [minimal requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements).  If the server is behind firewall, such as on an AWS EC2 instance, you'll need to update the firewall settings to allow the needed ports before BigBlueButton will run correctly.
+`bbb-install` requires that you run it as root on a Ubuntu 16.04 64-bit server that meets the [minimal requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements).  If the server is behind firewall, such as on an AWS EC2 instance, you'll need to update the firewall settings to allow the needed ports before BigBlueButton will run correctly.
 
 The above command finishes you'll see a message that the API demos are installed to let you quickly test your server.
 
