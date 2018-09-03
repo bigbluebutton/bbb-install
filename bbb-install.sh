@@ -251,7 +251,12 @@ get_IP() {
   fi
 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
-    # EC2
+    # On some EC2 instanced apt-get has not be run, so we'll do it here in case we need nginx later in this script
+    if [ ! -f /var/tmp/bbb-install-apt-get ]; then
+      sudo apt-get update
+      touch /var/tmp/bbb-install-apt-get
+    fi
+
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -r /sys/firmware/dmi/tables/smbios_entry_point ] && which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
