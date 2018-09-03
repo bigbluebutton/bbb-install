@@ -17,7 +17,7 @@
 # with BigBlueButton; if not, see <http://www.gnu.org/licenses/>.
 
 #
-# Install script for setting up BigBlueButton 2.0 with SSL (via LetsEncrypt)
+# Install script for setting up BigBlueButton 2.0 with SSL (via Let's Encrypt)
 
 #
 #  Examples
@@ -54,7 +54,7 @@
 
 usage() {
     cat 1>&2 <<HERE
-BigBlueButon 2.0 installer script
+BigBlueButton 2.0 installer script
 
 USAGE:
     bbb-install.sh [OPTIONS]
@@ -89,7 +89,6 @@ HERE
 main() {
   export DEBIAN_FRONTEND=noninteractive
 
-  need_root
   need_mem
   need_ubuntu
   need_x64
@@ -288,6 +287,7 @@ get_IP() {
 }
 
 need_pkg() {
+  need_root
   if [ ! -f /var/cache/apt/pkgcache.bin ]; then apt-get update; fi
   if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
   if ! dpkg -s $1 > /dev/null 2>&1; then apt-get install -yq $1; fi
@@ -299,6 +299,7 @@ check_version() {
   if ! wget -qS --spider "https://ubuntu.bigbluebutton.org/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1."
   fi
+  need_root
   echo "deb https://ubuntu.bigbluebutton.org/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
