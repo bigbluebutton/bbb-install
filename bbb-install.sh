@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 # BlueButton open source conferencing system - http://www.bigbluebutton.org/
 #
@@ -154,6 +154,7 @@ main() {
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
   if [ ! -f /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list ]; then  # Use ffmpeg 4.0
+    need_pkg software-properties-common
     add-apt-repository ppa:jonathonf/ffmpeg-4 -y
   fi
 
@@ -168,7 +169,7 @@ main() {
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
 
-  apt-get update
+  need_apt-get-update
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc
   apt-get dist-upgrade -yq
 
@@ -251,12 +252,6 @@ get_IP() {
   fi
 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
-    # On some EC2 instanced apt-get has not be run, so we'll do it here in case we need nginx later in this script
-    if [ ! -f /var/tmp/bbb-install-apt-get ]; then
-      sudo apt-get update
-      touch /var/tmp/bbb-install-apt-get
-    fi
-
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -r /sys/firmware/dmi/tables/smbios_entry_point ] && which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
@@ -291,9 +286,21 @@ get_IP() {
   fi
 }
 
+need_apt-get-update() {
+  # On some EC2 instanced apt-get is not run, so we'll do it 
+  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
+    if [ ! -f /tmp/bbb-install-apt-get ]; then
+      sudo apt-get update
+      touch /tmp/bbb-install-apt-get
+    fi
+  elif [ ! -f /var/cache/apt/pkgcache.bin ]; then 
+    apt-get update 
+  fi
+}
+
 need_pkg() {
   need_root
-  if [ ! -f /var/cache/apt/pkgcache.bin ]; then apt-get update; fi
+  need_apt-get-update
   if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
   if ! dpkg -s $1 > /dev/null 2>&1; then apt-get install -yq $1; fi
 }
