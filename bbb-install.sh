@@ -259,7 +259,7 @@ get_IP() {
   else
     # Try and determine the external IP
     need_pkg dnsutils
-    local external_ip=$(dig +short myip.opendns.com @resolver1.opendns.com)
+    local external_ip=$(dig +short myip.opendns.com @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
   fi
 
   if [ ! -z "$external_ip" ] && [ "$ip" != "$external_ip" ]; then
