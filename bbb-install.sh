@@ -169,7 +169,7 @@ main() {
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
 
-  need_apt-get-update
+  apt-get update
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc
   apt-get dist-upgrade -yq
 
@@ -289,13 +289,11 @@ get_IP() {
 need_apt-get-update() {
   # On some EC2 instanced apt-get is not run, so we'll do it 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
-    if [ ! -f /tmp/bbb-install-apt-get ]; then
-      sudo apt-get update
-      touch /tmp/bbb-install-apt-get
-    fi
-  elif [ ! -f /var/cache/apt/pkgcache.bin ]; then 
+    apt-get update
+  elif [ ! -z "$ran_apt_get_update" ]; then 
     apt-get update 
   fi
+  ran_apt_get_update="true"
 }
 
 need_pkg() {
@@ -317,7 +315,7 @@ check_version() {
 
 check_host() {
   need_pkg dnsutils
-  DIG_IP=$(dig +short $1)
+  DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
   if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
   get_IP
   if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
