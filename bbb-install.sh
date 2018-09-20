@@ -480,7 +480,7 @@ install_greenlight(){
     docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx
     cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
-  return 307 /g;
+  return 307 /b;
 }
 HERE
     systemctl restart nginx
