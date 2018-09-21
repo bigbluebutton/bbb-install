@@ -290,7 +290,7 @@ need_apt-get-update() {
   # On some EC2 instanced apt-get is not run, so we'll do it 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
     apt-get update
-  elif [ ! -z "$ran_apt_get_update" ]; then 
+  elif [ -z "$ran_apt_get_update" ]; then 
     apt-get update 
   fi
   ran_apt_get_update="true"
