@@ -3,7 +3,9 @@
 
 # bbb-install
 
-`bbb-install.sh` is a shell script that automates the [installation steps](http://docs.bigbluebutton.org/2.0/20install.html#step-by-step-install) for [BigBlueButton 2.0](http://docs.bigbluebutton.org/2.0/20overview.html).  For example, with a single command you can to install a base installation of BigBlueButton 2.0:
+`bbb-install.sh` is a script that lets you [install](http://docs.bigbluebutton.org/install/install.html) [BigBlueButton 2.0](http://docs.bigbluebutton.org/overview/overview.html) in about 15 minutes (depending on the internet speed of your server).
+
+You can install BigBlueButton 2.0 with a single command and have it configured to listen to the server's external IP address:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
@@ -49,7 +51,7 @@ The full source code `bbb-install.sh` is here [github](https://github.com/bigblu
 
 Many companies, such as [Digital Ocean](https://www.digitalocean.com/), offer both virtual and bare metal servers that provide you with an Ubuntu 16.04 64-bit server with single public IP address and no firewall.  
 
-Other companies, such as [ScaleWay](https://www.scaleway.com/) and [Google Compute Engine](https://cloud.google.com/compute/) offer servers that are setup behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configures BigBlueButton accordingly.  
+Other companies, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/) offer servers that are setup behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configures BigBlueButton accordingly.  
 
 However, if your server is behind a firewall, such as on Amazon EC2 instance, you will need to manually configure the firewall (see steps below).  
 
