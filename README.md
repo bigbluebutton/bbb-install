@@ -252,18 +252,25 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 For all the commands given above, you can re-run the same command later to update your version of BigBlueButton 2.0 to the latest release.  We announce updates to BigBlueButton to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
 
 
-# Troubleshooting and Feedback
+# Next Steps
 
-## Green Light not running
+If you intend to use this server for production you should uninstall the API demos using the command
+
+~~~
+apt-get purge bbb-demo
+~~~
+
+## Troubleshooting
+
+### Green Light not running
 
 If on first install Green Light gives you a `500 error` when accessing it, you can [restart Green Light](http://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
 
+### Getting Help
 
-## Getting Help
+If you have feedback on the script, or need help using it, please post to the [BigBlueButton Setup](https://bigbluebutton.org/support/community/) mailing list with details of the issue (and include related information such as steps to reproduce the error).
 
-If you have feedback on the script, or need help using it, please post to the [BigBlueButton Setup](https://bigbluebutton.org/support/community/) mailing list with details of the issue (and include helpful information such as any error messages).
-
-If you encounter an error with this script, please open [GitHub issue](https://github.com/bigbluebutton/bbb-install/issues) and provide steps to reproduce the issue.
+If you encounter an error with the script (such as it not completing or throwing an error), please open [GitHub issue](https://github.com/bigbluebutton/bbb-install/issues) and provide steps to reproduce the issue.
 
 
 # Limitations
