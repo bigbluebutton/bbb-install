@@ -3,17 +3,20 @@
 
 # bbb-install
 
-`bbb-install.sh` is a script that lets you [install](http://docs.bigbluebutton.org/install/install.html) [BigBlueButton 2.0](http://docs.bigbluebutton.org/overview/overview.html) in about 15 minutes (depending on the internet speed of your server).
+`bbb-install.sh` is a shell script that lets you install [BigBlueButton 2.0](http://docs.bigbluebutton.org/overview/overview.html) with a single command.  
 
-You can install BigBlueButton 2.0 with a single command and have it configured to listen to the server's external IP address:
+`bbb-install.sh` automates the [installation steps](http://docs.bigbluebutton.org/install/install.html) for setting up BigBlueButton 2.0.  Depending on the 
+internet speed of your server, the command can finish in about 15 minutes.  
+
+For example, to install BigBlueButton 2.0 on a Ubuntu 16.04 64-bit server and configure BigBlueButton to listen to the server's external IP address:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 ~~~
 
-`bbb-install.sh` requires a Ubuntu 16.04 64-bit server that meets (or exceeds) BigBlueButton 2.0's [minimal requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements).  In addition, if your server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you need to configure the firewall to forward [specific ports](#configuring-the-firewall) to pass through to the internal BigBlueButton server. 
+If the server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will also need to configure the firewall to forward [specific connections](#configuring-the-firewall) to pass through to the internal BigBlueButton server for it to work.
 
-When the installation finishes, you'll see a message that gives you a URL to test the server.
+When the script finishes, you'll see a message that gives you a URL to test the server.
 
 ~~~
 # Warning: The API demos are installed and accessible from:
@@ -27,9 +30,15 @@ When the installation finishes, you'll see a message that gives you a URL to tes
 #    sudo apt-get purge bbb-demo
 ~~~
 
-In the base installation, the BigBlueButton server is configured to use the external IP address.  To test the server, use FireFox (it allows you to use web real-time connection (WebRTC) without a secure socket layer (SSL) certificate on the server -- and open the given URL.  You can then enter your name and click Join. 
+Open this URL using FireFox.  Why FireFox?  This server does not have a secure socket layer (SSL) certificate -- we're only accessing it via an IP address.  Fortunately, FireFox allows you to use web real-time connection (WebRTC) without an SSL certificate.
 
-While this base installation is good for testing and development, we strongly recommend you setup a SSL certificate on the server.  The sections below show how to do this `bbb-install.sh` (using a single command, of course).
+![bbb-install.sh](images/index.png?raw=true "Index Page")
+
+Enter your name and click Join.  BigBlueButton 2.0 should load and prompt you to join the audio.
+
+![bbb-install.sh](images/join-audio.png?raw=true "Join Audio")
+
+While the above setup is good for testing and development, we strongly recommend you setup a SSL certificate on the server.  The sections below show how to install and configure BigBlueButton with SSL certificate (using a single command, of course).
 
 
 ## Overview
