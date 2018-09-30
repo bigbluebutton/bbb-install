@@ -61,7 +61,7 @@ With a FQDN and DNS entry in place,  you can then use `bbb-install.sh` to instal
   * the latest build of the HTML5 client, and 
   * the Green Light front-end to enable users to create accounts and manage rooms.
 
-Also, with a SSL certificate in place, your users can use Chrome and Safari to share the share audio/video/screen using WebRTC.  
+When BigBlueButton is configured with an SSL certificate, the browsers Chrome and Safari will let users share their audio and video using WebRTC.  
 
 The full source code `bbb-install.sh` is [here](https://github.com/bigbluebutton/bbb-install).  To make it easy for anyone to run the script with a single command, we host the latest version of the script at `https://ubuntu.bigbluebutton.org/bbb-install.sh`.
 
