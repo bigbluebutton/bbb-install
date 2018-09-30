@@ -3,20 +3,21 @@
 
 # bbb-install
 
-`bbb-install.sh` is a shell script that lets you install [BigBlueButton 2.0](http://docs.bigbluebutton.org/overview/overview.html) with a single command.  
+`bbb-install.sh` is a BASH shell script that lets you install [BigBlueButton 2.0](http://docs.bigbluebutton.org/overview/overview.html) on an Ubuntu 16.04 64-bit server with a single command.  
 
-`bbb-install.sh` automates the [installation steps](http://docs.bigbluebutton.org/install/install.html) for setting up BigBlueButton 2.0.  Depending on the 
-internet speed of your server, the command can finish in about 15 minutes.  
-
-For example, to install BigBlueButton 2.0 on a Ubuntu 16.04 64-bit server and configure BigBlueButton to listen to the server's external IP address:
+For example, to install BigBlueButton 2.0 on a server, login to the server and run the following command as root:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 ~~~
 
-If the server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will also need to configure the firewall to forward [specific connections](#configuring-the-firewall) to pass through to the internal BigBlueButton server for it to work.
+This will download the `bbb-install.sh` script and execute it with the parameter `-v xenial-200`.  This parameter instructs it to install BigBlueButton 2.0 on a Xenial (Ubuntu 16.04) server.
 
-When the script finishes, you'll see a message that gives you a URL to test the server.
+The command should finish in about 15 minutes (depending on the speed of the server), after which you'll have BigBlueButton 2.0 installed and ready for testing.
+
+If the server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to configure the firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before users can access it.
+
+When the script finishes, you should see a message that gives you a URL to login and test BigBlueButton.
 
 ~~~
 # Warning: The API demos are installed and accessible from:
@@ -30,35 +31,48 @@ When the script finishes, you'll see a message that gives you a URL to test the 
 #    sudo apt-get purge bbb-demo
 ~~~
 
-Open this URL using FireFox.  Why FireFox?  This server does not have a secure socket layer (SSL) certificate -- we're only accessing it via an IP address.  Fortunately, FireFox allows you to use web real-time connection (WebRTC) without an SSL certificate.
+To test the server, open the URL using FireFox.  Why FireFox?  In this basic setup the server does not have a secure socket layer (SSL) certificate.  Fortunately, FireFox allows you to use web real-time connection (WebRTC) without an SSL certificate.
 
 ![bbb-install.sh](images/index.png?raw=true "Index Page")
 
-Enter your name and click Join.  BigBlueButton 2.0 should load and prompt you to join the audio.
+You should see the default welcome page.  Enter your name and click Join.  BigBlueButton 2.0 should then load and prompt you to join the audio.
 
 ![bbb-install.sh](images/join-audio.png?raw=true "Join Audio")
 
-While the above setup is good for testing and development, we strongly recommend you setup a SSL certificate on the server.  The sections below show how to install and configure BigBlueButton with SSL certificate (using a single command, of course).
+At this point you have a full BigBlueButton server ready to use. But, While this basic setup is good for testing and development, you'll really want to configure the server with a fully qualified domain name (FQDN) and a SSL certificate for better security.  
+
+The sections below show how to do this using `bbb-install.sh` and a few additional parameters.
 
 
 ## Overview
 
-The `bbb-install.sh` makes it easy to setup BigBlueButton 2.0 (and later) on a dedicated or virtual server that meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements).
+`bbb-install.sh` is a BASH shell script that automates the [step-by-step installation steps](http://docs.bigbluebutton.org/install/install.html) for installing and configuring BigBlueButton 2.0. 
 
-Before running `bbb-install.sh`, we (strongly) recommend you setup a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of the server.  With a FQDN in place, you can then use `bbb-install.sh` to install
+Of course, going through the step-by-step instructions is recommended if you want to understand what `bbb-install.sh` is doing.  But if you want to setup a production ready server with SSL certificate, `bbb-install.sh` can save you a lot of time.
+
+Before running the script, we strongly recommend you do two steps
+
+  * ensure the server meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements), and
+  * setup a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of your server.
+
+To setup the domain name, you need to use a domain name registry (DNS), such as [GoDaddy](https://godaddy.com) or [Network Solutions](https://networksolutions.com)  to create an `A Record` that points to the external IP address of your server.  Your DNS provider will provide lots of documentation on how to do this.
+
+With a FQDN and DNS entry in place,  you can then use `bbb-install.sh` to install
 
   * a 4096 bit secure socket layers (SSL) certificate from Let's Encrypt (we love Let's Encrypt), 
   * the latest build of the HTML5 client, and 
-  * the Green Light front-end for end-user access.
+  * the Green Light front-end to enable users to create accounts and manage rooms.
 
-With a SSL certificate in place, you can use FireFox, Chrome and Safari to share the share audio or video using web real-time communications (WebRTC).
+Also, with a SSL certificate in place, your users can use Chrome and Safari to share the share audio/video/screen using WebRTC.  
 
-The full source code `bbb-install.sh` is here [github](https://github.com/bigbluebutton/bbb-install).  To make it easy for anyone to run the script with a single command, we host the latest version of the script at `https://ubuntu.bigbluebutton.org/bbb-install.sh`.
+The full source code `bbb-install.sh` is [here](https://github.com/bigbluebutton/bbb-install).  To make it easy for anyone to run the script with a single command, we host the latest version of the script at `https://ubuntu.bigbluebutton.org/bbb-install.sh`.
 
 
 ### Server choices
 
-Many companies, such as [Digital Ocean](https://www.digitalocean.com/), offer both virtual and bare metal servers that provide you with an Ubuntu 16.04 64-bit server with single public IP address and no firewall.  
+There are many hosting companies that will provide you both virtual and dedicated servers.
+
+For example, [Digital Ocean](https://www.digitalocean.com/) offers both virtual and bare metal servers that provide you with an Ubuntu 16.04 64-bit server with single public IP address and no firewall. 
 
 Other companies, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/) offer servers that are setup behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configures BigBlueButton accordingly.  
 
@@ -202,6 +216,14 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 
 After a few minutes, you'll have the HTML5 client installed.  Use an Android (6.0+) or iOS (iOS 11+) mobile phone or tablet to access your BigBlueButton server.  BigBlueButton detects when you are connecting from a mobile browser and automatically load the HTML5 client.
 
+BigBlueButton will automatically launch the HTML5 client if the browser does not support Flash, such as when accessing the server using an iOS (iOS 11+) or Android (version 6.0+) phone or tablet.  Since `bbb-install.sh` installs the API demos, you can force the loading of the HTML5 client by opening the URL `https://<hostname>/demo/demoHTML5.jsp`, entering your name, and clicking Join.
+
+![bbb-install.sh](images/html5-join.png?raw=true "HTML5 Page")
+
+Enter your name and click Join.  The HTML5 client will then load and join you into Demo Meeting.
+
+![bbb-install.sh](images/html5.png?raw=true "HTML5 Client")
+
 
 ## Install Green Light
 
@@ -214,6 +236,10 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 ~~~
 
 Once GreenLight is installed, opening the hostname for the server, such as `https://bbb.example.com/`, automatically opens Green Light.  You can also configure GreenLight to use [OAuth2 authentication](http://docs.bigbluebutton.org/install/greenlight-v2.html#configuring-greenlight-20).
+
+To launch GreenLight, simply the URL of your server, such as https://bbb.example.com/.  You should see the GreenLight landing page.
+
+![bbb-install.sh](images/greenlight.png?raw=true "Green Light")
 
 ## Do everything with a single command
 
