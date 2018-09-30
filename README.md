@@ -3,17 +3,15 @@
 
 # bbb-install
 
-`bbb-install.sh` is a BASH shell script that lets you install [BigBlueButton 2.0](http://docs.bigbluebutton.org/overview/overview.html) on an Ubuntu 16.04 64-bit server with a single command.  
+`bbb-install.sh` is a BASH shell script that lets you install [BigBlueButton 2.0](http://docs.bigbluebutton.org/overview/overview.html) with a single command in about 15 minutes.
 
-For example, to install BigBlueButton 2.0 on a server, login to the server and run the following command as root:
+For example, to install BigBlueButton 2.0 on an Ubuntu 16.04 64-bit server, login to the server and run the following command as root:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 ~~~
 
-This will download the `bbb-install.sh` script and execute it with the parameter `-v xenial-200`.  This parameter instructs it to install BigBlueButton 2.0 on a Xenial (Ubuntu 16.04) server.
-
-The command should finish in about 15 minutes (depending on the speed of the server), after which you'll have BigBlueButton 2.0 installed and ready for testing.
+This will download the `bbb-install.sh` script and execute it with the parameter `-v xenial-200`.  
 
 If the server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to configure the firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before users can access it.
 
