@@ -170,7 +170,7 @@ main() {
   fi
 
   apt-get update
-  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc
+  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
   apt-get dist-upgrade -yq
 
   need_pkg curl
