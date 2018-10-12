@@ -636,8 +636,8 @@ HERE
 
   if [ ! -f /etc/cron.d/renew-letsencrypt ]; then
     cat <<HERE > /etc/cron.d/renew-letsencrypt
-30 2 * * 1 /usr/bin/letsencrypt renew >> /var/log/letsencrypt-renew.log
-35 2 * * 1 /bin/systemctl reload nginx
+30 2 * * 1 root /usr/bin/letsencrypt renew >> /var/log/letsencrypt-renew.log
+35 2 * * 1 root /bin/systemctl reload nginx
 HERE
   fi
 
