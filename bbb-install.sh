@@ -54,30 +54,43 @@
 
 usage() {
     cat 1>&2 <<HERE
-BigBlueButton 2.0 installer script
+Installer script for setting up a BigBlueButton 2.0 server.  Also supports installation of 
+coturn (TURN) on a separate server and configuring BigBlueButton to use the TURN server.
 
 USAGE:
     bbb-install.sh [OPTIONS]
 
-OPTIONS:
+OPTIONS (install BigBlueButton):
 
-  -v <version>     Install given version of BigBlueButton (e.g. 'xenial-200') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-200') (required)
 
-  -s <hostname>    Configure server with <hostname>
-  -e <email>       Install SSL certificate from Let's Encrypt using <email>
+  -s <hostname>          Configure server with <hostname>
+  -e <email>             E-mail for Let's Encrypt certbot
+  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
-  -t               Install HTML5 client (currently under development)
-  -g               Install GreenLight
+  -t                     Install HTML5 client (currently under development)
+  -g                     Install GreenLight
 
-  -p <host>        Use apt-get proxy at <host>
+  -p <host>              Use apt-get proxy at <host>
 
-  -h               Print help
+  -h                     Print help
 
-EXAMPLES:
+OPTIONS (install coturn):
+
+  -c <hostname>:<secret> Configure coturn with <hostname> and <secret> (required)
+  -e <email>             E-mail for Let's Encrypt certbot (required)
+
+EXAMPLES
+
+Setup a BigBlueButton server
 
     ./bbb-install.sh -v xenial-200
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
+
+Setup a coturn server
+
+    ./bbb-install.sh -c turn.example.com:1234324 -e info@example.com
 
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
@@ -89,12 +102,9 @@ HERE
 main() {
   export DEBIAN_FRONTEND=noninteractive
 
-  need_mem
-  need_ubuntu
   need_x64
-  check_apache2
 
-  while builtin getopts "hs:v:e:p:gt" opt "${@}"; do
+  while builtin getopts "hs:c:v:e:p:gt" opt "${@}"; do
     case $opt in
       h)
         usage
@@ -104,6 +114,10 @@ main() {
       s)
         HOST=$OPTARG
         check_host $HOST
+        ;;
+      c)
+        COTURN=$OPTARG
+        check_coturn $COTURN
         ;;
       v)
         VERSION=$OPTARG
@@ -135,10 +149,24 @@ main() {
     esac
   done
 
+  # Check if we're installing coturn
+  if [ -z "$VERSION" ] && [ ! -z $COTURN ]; then
+    if [ -z $EMAIL ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
+    need_ubuntu 18.04
+
+    install_coturn
+    exit 0
+  fi
+
   if [ -z "$VERSION" ]; then
     usage
     exit 0
   fi
+
+  # We're installing BigBlueButton
+  need_ubuntu 16.04
+  need_mem
+  check_apache2
 
   if [ ! -z "$GREENLIGHT" ]; then
     if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -g option requires both the -s and -e options"; fi
@@ -198,6 +226,10 @@ main() {
     install_greenlight
   fi
 
+  if [ ! -z "$COTURN" ]; then
+    configure_coturn
+  fi
+
   apt-get auto-remove -y
 
   if [ ! -z "$HOST" ]; then
@@ -230,7 +262,7 @@ need_mem() {
 
 need_ubuntu(){
   RELEASE=$(lsb_release -r | sed 's/^[^0-9]*//g')
-  if [ "$RELEASE" != "16.04" ]; then err "You must run this command on Ubuntu 16.04 server."; fi
+  if [ "$RELEASE" != $1 ]; then err "You must run this command on Ubuntu $1 server."; fi
 }
 
 need_x64() {
@@ -245,12 +277,14 @@ change_yml_value () {
 get_IP() {
   if [ ! -z "$IP" ]; then return 0; fi
 
+  # Determine local IP
   if LANG=c ifconfig | grep -q 'venet0:0'; then
     IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
   else
-    IP=$(echo "$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^et.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^en.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^wl.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^bo.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^em.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')$(LANG=c ifconfig  | awk -v RS="" '{gsub (/\n[ ]*inet /," ")}1' | grep ^p.p.* | grep addr: | head -n1 | sed 's/.*addr://g' | sed 's/ .*//g')"  | head -n1)
+    IP=$(hostname -I | cut -f1 -d' ')
   fi
 
+  # Determine external IP 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -r /sys/firmware/dmi/tables/smbios_entry_point ] && which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
@@ -262,7 +296,8 @@ get_IP() {
     local external_ip=$(dig +short myip.opendns.com @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
   fi
 
-  if [ ! -z "$external_ip" ] && [ "$ip" != "$external_ip" ]; then
+  # Check if the external IP reaches the internal IP
+  if [ ! -z "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
     need_pkg nginx
 
     if [ -L /etc/nginx/sites-enabled/bigbluebutton ]; then
@@ -319,6 +354,19 @@ check_host() {
   if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
   get_IP
   if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
+}
+
+check_coturn() {
+  if ! echo $1 | grep -q ':'; then err "Option for coturn must be <hostname>:<secret>"; fi
+  COTURN_HOST=$(echo $OPTARG | cut -d':' -f1)
+  COTURN_SECRET=$(echo $OPTARG | cut -d':' -f2)
+
+  if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
+  if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
+
+  need_pkg dnsutils
+  DIG_IP=$(dig +short $COTURN_HOST | grep '^[.0-9]*$' | tail -n1)
+  if [ -z "$DIG_IP" ]; then err "Unable to resolve $COTURN_HOST to an external IP address using DNS lookup."; fi
 }
 
 check_apache2() {
@@ -680,5 +728,150 @@ HERE
   fi
 }
 
+configure_coturn() {
+  cat <<HERE > /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/spring/turn-stun-servers.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+    <bean id="stun0" class="org.bigbluebutton.web.services.turn.StunServer">
+        <constructor-arg index="0" value="stun:$COTURN_HOST"/>
+    </bean>
+
+
+    <bean id="turn0" class="org.bigbluebutton.web.services.turn.TurnServer">
+        <constructor-arg index="0" value="$COTURN_SECRET"/>
+        <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
+        <constructor-arg index="2" value="86400"/>
+    </bean>
+
+    <bean id="stunTurnService"
+            class="org.bigbluebutton.web.services.turn.StunTurnService">
+        <property name="stunServers">
+            <set>
+                <ref bean="stun0"/>
+            </set>
+        </property>
+        <property name="turnServers">
+            <set>
+                <ref bean="turn0"/>
+            </set>
+        </property>
+    </bean>
+</beans>
+HERE
+}
+
+install_coturn() {
+  IP=$(hostname -I | cut -f1 -d' ')
+  if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $COTURN_HOST resolved to $DIG_IP but didn't match local IP of $IP."; fi
+
+  apt-get update
+  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
+  apt-get dist-upgrade -yq
+  need_pkg coturn
+
+  need_pkg software-properties-common 
+  add-apt-repository ppa:certbot/certbot -y
+  apt-get -y install certbot
+
+  certbot certonly --standalone --preferred-challenges http \
+    --deploy-hook "systemctl restart coturn" \
+    -d $COTURN_HOST --email $EMAIL --agree-tos -n
+
+  cat <<HERE > /etc/turnserver.conf
+# Example coturn configuration for BigBlueButton
+
+# These are the two network ports used by the TURN server which the client
+# may connect to. We enable the standard unencrypted port 3478 for STUN,
+# as well as port 443 for TURN over TLS, which can bypass firewalls.
+listening-port=3478
+tls-listening-port=443
+
+# If the server has multiple IP addresses, you may wish to limit which
+# addresses coturn is using. Do that by setting this option (it can be
+# specified multiple times). The default is to listen on all addresses.
+# You do not normally need to set this option.
+#listening-ip=172.17.19.101
+
+# If the server is behind NAT, you need to specify the external IP address.
+# If there is only one external address, specify it like this:
+#external-ip=172.17.19.120
+# If you have multiple external addresses, you have to specify which
+# internal address each corresponds to, like this. The first address is the
+# external ip, and the second address is the corresponding internal IP.
+#external-ip=172.17.19.131/10.0.0.11
+#external-ip=172.17.18.132/10.0.0.12
+
+# Fingerprints in TURN messages are required for WebRTC
+fingerprint
+
+# The long-term credential mechanism is required for WebRTC
+lt-cred-mech
+
+# Configure coturn to use the "TURN REST API" method for validating time-
+# limited credentials. BigBlueButton will generate credentials in this
+# format. Note that the static-auth-secret value specified here must match
+# the configuration in BigBlueButton's turn-stun-servers.xml
+# You can generate a new random value by running the command:
+#   openssl rand -hex 16
+use-auth-secret
+static-auth-secret=$COTURN_SECRET
+
+# If the realm value is unspecified, it defaults to the TURN server hostname.
+# You probably want to configure it to a domain name that you control to
+# improve log output. There is no functional impact.
+# realm=example.com
+
+# Configure TLS support.
+# Adjust these paths to match the locations of your certificate files
+cert=/etc/letsencrypt/live/$COTURN_HOST/fullchain.pem
+pkey=/etc/letsencrypt/live/$COTURN_HOST/privkey.pem
+
+# Limit the allowed ciphers to improve security
+# Based on https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+cipher-list="ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS"
+
+# Enable longer DH TLS key to improve security
+dh2066
+
+# All WebRTC-compatible web browsers support TLS 1.2 or later, so disable
+# older protocols
+no-tlsv1
+no-tlsv1_1
+
+# Log to a single filename (rather than new log files each startup). You'll
+# want to install a logrotate configuration (see below)
+log-file=/var/log/coturn.log
+HERE
+
+  cat <<HERE > /etc/logrotate.d/coturn
+/var/log/coturn.log
+{
+    rotate 30
+    daily
+    missingok
+    notifempty
+    delaycompress
+    compress
+    postrotate
+    systemctl kill -sHUP coturn.service
+    endscript
+}
+HERE
+
+  sed -i 's/#TURNSERVER_ENABLED=1/TURNSERVER_ENABLED=1/g' /etc/default/coturn
+  systemctl restart coturn
+
+  cat 1>&2 <<HERE
+
+This TURN server is setup and ready for use with BigBlueButton.  On your BigBlueButton server run the bbb-install.sh command again with the original parameters and add 
+
+  -c $COTURN_HOST:$COTURN_SECRET
+
+HERE
+}
 
 main "$@" || exit 1
