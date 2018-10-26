@@ -37,7 +37,7 @@ You should see the default welcome page.  Enter your name and click Join.  BigBl
 
 ![bbb-install.sh](images/join-audio.png?raw=true "Join Audio")
 
-At this point you have a full BigBlueButton server ready to use. But, While this basic setup is good for testing and development, you'll really want to configure the server with a fully qualified domain name (FQDN) and a SSL certificate for better security.  
+At this point you have a full BigBlueButton server ready to use.  While this basic setup is good for testing and development, you'll really want to configure the server with a fully qualified domain name (FQDN) and a SSL certificate for better security.  If you have users who may be behind a firewall, you may also want to setup a separate TURN server to help them connect to your BigBlueButton server.
 
 The sections below show how to do this using `bbb-install.sh` and a few additional parameters.
 
@@ -106,34 +106,47 @@ You can get help by passing the `-h` option.
 
 ~~~
 $ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -h
-BigBlueButton 2.0 installer script
+Installer script for setting up a BigBlueButton 2.0 server.  Also supports installation of
+coturn (TURN) on a separate server and configuring BigBlueButton to use the TURN server.
 
 USAGE:
     bbb-install.sh [OPTIONS]
 
-OPTIONS:
+OPTIONS (install BigBlueButton):
 
-  -v <version>     Install given version of BigBlueButton (e.g. 'xenial-200') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-200') (required)
 
-  -s <hostname>    Configure server with <hostname>
-  -e <email>       Install SSL certificate from Let's Encrypt using <email>
+  -s <hostname>          Configure server with <hostname>
+  -e <email>             E-mail for Let's Encrypt certbot
+  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
-  -t               Install HTML5 client (currently under development)
-  -g               Install Green Light
+  -t                     Install HTML5 client (currently under development)
+  -g                     Install GreenLight
 
-  -p <host>        Use apt-get proxy at <host>
+  -p <host>              Use apt-get proxy at <host>
 
-  -h               Print help
+  -h                     Print help
 
-EXAMPLES:
+OPTIONS (install coturn):
+
+  -c <hostname>:<secret> Configure coturn with <hostname> and <secret> (required)
+  -e <email>             E-mail for Let's Encrypt certbot (required)
+
+EXAMPLES
+
+Setup a BigBlueButton server
 
     ./bbb-install.sh -v xenial-200
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
 
+Setup a coturn server
+
+    ./bbb-install.sh -c turn.example.com:1234324 -e info@example.com
+
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
-   Community: https://bigbluebutton.org/support
+   Commnity: https://bigbluebutton.org/support
 ~~~
 
 ## Install and configure with an IP address (no SSL)
@@ -290,7 +303,7 @@ With the TURN server in place, you can configure your BigBlueButton server to us
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234abcd
 ~~~
 
-Youc an re-use the same TURN server for multiple BigBlueButton server installations.
+You can re-use a single TURN server for multiple BigBlueButton installations.
 
 # Next Steps
 
