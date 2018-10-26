@@ -250,6 +250,48 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 For all the commands given above, you can re-run the same command later to update your version of BigBlueButton 2.0 to the latest release.  We announce updates to BigBlueButton to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
 
 
+# Install a TURN server
+
+Note: This step is optional, but recommended if your BigBlueButton server is publically available on the internet and will be accessed by users who may be behind restrictive firewalls.
+
+BigBlueButton normally requires a wide range of UDP ports to be available for WebRTC communication. In some network restricted sites or development environments, such as those behind NAT or a firewall that restricts outgoing UDP connections, users may be unable to make outgoing UDP connections to your BigBlueButton server.  
+
+The TURN protocol is designed to allow UDP-based communication flows like WebRTC to bypass NAT or firewalls by having the client connect to the TURN server, and then have the TURN server connect to the destination on their behalf.
+
+You can use `bbb-install.sh` to automate the steps to [setup a TURN server for BigBlueButton](http://docs.bigbluebutton.org/install/install.html#setup-a-turn-server).  You need a separate server (not the BigBlueButton server) to setup, specifically 
+
+  * a Ubuntu 18.04 server with a public IP address
+
+We recommend Ubuntu 18.04 as it has a later version of [coturn](https://github.com/coturn/coturn).  This TURN server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core CPU server is sufficent.  A low-end server on Digital Ocean, which offers servers with public IP addresses, is a good choce.
+
+Next, to configure the TURN server you need:
+  
+  * a fully qualified domain name (FQDN) with a DNS entry that resolves to the external public IP address of the TURN server, 
+  * a e-mail addres for Let's Encrypt, and
+  * a secret key (it can be 8 to 16 character random string that you create).
+
+With the above information, you can setup a TURN server for BigBlueButton using the command:
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c <FQDN>:<SECRET> -e <EMAIL>
+~~~
+
+For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email addres, you can setup a TURN server for BigBlueButton using the command
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.example.com:1234abcd -e info@example.com
+~~~
+
+`bbb-install.sh` will use Let's Encrypt to configure coturn to use a SSL certificate.  This will enable the BigBlueButton client to attempt access the BigBlueButton server using the TURN server on port 443 via TCP/IP.
+
+With the TURN server in place, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and adding the same `-c <FQDN>:<SECRET>`.  For example, 
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234abcd
+~~~
+
+Youc an re-use the same TURN server for multiple BigBlueButton server installations.
+
 # Next Steps
 
 If you intend to use this server for production you should uninstall the API demos using the command
