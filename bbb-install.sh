@@ -181,17 +181,8 @@ main() {
   install_bigbluebutton_apt-get-key
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
-  if [ ! -f /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list ]; then  # Use ffmpeg 4.0
-    need_pkg software-properties-common
-    add-apt-repository ppa:jonathonf/ffmpeg-4 -y
-  fi
-
-  if ! apt-key list F06FC659 | grep -q F06FC659; then
-    add-apt-repository ppa:jonathonf/ffmpeg-4 -y
-    if ! apt-key list F06FC659 | grep -q F06FC659; then
-      err "Unable to download apt-get key for ffmpeg 4.0"
-    fi
-  fi
+  need_ppa jonathonf-ubuntu-ffmpeg-4-xenial.list ppa:jonathonf/ffmpeg-4 F06FC659	# Latest version of ffmpeg
+  need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq CC86BB64			# Edit yaml files with yq
 
   if [ ! -z "$PROXY" ]; then
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
@@ -204,6 +195,7 @@ main() {
   need_pkg curl
   need_pkg haveged
   need_pkg build-essential
+  need_pkg yq
 
   need_pkg bigbluebutton
   while [ ! -f /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; echo -n '.'; done
@@ -270,10 +262,6 @@ need_x64() {
   if [ "$UNAME" != "x86_64" ]; then err "You must run this command on a 64-bit server."; fi
 }
 
-change_yml_value () {
-  sed -i "s<^\([[:blank:]#]*\)\(${2}\): .*<\1\2: ${3}<" $1
-}
-
 get_IP() {
   if [ ! -z "$IP" ]; then return 0; fi
 
@@ -336,6 +324,19 @@ need_pkg() {
   need_apt-get-update
   if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
   if ! dpkg -s $1 > /dev/null 2>&1; then apt-get install -yq $1; fi
+}
+
+need_ppa() {
+  need_pkg software-properties-common
+  if [ ! -f /etc/apt/sources.list.d/$1 ]; then
+    add-apt-repository $2 -y
+    if ! apt-key list $3 | grep -q $3; then
+      add-apt-repository $2 -y
+      if ! apt-key list $3 | grep -q $3; then
+        err "Unable to setup PPA for $2"
+      fi
+    fi
+  fi
 }
 
 check_version() {
@@ -467,7 +468,7 @@ install_HTML5() {
   need_pkg nodejs
   need_pkg bbb-html5
   apt-get install -yq bbb-webrtc-sfu
-  apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0 > /dev/null  # Remove older packages
+  apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0 > /dev/null 2>&1  # Remove older packages
 
   if [ ! -z "$INTERNAL_IP" ]; then
    sed -i 's/.*stunServerAddress.*/stunServerAddress=64.233.177.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
@@ -702,7 +703,7 @@ HERE
 
   sed -i 's|http://|https://|g' /var/www/bigbluebutton/client/conf/config.xml
 
-  sed -i 's/playback_protocol: http$/playback_protocol: https/g' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
+  yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
 
   if [ -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; then
     sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp
@@ -723,8 +724,13 @@ HERE
       /usr/share/meteor/bundle/programs/server/assets/app/config/settings-production.json
   fi
 
-  if [ -f /usr/local/bigbluebutton/bbb-webrtc-sfu/config/default.yml ]; then
-    change_yml_value /usr/local/bigbluebutton/bbb-webrtc-sfu/config/default.yml ip $IP
+  TARGET=/usr/local/bigbluebutton/bbb-webrtc-sfu/config/default.yml
+  if [ -f $TARGET ]; then
+    if grep -q kurentoIp $TARGET; then
+      yq w -i $TARGET kurentoIp "$IP"
+    else
+      yq w -i $TARGET kurento[0].ip "$IP"
+    fi
   fi
 }
 
@@ -774,7 +780,7 @@ install_coturn() {
   need_pkg coturn
 
   need_pkg software-properties-common 
-  add-apt-repository ppa:certbot/certbot -y
+  need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694
   apt-get -y install certbot
 
   certbot certonly --standalone --preferred-challenges http \
