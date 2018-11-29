@@ -704,6 +704,7 @@ HERE
   sed -i 's|http://|https://|g' /var/www/bigbluebutton/client/conf/config.xml
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
+  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
 
   if [ -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; then
     sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp
@@ -731,6 +732,8 @@ HERE
     else
       yq w -i $TARGET kurento[0].ip "$IP"
     fi
+    chown bigbluebutton:bigbluebutton $TARGET
+    chmod 644 $TARGET
   fi
 }
 
