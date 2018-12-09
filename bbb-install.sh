@@ -281,7 +281,7 @@ get_IP() {
   else
     # Try and determine the external IP
     need_pkg dnsutils
-    local external_ip=$(dig +short myip.opendns.com @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
+    local external_ip=$(dig +short $HOST @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
   fi
 
   # Check if the external IP reaches the internal IP
@@ -463,6 +463,10 @@ install_HTML5() {
 
   if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
     curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+  fi
+
+  if ! apt-cache madison nodejs | grep -q node_8; then
+    err "Did not detect nodejs 8.x candidate for installation"
   fi
 
   need_pkg nodejs
