@@ -106,8 +106,9 @@ You can get help by passing the `-h` option.
 
 ~~~
 $ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -h
-Installer script for setting up a BigBlueButton 2.0 server.  Also supports installation of
-coturn (TURN) on a separate server and configuring BigBlueButton to use the TURN server.
+Installer script for setting up a BigBlueButton 2.0 server.
+
+This script also supports installation of a separate coturn (TURN) server on a separate server.
 
 USAGE:
     bbb-install.sh [OPTIONS]
@@ -117,7 +118,7 @@ OPTIONS (install BigBlueButton):
   -v <version>           Install given version of BigBlueButton (e.g. 'xenial-200') (required)
 
   -s <hostname>          Configure server with <hostname>
-  -e <email>             E-mail for Let's Encrypt certbot
+  -e <email>             Email for Let's Encrypt certbot
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
   -t                     Install HTML5 client (currently under development)
@@ -132,6 +133,7 @@ OPTIONS (install coturn):
   -c <hostname>:<secret> Configure coturn with <hostname> and <secret> (required)
   -e <email>             E-mail for Let's Encrypt certbot (required)
 
+
 EXAMPLES
 
 Setup a BigBlueButton server
@@ -139,6 +141,7 @@ Setup a BigBlueButton server
     ./bbb-install.sh -v xenial-200
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
+    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234324
 
 Setup a coturn server
 
@@ -147,6 +150,7 @@ Setup a coturn server
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
    Commnity: https://bigbluebutton.org/support
+
 ~~~
 
 ## Install and configure with an IP address (no SSL)

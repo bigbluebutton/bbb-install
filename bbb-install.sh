@@ -1,7 +1,5 @@
 #!/bin/bash -ex
 
-# BlueButton open source conferencing system - http://www.bigbluebutton.org/
-#
 # Copyright (c) 2018 BigBlueButton Inc.
 #
 # This program is free software; you can redistribute it and/or modify it under the
@@ -16,18 +14,22 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with BigBlueButton; if not, see <http://www.gnu.org/licenses/>.
 
+# BlueButton is an open source conferencing system.  For more informaiton see
+#    http://www.bigbluebutton.org/.
 #
-# Install script for setting up BigBlueButton 2.0 with SSL (via Let's Encrypt)
-
+# This bbb-install.sh scrip automates many of the instrallation and configuration
+# steps at
+#    http://docs.bigbluebutton.org/install/install.html
+#
 #
 #  Examples
 #
-#  Install BigBlueButton using server's external IP address
+#  Install BigBlueButton and configure using server's external IP address
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200
 #
 #
-#  Install BigBlueButton using hostname bbb.example.com
+#  Install BigBlueButton and configure using hostname bbb.example.com
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com
 #
@@ -54,8 +56,9 @@
 
 usage() {
     cat 1>&2 <<HERE
-Installer script for setting up a BigBlueButton 2.0 server.  Also supports installation of 
-coturn (TURN) on a separate server and configuring BigBlueButton to use the TURN server.
+Installer script for setting up a BigBlueButton 2.0 server.  
+
+This script also supports installation of a separate coturn (TURN) server on a separate server.
 
 USAGE:
     bbb-install.sh [OPTIONS]
@@ -65,7 +68,7 @@ OPTIONS (install BigBlueButton):
   -v <version>           Install given version of BigBlueButton (e.g. 'xenial-200') (required)
 
   -s <hostname>          Configure server with <hostname>
-  -e <email>             E-mail for Let's Encrypt certbot
+  -e <email>             Email for Let's Encrypt certbot
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
   -t                     Install HTML5 client (currently under development)
@@ -80,6 +83,7 @@ OPTIONS (install coturn):
   -c <hostname>:<secret> Configure coturn with <hostname> and <secret> (required)
   -e <email>             E-mail for Let's Encrypt certbot (required)
 
+
 EXAMPLES
 
 Setup a BigBlueButton server
@@ -87,6 +91,7 @@ Setup a BigBlueButton server
     ./bbb-install.sh -v xenial-200
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
     ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
+    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234324
 
 Setup a coturn server
 
@@ -113,6 +118,9 @@ main() {
 
       s)
         HOST=$OPTARG
+        if [ "$HOST" == "bbb.example.com" ]; then 
+          err "You must specify a valid hostname (not the hostname given in the docs)."
+        fi
         check_host $HOST
         ;;
       c)
@@ -125,6 +133,10 @@ main() {
         ;;
       e)
         EMAIL=$OPTARG
+        if [ "$EMAIL" == "info@example.com" ]; then 
+          err "You must specify a valid email address (not the email in the docs)."
+
+        fi
         ;;
       p)
         PROXY=$OPTARG
@@ -149,7 +161,7 @@ main() {
     esac
   done
 
-  # Check if we're installing coturn
+  # Check if we're installing coturn (need an e-mail address for Let's Encerypt)
   if [ -z "$VERSION" ] && [ ! -z $COTURN ]; then
     if [ -z $EMAIL ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
     need_ubuntu 18.04
@@ -364,6 +376,13 @@ check_coturn() {
 
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
   if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
+
+  if [ "$COTURN_HOST" == "turn.example.com" ]; then 
+    err "You must specify a valid hostname (not the one given in the docs"
+  fi
+  if [ "$COTURN_SECRET" == "1234abcd" ]; then 
+    err "You must specify a new password (not the one given in the docs as an example)."
+  fi
 
   need_pkg dnsutils
   DIG_IP=$(dig +short $COTURN_HOST | grep '^[.0-9]*$' | tail -n1)
@@ -687,12 +706,18 @@ server {
 }
 HERE
 
-  if [ ! -f /etc/cron.d/renew-letsencrypt ]; then
-    cat <<HERE > /etc/cron.d/renew-letsencrypt
-30 2 * * 1 root /usr/bin/letsencrypt renew >> /var/log/letsencrypt-renew.log
-35 2 * * 1 root /bin/systemctl reload nginx
+  if [ -f /etc/cron.d/renew-letsencrypt ]; then 
+    rm /etc/cron.d/renew-letsencrypt
+  fi
+
+  if [ ! -f /etc/cron.daily/renew-letsencrypt ]; then
+    cat <<HERE > /etc/cron.daily/renew-letsencrypt
+#!/bin/bash
+/usr/bin/letsencrypt renew >> /var/log/letsencrypt-renew.log
+/bin/systemctl reload nginx
 HERE
   fi
+  chmod 644 /etc/cron.daily/renew-letsencrypt
 
   # Setup rest of BigBlueButton Configuration for SSL
   sed -i "s/<param name=\"wss-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
