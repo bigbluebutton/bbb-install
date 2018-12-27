@@ -815,7 +815,7 @@ install_coturn() {
   need_pkg coturn
 
   need_pkg software-properties-common 
-  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694
+  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 7BF5
   apt-get -y install certbot
 
   certbot certonly --standalone --preferred-challenges http \
