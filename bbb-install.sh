@@ -299,6 +299,9 @@ get_IP() {
   # Check if the external IP reaches the internal IP
   if [ ! -z "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
     need_pkg nginx
+    if [ ! -L /etc/nginx/sites-enabled/default ]; then
+      err "The default symbolic link for nginx does not exist."
+    fi
 
     if [ -L /etc/nginx/sites-enabled/bigbluebutton ]; then
       rm -f /etc/nginx/sites-enabled/bigbluebutton
