@@ -190,11 +190,10 @@ main() {
   get_IP
   if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
 
-  install_bigbluebutton_apt-get-key
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
-  need_ppa jonathonf-ubuntu-ffmpeg-4-xenial.list ppa:jonathonf/ffmpeg-4 F06FC659	# Latest version of ffmpeg
-  need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq CC86BB64			# Edit yaml files with yq
+  need_ppa jonathonf-ubuntu-ffmpeg-4-xenial.list ppa:jonathonf/ffmpeg-4 F06FC659 F06FC659	# Latest version of ffmpeg
+  need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq CC86BB64 CC86BB64			# Edit yaml files with yq
 
   if [ ! -z "$PROXY" ]; then
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
@@ -345,11 +344,11 @@ need_ppa() {
   need_pkg software-properties-common
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
     add-apt-repository $2 -y
-    if ! apt-key list $3 | grep -q $3; then
-      add-apt-repository $2 -y
-      if ! apt-key list $3 | grep -q $3; then
-        err "Unable to setup PPA for $2"
-      fi
+  fi
+  if ! apt-key list $3 | grep -q $4; then
+    add-apt-repository $2 -y
+    if ! apt-key list $3 | grep -q $4; then
+      err "Unable to setup PPA for $2"
     fi
   fi
 }
@@ -361,6 +360,10 @@ check_version() {
     err "Unable to locate packages for $1."
   fi
   need_root
+  need_pkg apt-transport-https
+  if ! apt-key list | grep -q BigBlueButton; then
+    wget https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc -O- | apt-key add -
+  fi
   echo "deb https://ubuntu.bigbluebutton.org/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
@@ -395,14 +398,6 @@ check_coturn() {
 check_apache2() {
   if dpkg -l | grep -q apache2; then err "You must unisntall apache2 first"; fi
 }
-
-install_bigbluebutton_apt-get-key() {
- need_pkg apt-transport-https
- if ! apt-key list | grep -q BigBlueButton; then
-    wget https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc -O- | apt-key add -
-  fi
-}
-
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
 check_lxc() {
@@ -815,7 +810,7 @@ install_coturn() {
   need_pkg coturn
 
   need_pkg software-properties-common 
-  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 7BF5
+  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
   apt-get -y install certbot
 
   certbot certonly --standalone --preferred-challenges http \
