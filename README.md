@@ -5,7 +5,7 @@
 
 `bbb-install.sh` is a BASH shell script that lets you install [BigBlueButton 2.0](http://docs.bigbluebutton.org/overview/overview.html) with a single command in about 15 minutes.
 
-For example, to install BigBlueButton 2.0 on an Ubuntu 16.04 64-bit server, login to the server and run the following command as root:
+For example, to install BigBlueButton 2.0 on an Ubuntu 16.04 64-bit server, login to the server as root and run the following command:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
@@ -13,9 +13,9 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 
 This will download the `bbb-install.sh` script and execute it with the parameter `-v xenial-200`.  
 
-If the server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to configure the firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before users can access it.
+If your server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to configure the firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before users can access it.
 
-When the script finishes, you should see a message that gives you a URL to login and test BigBlueButton.
+When the script finishes you should see a message that gives a URL to login and test your newly created BigBlueButton server.
 
 ~~~
 # Warning: The API demos are installed and accessible from:
@@ -29,15 +29,17 @@ When the script finishes, you should see a message that gives you a URL to login
 #    sudo apt-get purge bbb-demo
 ~~~
 
-To test the server, open the URL using FireFox.  Why FireFox?  In this basic setup the server does not have a secure socket layer (SSL) certificate.  Fortunately, FireFox allows you to use web real-time connection (WebRTC) without an SSL certificate.
+To test the server, open the URL using FireFox.  Why FireFox?  In this basic setup, the server does not have a configured secure socket layer (SSL) certificate for nginx.  Fortunately, FireFox allows you to use web real-time connection (WebRTC) without an SSL certificate.
+
+You shoud see a login to join the meeting `Demo Meeting`.
 
 ![bbb-install.sh](images/index.png?raw=true "Index Page")
 
-You should see the default welcome page.  Enter your name and click Join.  BigBlueButton 2.0 should then load and prompt you to join the audio.
+Enter your name and click Join.  BigBlueButton 2.0 should then load and prompt you to join the audio.
 
 ![bbb-install.sh](images/join-audio.png?raw=true "Join Audio")
 
-At this point you have a full BigBlueButton server ready to use.  While this basic setup is good for testing and development, you'll really want to configure the server with a fully qualified domain name (FQDN) and a SSL certificate for better security.  If you have users who may be behind a firewall, you may also want to setup a separate TURN server to help them connect to your BigBlueButton server.
+At this point you have a full BigBlueButton server ready to use.  While this setup is good for testing and development, you'll really want to configure the server with a fully qualified domain name (FQDN) and a SSL certificate for better security.  If you have users who may be behind a firewall, you may also want to setup a separate TURN server to help them connect to your BigBlueButton server.
 
 The sections below show how to do this using `bbb-install.sh` and a few additional parameters.
 

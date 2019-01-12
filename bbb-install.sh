@@ -241,6 +241,12 @@ main() {
     bbb-conf --setip $IP
   fi
 
+  if systemctl status freeswitch.service | grep -q SETSCHEDULER; then
+    sed -i "s/^CPUSchedulingPolicy=rr/#CPUSchedulingPolicy=rr/g" /lib/systemd/system/freeswitch.service
+    systemctl daemon-reload
+    systemctl restart freeswitch
+  fi
+
   bbb-conf --check
 }
 
@@ -420,6 +426,17 @@ WorkingDirectory=/opt/freeswitch
 User=freeswitch
 Group=daemon
 
+LimitCORE=infinity
+LimitNOFILE=100000
+LimitNPROC=60000
+LimitSTACK=250000
+LimitRTPRIO=infinity
+LimitRTTIME=7000000
+#IOSchedulingClass=realtime
+#IOSchedulingPriority=2
+#CPUSchedulingPolicy=rr
+#CPUSchedulingPriority=89
+
 [Install]
 WantedBy=multi-user.target
 HERE
@@ -439,8 +456,12 @@ check_nat() {
     sed -i "s/$INTERNAL_IP:/$IP:/g" /etc/bigbluebutton/nginx/sip.nginx
     ip addr add $IP dev lo
 
-    if [ -f /lib/systemd/system/dummy-nic.service ]; then RELOAD=true; fi
+    # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
     if ! grep -q $IP /lib/systemd/system/dummy-nic.service > /dev/null 2>&1; then
+      if [ -f /lib/systemd/system/dummy-nic.service ]; then 
+        DAEMON_RELOAD=true; 
+      fi
+
       cat > /lib/systemd/system/dummy-nic.service << HERE
 [Unit]
 Description=Configure dummy NIC for FreeSWITCH
@@ -452,7 +473,8 @@ ExecStart=/sbin/ip addr add $IP dev lo
 [Install]
 WantedBy=multi-user.target
 HERE
-      if [ "$RELOAD" == "true" ]; then
+
+      if [ "$DAEMON_RELOAD" == "true" ]; then
         systemctl dameon-reload
         systemctl restart dummy-nic
       else
