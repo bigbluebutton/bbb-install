@@ -209,7 +209,14 @@ main() {
   need_pkg yq
 
   need_pkg bigbluebutton
-  while [ ! -f /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; echo -n '.'; done
+
+  if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
+    SERVLET_DIR=/usr/share/bbb-web
+  else
+    SERVLET_DIR=/var/lib/tomcat7/webapps/bigbluebutton
+  fi
+
+  while [ ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; echo -n '.'; done
 
   check_lxc
   check_nat
@@ -349,7 +356,7 @@ need_pkg() {
 need_ppa() {
   need_pkg software-properties-common
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
-    add-apt-repository $2 -y
+    add-apt-repository -y $2 
   fi
   if ! apt-key list $3 | grep -q $4; then
     add-apt-repository $2 -y
@@ -558,8 +565,8 @@ install_greenlight(){
     docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/env
   fi
 
-  BIGBLUEBUTTONENDPOINT=$(cat /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
-  BIGBLUEBUTTONSECRET=$(cat /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | grep securitySalt | cut -d= -f2)
+  BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
+  BIGBLUEBUTTONSECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | grep securitySalt | cut -d= -f2)
 
   # Update GreenLight configuration file in ~/greenlight/env
   sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                       ~/greenlight/env
@@ -745,7 +752,7 @@ HERE
   sed -i 's/http:/https:/g' /etc/bigbluebutton/nginx/sip.nginx
   sed -i 's/5066/7443/g'    /etc/bigbluebutton/nginx/sip.nginx
 
-  sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties
+  sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 
   sed -i 's/jnlpUrl=http/jnlpUrl=https/g'   /usr/share/red5/webapps/screenshare/WEB-INF/screenshare.properties
   sed -i 's/jnlpFile=http/jnlpFile=https/g' /usr/share/red5/webapps/screenshare/WEB-INF/screenshare.properties
@@ -759,9 +766,13 @@ HERE
     sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp
   fi
 
+  if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
+    yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url https://$HOST/pad
+  fi
+
   # Update GreenLight (if installed) to use SSL
   if [ -f ~/greenlight/env ]; then
-    BIGBLUEBUTTONENDPOINT=$(cat /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
+    BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
     sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/env
     docker stop greenlight-v2
     docker rm greenlight-v2
@@ -925,10 +936,14 @@ HERE
 
   cat 1>&2 <<HERE
 
-This TURN server is setup and ready for use with BigBlueButton.  On your BigBlueButton server run the bbb-install.sh command again with the original parameters and add 
-
-  -c $COTURN_HOST:$COTURN_SECRET
-
+#
+# This TURN server is ready.  To configure your BigBlueButton server to use this TURN server, 
+# add the option
+#
+#  -c $COTURN_HOST:$COTURN_SECRET
+#
+# the the bbb-install.sh command.
+#
 HERE
 }
 
