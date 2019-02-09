@@ -212,8 +212,10 @@ main() {
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
     SERVLET_DIR=/usr/share/bbb-web
+    TURN_XML=$SERVLET_DIR/WEB-INF/classes/spring/turn-stun-servers.xml
   else
     SERVLET_DIR=/var/lib/tomcat7/webapps/bigbluebutton
+    TURN_XML=$SERVLET_DIR/WEB-INF/spring/turn-stun-servers.xml
   fi
 
   while [ ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; echo -n '.'; done
@@ -798,7 +800,7 @@ HERE
 }
 
 configure_coturn() {
-  cat <<HERE > /var/lib/tomcat7/webapps/bigbluebutton/WEB-INF/spring/turn-stun-servers.xml
+  cat <<HERE > $TURN_XML
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
