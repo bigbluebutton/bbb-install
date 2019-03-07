@@ -379,6 +379,18 @@ check_version() {
   if ! apt-key list | grep -q BigBlueButton; then
     wget https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc -O- | apt-key add -
   fi
+
+  # Check if were upgrading from 2.0 (the ownership of /etc/bigbluebutton/nginx/web has changed from bbb-client to bbb-web)
+  if [ -f /etc/apt/sources.list.d/bigbluebutton.list ]; then
+    if grep -q xenial-200 /etc/apt/sources.list.d/bigbluebutton.list; then
+      if echo $VERSION | grep -q xenial-220; then
+        if dpkg -l | grep -q bbb-client; then
+          apt-get purge -y bbb-client
+        fi
+      fi
+    fi
+  fi
+
   echo "deb https://ubuntu.bigbluebutton.org/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
@@ -528,6 +540,11 @@ install_HTML5() {
   fi
 
   sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
+
+  # Need to revert defaultGuestPolicy to 
+  if echo $VERSION | grep -q xenial-220; then
+    sed -i 's/^defaultGuestPolicy=.*/defaultGuestPolicy=ALWAYS_ACCEPT/' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
+  fi
 }
 
 install_greenlight(){
