@@ -540,11 +540,6 @@ install_HTML5() {
   fi
 
   sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
-
-  # Need to revert defaultGuestPolicy to 
-  if echo $VERSION | grep -q xenial-220; then
-    sed -i 's/^defaultGuestPolicy=.*/defaultGuestPolicy=ALWAYS_ACCEPT/' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
-  fi
 }
 
 install_greenlight(){
