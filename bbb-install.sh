@@ -511,7 +511,7 @@ install_HTML5() {
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
   fi
 
-  echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
   apt-get update
 
   need_pkg mongodb-org
@@ -663,7 +663,7 @@ HERE
       systemctl restart nginx
     fi
 
-    if ! letsencrypt --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ -d $HOST certonly; then
+    if ! letsencrypt --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ -d $HOST --non-interactive certonly; then
       cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
       systemctl restart nginx
       err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
@@ -860,7 +860,7 @@ install_coturn() {
   need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
   apt-get -y install certbot
 
-  certbot certonly --standalone --preferred-challenges http \
+  certbot certonly --standalone --non-interactive --preferred-challenges http \
     --deploy-hook "systemctl restart coturn" \
     -d $COTURN_HOST --email $EMAIL --agree-tos -n
 
