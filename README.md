@@ -5,17 +5,17 @@
 
 `bbb-install.sh` is a BASH shell script that automates the step-by-step instructions for installing and configuring a BigBlueButton server. 
 
-Depending on the speed of your server and its network, `bbb-install.sh` can have your BigBlueButton server setup and ready for use in about 15 minutes.
+Depending on the speed of your server and its network, `bbb-install.sh` can have your BigBlueButton server ready for use in about 15 minutes.
 
-For example, want to install BigBlueButton 2.0 on a Ubuntu 16.04 64-bit server with a public IP address, SSH into your server and run the following command as root:
+For example, want to install BigBlueButton 2.2-beta (our latest version with a pure HTML5 client) on a Ubuntu 16.04 64-bit server with a public IP address, SSH into your server and run the following command as root:
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta
 ~~~
 
-(If you want to try BigBlueButton 2.2-beta, substitute `-v xenial-220-beta` for `-v xenial-200`.
+(If you want to install BigBlueButton 2.0, substitute `-v xenial-200`.
 
-This command will download and run `bbb-install.sh` which, in turn, reads the `-v xenial-200` to install BigBlueButton 2.0 and configure it using the server's public IP address.
+This command will download and run `bbb-install.sh` which, in turn, reads the `-v xenial-220-beta` to install BigBlueButton 2.2-beta and configure it using the server's public IP address.
 
 Note: If your server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before you can access it.
 
@@ -117,7 +117,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-200') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220-betaa') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -140,10 +140,10 @@ EXAMPLES
 
 Setup a BigBlueButton server
 
-    ./bbb-install.sh -v xenial-200
-    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
-    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
-    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234324
+    ./bbb-install.sh -v xenial-220-beta
+    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com
+    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -t -g
+    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234324
 
 Setup a coturn server
 
@@ -231,7 +231,7 @@ To receive updates from Let's Encrypt, you need to provide a valid e-mail addres
 With just these two pieces of information -- FQDN and e-mail address -- you can use `bbb-install.sh` to automate the configuration of BigBlueButton server with an SSL certificate.  For example, using the sample hostname and e-mail in the command, to install BigBlueButton 2.0 with a SSL certificate from Let's Encrypt, use the following command (again, you would substitute `bbb.example.com` and `info@example.com` with your servers FQDN and your e-mail address):
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com
 ~~~
 
 The `bbb-install.sh` script will also install a cron job that automatically news the Let's Encrypt certificate so it doesn't expire.  Cool.
@@ -242,7 +242,7 @@ The `bbb-install.sh` script will also install a cron job that automatically news
 To try out the latest of the latest build of the [HTML5 client](http://docs.bigbluebutton.org/html/html5-overview.html), add the `-t` option.
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -t
 ~~~
 
 After a few minutes, you'll have the HTML5 client installed.  Use an Android (6.0+) or iOS (iOS 11+) mobile phone or tablet to access your BigBlueButton server.  BigBlueButton detects when you are connecting from a mobile browser and automatically load the HTML5 client.
@@ -263,7 +263,7 @@ Enter your name and click Join.  The HTML5 client will then load and join you in
 You can install [GreenLight](http://docs.bigbluebutton.org/install/green-light.html) by adding the `-g` option.
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -g
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -g
 ~~~
 
 Once GreenLight is installed, opening the hostname for the server, such as `https://bbb.example.com/`, automatically opens Green Light.  You can also configure GreenLight to use [OAuth2 authentication](http://docs.bigbluebutton.org/install/greenlight-v2.html#configuring-greenlight-20).
@@ -278,7 +278,7 @@ To launch GreenLight, simply the URL of your server, such as https://bbb.example
 If you want to setup BigBlueButton 2.0 with a SSL certificate, HTML5 client, and GreenLight, you can do this with a single command.
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-betaa -s bbb.example.com -e info@example.com -t -g
 ~~~
 
 For BigBlueButton 2.2-beta, 
@@ -318,7 +318,7 @@ With the above information, you can setup a TURN server for BigBlueButton using 
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c <FQDN>:<SECRET> -e <EMAIL>
 ~~~
 
-Note, we've omitted the `-v xenial-200` option, which causes `bbb-install.sh` to just install and cofigure coturn.  For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email addres, you can setup a TURN server for BigBlueButton using the command
+Note, we've omitted the `-v` option, which causes `bbb-install.sh` to just install and cofigure coturn.  For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email addres, you can setup a TURN server for BigBlueButton using the command
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.example.com:1234abcd -e info@example.com
@@ -329,7 +329,7 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.e
 With the TURN server in place, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and adding the same `-c <FQDN>:<SECRET>`.  For example, 
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234abcd
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234abcd
 ~~~
 
 You can re-use a single TURN server for multiple BigBlueButton installations.
@@ -347,6 +347,16 @@ apt-get purge bbb-demo
 ### Green Light not running
 
 If on first install Green Light gives you a `500 error` when accessing it, you can [restart Green Light](http://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
+
+### tomcat7 not running 
+
+If on the initial install you see
+
+~~~
+# Not running:  tomcat7 or grails LibreOffice
+~~~
+
+just run `sudo bbb-conf --check` again.  Tomcat7 may take a bit longer to start up and isn't running when the first time you run `sudo bbb-conf --check`.
 
 ### Getting Help
 
