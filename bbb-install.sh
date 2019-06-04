@@ -352,7 +352,7 @@ need_pkg() {
   need_root
   need_apt-get-update
   if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
-  if ! dpkg -s $1 > /dev/null 2>&1; then apt-get install -yq $1; fi
+  if ! dpkg -s $1 > /dev/null 2>&1; then LC_CTYPE=en_US.UTF-8 apt-get install -yq $1; fi
 }
 
 need_ppa() {
@@ -576,16 +576,16 @@ install_greenlight(){
   source /var/tmp/secret
 
   if [ ! -f ~/greenlight/env ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/env
+    docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
   fi
 
   BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
   BIGBLUEBUTTONSECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | grep securitySalt | cut -d= -f2)
 
   # Update GreenLight configuration file in ~/greenlight/env
-  sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                       ~/greenlight/env
-  sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/env
-  sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTONSECRET|"       ~/greenlight/env
+  sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                       ~/greenlight/.env
+  sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/.env
+  sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTONSECRET|"       ~/greenlight/.env
 
   # need_pkg bbb-webhooks
 
@@ -611,7 +611,7 @@ HERE
   if ! docker ps | grep -q greenlight; then
     docker run -d -p 5000:80 --restart=unless-stopped \
       -v ~/greenlight/db/production:/usr/src/app/db/production \
-      --env-file ~/greenlight/env \
+      --env-file ~/greenlight/.env \
       --name greenlight-v2 bigbluebutton/greenlight:v2
       sleep 5
   fi
@@ -785,12 +785,12 @@ HERE
   fi
 
   # Update GreenLight (if installed) to use SSL
-  if [ -f ~/greenlight/env ]; then
+  if [ -f ~/greenlight/.env ]; then
     BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
-    sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/env
+    sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/.env
     docker stop greenlight-v2
     docker rm greenlight-v2
-    docker run -d -p 5000:80 --restart=unless-stopped -v ~/greenlight/db/production:/usr/src/app/db/production --env-file ~/greenlight/env --name greenlight-v2 bigbluebutton/greenlight:v2
+    docker run -d -p 5000:80 --restart=unless-stopped -v ~/greenlight/db/production:/usr/src/app/db/production --env-file ~/greenlight/.env --name greenlight-v2 bigbluebutton/greenlight:v2
   fi
 
   # Update HTML5 client (if installed) to use SSL
