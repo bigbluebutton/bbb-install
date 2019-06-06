@@ -540,6 +540,7 @@ install_HTML5() {
   fi
 
   sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
+  
 }
 
 install_greenlight(){
@@ -805,6 +806,9 @@ HERE
       yq w -i $TARGET kurentoIp "$IP"
     else
       yq w -i $TARGET kurento[0].ip "$IP"
+    fi
+    if [ ! -z $INTERNAL_IP ]; then
+      yq w -i $TARGET freeswitch.ip $IP
     fi
     chown bigbluebutton:bigbluebutton $TARGET
     chmod 644 $TARGET
