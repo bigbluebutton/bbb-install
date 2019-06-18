@@ -256,21 +256,21 @@ Enter your name and click Join.  The HTML5 client will then load and join you in
 ![bbb-install.sh](images/html5.png?raw=true "HTML5 Client")
 
 
-## Install Green Light
+## Install Greenlight
 
-[Green Light](https://github.com/bigbluebutton/greenlight) is front-end for BigBlueButton written in Ruby on Rails.  It lets users create accounts, have permanent rooms, and manage their recordings.
+[Greenlight](https://github.com/bigbluebutton/greenlight) is front-end for BigBlueButton written in Ruby on Rails.  It lets users create accounts, have permanent rooms, and manage their recordings.
 
-You can install [GreenLight](http://docs.bigbluebutton.org/install/green-light.html) by adding the `-g` option.
+You can install [Greenlight](http://docs.bigbluebutton.org/install/green-light.html) by adding the `-g` option.
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -g
 ~~~
 
-Once GreenLight is installed, opening the hostname for the server, such as `https://bbb.example.com/`, automatically opens Green Light.  You can also configure GreenLight to use [OAuth2 authentication](http://docs.bigbluebutton.org/install/greenlight-v2.html#configuring-greenlight-20).
+Once Greenlight is installed, opening the hostname for the server, such as `https://bbb.example.com/`, automatically opens Greenlight.  You can also configure GreenLight to use [OAuth2 authentication](http://docs.bigbluebutton.org/install/greenlight-v2.html#configuring-greenlight-20).
 
-To launch GreenLight, simply the URL of your server, such as https://bbb.example.com/.  You should see the GreenLight landing page.
+To launch Greenlight, simply the URL of your server, such as https://bbb.example.com/.  You should see the Greenlight landing page.
 
-![bbb-install.sh](images/greenlight.png?raw=true "Green Light")
+![bbb-install.sh](images/greenlight.png?raw=true "Greenlight")
 
 
 ## Do everything with a single command
