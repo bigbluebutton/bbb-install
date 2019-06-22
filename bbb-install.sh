@@ -56,7 +56,7 @@
 
 usage() {
     cat 1>&2 <<HERE
-Installer script for setting up a BigBlueButton 2.0 server.  
+Installer script for setting up a BigBlueButton 2.0 (or later) server.  
 
 This script also supports installation of a separate coturn (TURN) server on a separate server.
 
@@ -88,10 +88,10 @@ EXAMPLES
 
 Setup a BigBlueButton server
 
-    ./bbb-install.sh -v xenial-200
-    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com
-    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g
-    ./bbb-install.sh -v xenial-200 -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234324
+    ./bbb-install.sh -v xenial-220-beta
+    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com
+    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -t -g
+    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234324
 
 Setup a coturn server
 
@@ -193,7 +193,7 @@ main() {
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
   need_ppa jonathonf-ubuntu-ffmpeg-4-xenial.list ppa:jonathonf/ffmpeg-4 F06FC659 F06FC659	# Latest version of ffmpeg
-  need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq CC86BB64 CC86BB64			# Edit yaml files with yq
+  need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq           CC86BB64 CC86BB64   # Edit yaml files with yq
 
   if [ ! -z "$PROXY" ]; then
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
@@ -411,10 +411,10 @@ check_coturn() {
   if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
 
   if [ "$COTURN_HOST" == "turn.example.com" ]; then 
-    err "You must specify a valid hostname (not the one given in the docs"
+    err "You must specify a valid hostname (not the example given in the docs)"
   fi
   if [ "$COTURN_SECRET" == "1234abcd" ]; then 
-    err "You must specify a new password (not the one given in the docs as an example)."
+    err "You must specify a new password (not the example given in the docs)."
   fi
 
   need_pkg dnsutils
@@ -423,7 +423,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2; then err "You must unisntall apache2 first"; fi
+  if dpkg -l | grep -q apache2-bin; then err "You must unisntall the Apache2 server first"; fi
 }
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
@@ -517,6 +517,7 @@ install_HTML5() {
   need_pkg mongodb-org
   service mongod start
 
+  # Remove default version of nodejs for Ubuntu 16.04 if installed
   if dpkg -s nodejs | grep Version | grep -q 4.2.6; then
     apt-get purge -y nodejs
   fi
@@ -534,9 +535,10 @@ install_HTML5() {
   apt-get install -yq bbb-webrtc-sfu
   apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0 > /dev/null 2>&1  # Remove older packages
 
+  # Use Google's default STUN server
   if [ ! -z "$INTERNAL_IP" ]; then
    sed -i 's/.*stunServerAddress.*/stunServerAddress=64.233.177.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
-   sed -i 's/.*stunServerPort.*/stunServerPort=19302/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
+   sed -i 's/.*stunServerPort.*/stunServerPort=19302/g'                /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
   fi
 
   sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
