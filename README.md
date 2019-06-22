@@ -7,7 +7,7 @@
 
 Depending on the speed of your server and its network, `bbb-install.sh` can have your BigBlueButton server ready for use in about 15 minutes.
 
-For example, want to install BigBlueButton 2.2-beta (our latest version with a pure HTML5 client) on a Ubuntu 16.04 64-bit server with a public IP address, SSH into your server and run the following command as root:
+For example, want to install BigBlueButton 2.2-beta on a Ubuntu 16.04 64-bit server with a public IP address, SSH into your server and run the following command as root:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta
@@ -33,7 +33,7 @@ When the install will finish and you'll see a message that gives a URL to test y
 #    sudo apt-get purge bbb-demo
 ~~~
 
-Since BigBlueButton is using an IP address (not a hostname with a secure socket layer (SSL) certificate), we recommend you test the server with FireFo.  Why FireFox?  FireFox allows you to use web real-time connection (WebRTC) to share your camera and microphone without requiring SSL. 
+Since the default installation configures BigBlueButton using the server's external IP address, and not with hostname + transport level security (TLS) or secure socket layer (SSL) certificate, you won't be able to use WebRTC as browsers now require a TLS/SSL certificate.
 
 When you open the URL, you should see a login to join the meeting `Demo Meeting`.
 
@@ -43,7 +43,7 @@ Enter your name and click Join.  The BigBlueButton client should load and prompt
 
 ![bbb-install.sh](images/join-audio.png?raw=true "Join Audio")
 
-While this server is good for testing, to setup a server for production, you *really* want to have the server using a hostname and secure socket layer (SSL) certificate.  Fortunately, thanks to the excellent service provided by Let's Encrypt, `bbb-install.sh` can automatically setup a SSL cerficiate for you given a hostname and e-mail address.  
+While this server is good for testing, to setup a server for production, you *really* want to have the server using a hostname and TLS/SSL certificate.  Fortunately, thanks to the excellent service provided by Let's Encrypt, `bbb-install.sh` can automatically setup a TLS/SSL cerficiate for you given a hostname and e-mail address.  
 
 The sections below show how to do all this using a single `bbb-install.sh` command.
 
@@ -59,11 +59,11 @@ To setup a FQDN, you need to purchase a domain name from a domain name system (D
 
 With a FQDN domain name place, you can pass a few additional parameters to `bbb-install.sh` to have it
 
-  * a 4096 bit secure socket layers (SSL) certificate from Let's Encrypt (we love Let's Encrypt), 
+  * a 4096 bit TLS/SSL certificate from Let's Encrypt (we love Let's Encrypt), 
   * the latest build of the HTML5 client, and 
   * the Green Light front-end to enable users to create accounts and manage rooms (optimal).
 
-Most importanly, when your server is configured with an SSL certificate, your users can use Chrome, Safari, and Edge to launch the BigBlueButton client and share their audio and video using WebRTC.   We recommend Chrome and FireFox as the default browsers (they have the best support for WebRTC).
+Most importanly, when your server is configured with an TLS/SSL certificate, your users can use Chrome, Safari, and Edge to launch the BigBlueButton client and share their audio and video using WebRTC.   We recommend Chrome and FireFox as the default browsers (they have the best support for WebRTC).
 
 The full source code for `bbb-install.sh` is [here](https://github.com/bigbluebutton/bbb-install).  To make it easy for anyone to run the script with a single command, we host the latest version of the script at `https://ubuntu.bigbluebutton.org/bbb-install.sh`.
 
@@ -155,25 +155,25 @@ SUPPORT:
 
 ~~~
 
-## Install and configure with an IP address (no SSL)
+## Install and configure with an IP address only
 
-To install a BigBlueButton on a Ubuntu 16.04 64-bit with no SSL cerificate, you need only specify the `-v` option for a given BigBlueButton package repository.  There are two choices:
+To install a BigBlueButton on a Ubuntu 16.04 64-bit with only an IP address, use the `-v` option for a given BigBlueButton package repository.  There are two choices:
 
-| Option | Version | Installation Steps |
+| Option | Version | Installation Steps (for reference) |
 | --- |:---|:---|
+| -v xenial-220-beta  | BigBlueButton 2.2-beta (pure HTML5 client) (recommended) | [install steps](http://docs.bigbluebutton.org/2.2/install.html) |
 | -v xenial-200  | BigBlueButton 2.0 (Flash/HTML5 client)| [install steps](http://docs.bigbluebutton.org/install/install.html) |
-| -v xenial-220-beta  | BigBlueButton 2.2-beta (pure HTML5 client) | [install steps](http://docs.bigbluebutton.org/2.2/install.html) |
-
-For example, to install BigBlueButton 2.0:
-
-~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
-~~~
 
 To install BigBlueButton 2.2-beta:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta
+~~~
+
+For example, to install BigBlueButton 2.0:
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 
 ~~~
 
 
@@ -212,27 +212,29 @@ If you want to use this server with an third-party integration, such as Moodle, 
       http://mconf.github.io/api-mate/#server=http://xxx.xxx.xxx.xxx/bigbluebutton/&sharedSecret=yyy
 ~~~
 
-Since this use of `bbb-install.sh` does not configure a SSL certificate, use must FireFox for sharing audio (at the time of this writing, FireFox does not require SSL to use WebRTC audio).  However, Chrome *does* require a SSL certificate, so users will get an error when sharing their audio with WebRTC.
- 
-We recommend installing an SSL certificate (see next section).
- 
-## Install with SSL
+Since this default use of `bbb-install.sh` does not configure a SSL/TLS certificate, while you can login to the server, you won't be able to share audio/video as WebRTC requires a SSL/TLS certificate.
 
-Before `bbb-install.sh` can install a SSL certificate, you first need to configure a domain name, such as `bbb.example.com`, that resolves to the public IP address of your server.  If you have setup a domain name, you can check that it correctly resolves to the external IP address of the server using the `dig` command.
+## Install with SSL/TLS
+
+Before `bbb-install.sh` can install a SSL/TLS certificate, you will need to provide two pieces of information
+   * a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the public IP address of your server, and 
+   * an e-mail address.
+   
+When you have setup the FQDN, check that it correctly resolves to the external IP address of the server using the `dig` command.
 
 ~~~
 dig bbb.example.com @8.8.8.8
 ~~~
 
-Note: we're using `bbb.example.com` as an example hostname, you would substitute your real hostname in commands below.
+Note: we're using `bbb.example.com` as an example hostname, you would substitute your real hostname for the check (and for the commands below).
 
-To receive updates from Let's Encrypt, you need to provide a valid e-mail address.
-
-With just these two pieces of information -- FQDN and e-mail address -- you can use `bbb-install.sh` to automate the configuration of BigBlueButton server with an SSL certificate.  For example, using the sample hostname and e-mail in the command, to install BigBlueButton 2.0 with a SSL certificate from Let's Encrypt, use the following command (again, you would substitute `bbb.example.com` and `info@example.com` with your servers FQDN and your e-mail address):
+With just these two pieces of information -- FQDN and e-mail address -- you can use `bbb-install.sh` to automate the configuration of BigBlueButton server with an TLS/SSL certificate.  For example, to install BigBlueButton 2.2-beta with a TLS/SSL certificate from Let's Encrypt using `bbb.example.com` and `info@example.com`, enter the command
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com
 ~~~
+
+(again, you would substitute `bbb.example.com` and `info@example.com` with your server's FQDN and your e-mail address).
 
 The `bbb-install.sh` script will also install a cron job that automatically news the Let's Encrypt certificate so it doesn't expire.  Cool.
 
@@ -245,9 +247,9 @@ To try out the latest of the latest build of the [HTML5 client](http://docs.bigb
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -t
 ~~~
 
-After a few minutes, you'll have the HTML5 client installed.  Use an Android (6.0+) or iOS (iOS 11+) mobile phone or tablet to access your BigBlueButton server.  BigBlueButton detects when you are connecting from a mobile browser and automatically load the HTML5 client.
+After a few minutes, you'll have the HTML5 client installed.  Use an Android (6.0+) or iOS (iOS 12.2+) mobile phone or tablet to access your BigBlueButton server.  BigBlueButton detects when you are connecting from a mobile browser and automatically load the HTML5 client.
 
-BigBlueButton will automatically launch the HTML5 client if the browser does not support Flash, such as when accessing the server using an iOS (iOS 11+) or Android (version 6.0+) phone or tablet.  Since `bbb-install.sh` installs the API demos, you can force the loading of the HTML5 client by opening the URL `https://<hostname>/demo/demoHTML5.jsp`, entering your name, and clicking Join.
+BigBlueButton will automatically launch the HTML5 client if the browser does not support Flash, such as when accessing the server using an iOS (iOS 12.2+) or Android (version 6.0+) phone or tablet.  Since `bbb-install.sh` installs the API demos, you can force the loading of the HTML5 client by opening the URL `https://<hostname>/demo/demoHTML5.jsp`, entering your name, and clicking Join.
 
 ![bbb-install.sh](images/html5-join.png?raw=true "HTML5 Page")
 
@@ -258,7 +260,7 @@ Enter your name and click Join.  The HTML5 client will then load and join you in
 
 ## Install Greenlight
 
-[Greenlight](https://github.com/bigbluebutton/greenlight) is front-end for BigBlueButton written in Ruby on Rails.  It lets users create accounts, have permanent rooms, and manage their recordings.
+[Greenlight](https://github.com/bigbluebutton/greenlight) is a simple front-end for BigBlueButton written in Ruby on Rails.  It lets users create accounts, have permanent rooms, and manage their recordings.
 
 You can install [Greenlight](http://docs.bigbluebutton.org/install/green-light.html) by adding the `-g` option.
 
@@ -266,28 +268,28 @@ You can install [Greenlight](http://docs.bigbluebutton.org/install/green-light.h
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -g
 ~~~
 
-Once Greenlight is installed, opening the hostname for the server, such as `https://bbb.example.com/`, automatically opens Greenlight.  You can also configure GreenLight to use [OAuth2 authentication](http://docs.bigbluebutton.org/install/greenlight-v2.html#configuring-greenlight-20).
+Once Greenlight is installed, accessing the FQDN of the server, such as `https://bbb.example.com/`, automatically opens Greenlight.  You can also configure GreenLight to use [OAuth2 authentication](http://docs.bigbluebutton.org/install/greenlight-v2.html#configuring-greenlight-20).
 
-To launch Greenlight, simply the URL of your server, such as https://bbb.example.com/.  You should see the Greenlight landing page.
+To launch Greenlight, simply the URL of your server, such as `https://bbb.example.com/`.  You should see the Greenlight landing page.
 
 ![bbb-install.sh](images/greenlight.png?raw=true "Greenlight")
 
 
 ## Do everything with a single command
 
-If you want to setup BigBlueButton 2.0 with a SSL certificate, HTML5 client, and GreenLight, you can do this with a single command.
-
-~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-betaa -s bbb.example.com -e info@example.com -t -g
-~~~
-
-For BigBlueButton 2.2-beta, 
+If you want to setup BigBlueButton 2.2-beta (recommended) with a SSL certificate, HTML5 client, and GreenLight, you can do this with a single command.
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -t -g
 ~~~
 
-For all the commands given above, you can re-run the same command later to update your version of BigBlueButton 2.0 to the latest release.  We announce updates to BigBlueButton to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
+For BigBlueButton 2.0, 
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g
+~~~
+
+For all the commands given above, you can re-run the same command later to update your server to the latest version of BigBlueButton 2.2.  We announce updates to BigBlueButton to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
 
 
 # Install a TURN server
@@ -342,11 +344,13 @@ If you intend to use this server for production you should uninstall the API dem
 apt-get purge bbb-demo
 ~~~
 
+You can also do a number of [customizations](http://docs.bigbluebutton.org/2.2/customize.html) to your server as well.
+
 ## Troubleshooting
 
-### Green Light not running
+### Greenlight not running
 
-If on first install Green Light gives you a `500 error` when accessing it, you can [restart Green Light](http://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
+If on first install Greenlight gives you a `500 error` when accessing it, you can [restart Greenlight](http://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
 
 ### tomcat7 not running 
 
