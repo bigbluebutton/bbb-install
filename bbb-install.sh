@@ -180,12 +180,12 @@ main() {
   need_mem
   check_apache2
 
-  if [ ! -z "$GREENLIGHT" ]; then
-    if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -g option requires both the -s and -e options"; fi
-  fi
-  if [ ! -z "$HTML5" ]; then
-    if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -t option requires both the -s and -e options"; fi
-  fi
+  #if [ ! -z "$GREENLIGHT" ]; then
+  #  if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -g option requires both the -s and -e options"; fi
+  #fi
+  #if [ ! -z "$HTML5" ]; then
+  #  if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -t option requires both the -s and -e options"; fi
+  #fi
 
   get_IP
   if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
@@ -352,16 +352,16 @@ need_pkg() {
   need_root
   need_apt-get-update
   if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
-  if ! dpkg -s $1 > /dev/null 2>&1; then LC_CTYPE=en_US.UTF-8 apt-get install -yq $1; fi
+  if ! dpkg -s $1 > /dev/null 2>&1; then LC_CTYPE=C.UTF-8 apt-get install -yq $1; fi
 }
 
 need_ppa() {
   need_pkg software-properties-common
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
-    add-apt-repository -y $2 
+    LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
   fi
   if ! apt-key list $3 | grep -q $4; then
-    add-apt-repository $2 -y
+    LC_CTYPE=C.UTF-8 add-apt-repository $2 -y
     if ! apt-key list $3 | grep -q $4; then
       err "Unable to setup PPA for $2"
     fi
