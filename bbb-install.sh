@@ -44,7 +44,7 @@
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t
 #
 #
-#  Install BigBlueButton with SSL + GreenLight
+#  Install BigBlueButton with SSL + Greenlight
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -g
 #
@@ -72,7 +72,7 @@ OPTIONS (install BigBlueButton):
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
   -t                     Install HTML5 client (currently under development)
-  -g                     Install GreenLight
+  -g                     Install Greenlight
 
   -p <host>              Use apt-get proxy at <host>
 
@@ -554,6 +554,7 @@ install_greenlight(){
       linux-image-extra-virtual
   fi
 
+  # Install Docker
   if ! apt-key list | grep -q Docker; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
   fi
@@ -569,23 +570,31 @@ install_greenlight(){
   fi
   if ! which docker; then err "Docker did not install"; fi
 
-  mkdir -p ~/greenlight
-
-  if [ ! -f /var/tmp/secret ]; then
-    # This will trigger the download of GreenLight docker image (if needed)
-    echo "SECRET_KEY_BASE=$(docker run --rm bigbluebutton/greenlight:v2 bundle exec rake secret)" > /var/tmp/secret
+  # Install Docker Compose
+  if dpkg -l | grep -q docker-compose; then
+    apt-get purge -y docker-compose
   fi
-  if [ ! -s /var/tmp/secret ]; then err "Invalid secret file in /var/tmp/secret for GreenLight"; fi
-  source /var/tmp/secret
 
-  if [ ! -f ~/greenlight/env ]; then
+  if [ ! -x /usr/local/bin/docker-compose ]; then
+    curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+  fi
+
+  if [ ! -d ~/greenlight ]; then
+    mkdir -p ~/greenlight
+  fi
+
+  # This will trigger the download of Greenlight docker image (if needed)
+  SECRET_KEY_BASE=$(echo "SECRET_KEY_BASE=$(docker run --rm bigbluebutton/greenlight:v2 bundle exec rake secret)")
+
+  if [ ! -f ~/greenlight/.env ]; then
     docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
   fi
 
   BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
   BIGBLUEBUTTONSECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | grep securitySalt | cut -d= -f2)
 
-  # Update GreenLight configuration file in ~/greenlight/env
+  # Update Greenlight configuration file in ~/greenlight/env
   sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                       ~/greenlight/.env
   sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/.env
   sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTONSECRET|"       ~/greenlight/.env
@@ -606,17 +615,21 @@ HERE
     gem install jwt java_properties
   fi
 
-  # Greenlight 2.0 currently does not support recording notifications.
-  #if [ ! -f /usr/local/bigbluebutton/core/scripts/post_publish/greenlight_recording_notify.rb ]; then
-  #  docker run --rm bigbluebutton/greenlight cat ./scripts/greenlight_recording_notify.rb > /usr/local/bigbluebutton/core/scripts/post_publish/greenlight_recording_notify.rb
-  #fi
+  if [ ! -f ~/greenlight/docker-compose.yml ]; then
+    docker run --rm bigbluebutton/greenlight:v2 cat ./docker-compose.yml > ~/greenlight/docker-compose.yml
+  fi
+
+  # Remove old containers
+  if docker ps | grep -q greenlight_db_1; then
+    docker rm -f greenlight_db_1
+  fi
+  if docker ps | grep -q greenlight-v2; then
+    docker rm -f greenlight-v2
+  fi
 
   if ! docker ps | grep -q greenlight; then
-    docker run -d -p 5000:80 --restart=unless-stopped \
-      -v ~/greenlight/db/production:/usr/src/app/db/production \
-      --env-file ~/greenlight/.env \
-      --name greenlight-v2 bigbluebutton/greenlight:v2
-      sleep 5
+    docker-compose -f ~/greenlight/docker-compose.yml up -d
+    sleep 5
   fi
 }
 
@@ -787,13 +800,12 @@ HERE
     yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url https://$HOST/pad
   fi
 
-  # Update GreenLight (if installed) to use SSL
+  # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
     BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
     sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/.env
-    docker stop greenlight-v2
-    docker rm greenlight-v2
-    docker run -d -p 5000:80 --restart=unless-stopped -v ~/greenlight/db/production:/usr/src/app/db/production --env-file ~/greenlight/.env --name greenlight-v2 bigbluebutton/greenlight:v2
+    docker-compose -f ~/greenlight/docker-compose.yml down
+    docker-compose -f ~/greenlight/docker-compose.yml up -d
   fi
 
   # Update HTML5 client (if installed) to use SSL
