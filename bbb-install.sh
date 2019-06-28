@@ -804,7 +804,7 @@ HERE
   if [ -f ~/greenlight/.env ]; then
     BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
     sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/.env
-    docker-compose down
+    docker-compose -f ~/greenlight/docker-compose.yml down
     docker-compose -f ~/greenlight/docker-compose.yml up -d
   fi
 
