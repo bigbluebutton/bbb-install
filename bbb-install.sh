@@ -46,7 +46,7 @@
 
 usage() {
     cat 1>&2 <<HERE
-Installer script for setting up a BigBlueButton 2.0 (or later) server.  
+Installer script for setting up a BigBlueButton 2.2-beta (or later) server.  
 
 This script also supports installation of a separate coturn (TURN) server on a separate server.
 

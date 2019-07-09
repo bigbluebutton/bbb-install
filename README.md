@@ -3,21 +3,19 @@
 
 # bbb-install
 
-`bbb-install.sh` is a BASH shell script that automates the step-by-step instructions for installing and configuring a BigBlueButton 2.2 server (referred hereafter as simply BigBlueButton 2.2). 
+`bbb-install.sh` is a BASH shell script that automates the step-by-step instructions for installing and configuring a BigBlueButton 2.2-beta server (referred hereafter as simply BigBlueButton 2.2). 
 
-Depending on the speed of your server and your network, `bbb-install.sh` can have your BigBlueButton server ready for use in about 15 minutes.
+`bbb-install.sh` can have your BigBlueButton server setup and ready for use about 15 minutes (depending on the speed of your server's internet connection to download an install packages).
 
-For example, want to install BigBlueButton 2.2 on a Ubuntu 16.04 64-bit server with a public IP address, SSH into your server and run the following command as root:
+For example, to install BigBlueButton 2.2 on a Ubuntu 16.04 64-bit server with a public IP address, SSH into the server and run the following command as root:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta
 ~~~
 
-This command will download and run `bbb-install.sh` which, in turn, reads the `-v xenial-220-beta` to install BigBlueButton 2.2 and configure it using the server's public IP address.
-
 Note: If your server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before you can access it.
 
-When the install will finish and you'll see a message that gives a URL to test your newly setup BigBlueButton server.
+When `bbb-install.sh` finishes, you'll see a message that gives you a test URL launch the BigBlueButton HTML5 client in a meeting called 'Demo Meeting'.
 
 ~~~
 # Warning: The API demos are installed and accessible from:
@@ -31,13 +29,13 @@ When the install will finish and you'll see a message that gives a URL to test y
 #    sudo apt-get purge bbb-demo
 ~~~
 
-Since the default installation configures BigBlueButton using the server's external IP address, and not with hostname + transport level security (TLS) or secure socket layer (SSL) certificate, you won't be able to use WebRTC as browsers now require a TLS/SSL certificate.
+Since the default installation configures BigBlueButton using the server's external IP address, and not with hostname + transport level security (TLS) or secure socket layer (SSL) certificate, you on't be able to use WebRTC as browsers now require a TLS/SSL certificate.
 
 When you open the URL, you should see a login to join the meeting `Demo Meeting`.
 
 ![bbb-install.sh](images/html5-join.png?raw=true "HTML5 Page")
 
-Enter your name and click Join.  The BigBlueButton client should load and prompt you to join the audio.
+Enter your name and click Join.  The BigBlueButton client should load and prompt you to join the audio.   Click '[x]' to skip joining the audio (again, with a TLS/SSL certificate, your browser will not grant a web application access to the microphone or webcam).
 
 ![bbb-install.sh](images/html5.png?raw=true "HTML5 Client")
 
@@ -49,17 +47,16 @@ Before running `bbb-install.sh`, we _strongly_ recommend that you
 
   * read through these docs, 
   * ensure your server meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements), and
-  * setup a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of your server.
+  * configure a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of your server.
 
-To setup a FQDN, you need to purchase a domain name from a domain name system (DNS) provider, such as [GoDaddy](https://godaddy.com) or [Network Solutions](https://networksolutions.com), and use their tools to setup a FQDN (such as `bbb.example.com` that points to the public IP address of your server.  More specifically, you need to create an `A Record` that points to the public IP address.  Check the documentation of your DNS provider for details on how to do this.
+To setup a FQDN, you need to purchase a domain name from a domain name system (DNS) provider, such as [GoDaddy](https://godaddy.com) or [Network Solutions](https://networksolutions.com), and use their tools to have the FQDN resolve to the public IP address of your server.  More specifically, you need to create an `A Record` that points to the public IP address of your BigBlueButton server.  Check the documentation of your DNS provider for details on how to do this.
 
 With a FQDN domain name place, you can pass a few additional parameters to `bbb-install.sh` to have it
 
-  * a 4096 bit TLS/SSL certificate from Let's Encrypt (we love Let's Encrypt), 
-  * the latest build of the HTML5 client, and 
-  * [Greenlight](http://docs.bigbluebutton.org/greenlight/gl-overview.html), a simple front-end that enables users to setup rooms, hold meetings, and manage recordings, and enables you (the administrator) to create and manage user accounts.
+  * request and install a 4096 bit TLS/SSL certificate from Let's Encrypt (we love Let's Encrypt), and (optionally)
+  * install and configure [Greenlight](http://docs.bigbluebutton.org/greenlight/gl-overview.html), a simple front-end that enables users to setup rooms, hold meetings, and manage recordings, and enables you (the administrator) to create and manage user accounts.
 
-Also, when your server is configured with an TLS/SSL certificate, users can use FireFox and Chrome (recommend browsers) to share audio and video and screens using the browser's built-in support for web real-time communication (WebRTC). 
+Once your server is configured with an TLS/SSL certificate, you users can use FireFox and Chrome (recommend browsers) to share audio and video and screens using the browser's built-in support for web real-time communication (WebRTC). 
 
 The full source code for `bbb-install.sh` is [here](https://github.com/bigbluebutton/bbb-install).  To make it easy for anyone to run the script with a single command, we host the latest version of the script at `https://ubuntu.bigbluebutton.org/bbb-install.sh`.
 
@@ -104,7 +101,7 @@ You can get help by passing the `-h` option.
 
 ~~~
 $ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -h
-Installer script for setting up a BigBlueButton 2.2 server.
+Installer script for setting up a BigBlueButton 2.2-beta server.
 
 This script also supports installation of a separate coturn (TURN) server on a separate server.
 
