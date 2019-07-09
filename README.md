@@ -29,7 +29,7 @@ When `bbb-install.sh` finishes, you'll see a message that gives you a test URL l
 #    sudo apt-get purge bbb-demo
 ~~~
 
-Since the default installation configures BigBlueButton using the server's external IP address, and not with hostname + transport level security (TLS) or secure socket layer (SSL) certificate, you on't be able to use WebRTC as browsers now require a TLS/SSL certificate.
+Since the default installation configures BigBlueButton using the server's external IP address, and not with hostname + transport level security (TLS) or secure socket layer (SSL) certificate, you won't be able to use WebRTC as browsers now require a TLS/SSL certificate.
 
 When you open the URL, you should see a login to join the meeting `Demo Meeting`.
 
@@ -69,7 +69,7 @@ For quick setup, [Digital Ocean](https://www.digitalocean.com/) offers both virt
 
 Other companies, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/) offer servers that are setup behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configure BigBlueButton accordingly.  
 
-Another populare choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.xlarge` (or larger) instance.  All EC2 servers are, by default, is behind a firewall (which Amazon calls a `security group`). You will need to manually configure he security group before installing BigBlueButton (we provide steps in the next section).  
+Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.xlarge` (or larger) instance.  All EC2 servers are, by default, is behind a firewall (which Amazon calls a `security group`). You will need to manually configure he security group before installing BigBlueButton (we provide steps in the next section).  
 
 Finally, if `bbb-install.sh` is unable to configure your server behind NAT, we recommend going through the [step-by-step](http://docs.bigbluebutton.org/2.2/install.html) for installing BigBlueButton.  (Going through the steps is also a good way to understand more about how BigBlueButton works).
 
@@ -80,7 +80,6 @@ If you want to install BigBlueButton on a server behind a firewall, such an Amaz
 
   * TCP/IP port 22 (for SSH)
   * TCP/IP ports 80/443 (for HTTP/HTTPS)
-  * TCP/IP port 1935 (for RTMP)
   * UDP ports in the range 16384 - 32768 (for FreeSWITCH/HTML5 client RTP streams)
 
 Amazon calls the firewall for EC2 a 'security group'.   Here's a screen shot how the EC2 security group configuration should look after configuring it to forward incoming traffic on the above ports:
@@ -144,7 +143,7 @@ Setup a coturn server
 
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
-   Commnity: https://bigbluebutton.org/support
+   Community: https://bigbluebutton.org/support
 
 ~~~
 
@@ -260,12 +259,12 @@ You need a separate server (not the BigBlueButton server) to setup as a TURN ser
 
   * a Ubuntu 18.04 server with a public IP address
 
-We recommend Ubuntu 18.04 as it has a later version of [coturn](https://github.com/coturn/coturn) than Ubuntu 16.04.  Also, this TURN server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core server on Digital Ocean, for example, which offers servers with public IP addresses, is a good choce.
+We recommend Ubuntu 18.04 as it has a later version of [coturn](https://github.com/coturn/coturn) than Ubuntu 16.04.  Also, this TURN server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core server on Digital Ocean, for example, which offers servers with public IP addresses, is a good choice.
 
 Next, to configure the TURN server you need:
   
   * a fully qualified domain name (FQDN) with a DNS entry that resolves to the external public IP address of the TURN server, 
-  * a e-mail addres for Let's Encrypt, and
+  * a e-mail address for Let's Encrypt, and
   * a secret key (it can be 8 to 16 character random string that you create).
 
 With the above information, you can setup a TURN server for BigBlueButton using `bbb-install.sh` as follows
@@ -274,7 +273,7 @@ With the above information, you can setup a TURN server for BigBlueButton using 
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c <FQDN>:<SECRET> -e <EMAIL>
 ~~~
 
-Note, we've omitted the `-v` option, which causes `bbb-install.sh` to just install and cofigure coturn.  For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email addres, you can setup a TURN server for BigBlueButton using the command
+Note, we've omitted the `-v` option, which causes `bbb-install.sh` to just install and configure coturn.  For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email address, you can setup a TURN server for BigBlueButton using the command
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.example.com:1234abcd -e info@example.com
