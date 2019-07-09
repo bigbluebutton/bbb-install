@@ -233,10 +233,26 @@ To launch Greenlight, simply the URL of your server, such as `https://bbb.exampl
 
 ![bbb-install.sh](images/greenlight.png?raw=true "Greenlight")
 
+To setup an administrator account for Greenlight (so you can approve/deny signups), enter the following commands
 
-## Do everything with a single command
+~~~
+cd greenlight/
+docker exec greenlight-v2 bundle exec rake admin:create
+~~~
 
-If you want to setup BigBlueButton 2.2 with a TLS/SSL certificate, HTML5 client, and GreenLight, you can do this all with a single command:
+This command will create an admin account and set a default password.  After running this command, login using the given username/password and change the default password. Next, select 'Administrator' and choose 'Organization'.
+
+![bbb-install.sh](images/gl-amdin.png?raw=true "Greenlight Admin page")
+
+You can then select 'Site Settings' on the left-hand side and change the Registration Method to 'Approve/Decline'.
+
+![bbb-install.sh](images/gl-amdin.png?raw=true "Greenlight Admin page")
+
+You can now contol who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](http://docs.bigbluebutton.org/greenlight/gl-admin.html).
+
+## Doing everything with a single command
+
+If you want to setup BigBlueButton 2.2 with a TLS/SSL certificate and GreenLight, you can do this all with a single command:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -g
