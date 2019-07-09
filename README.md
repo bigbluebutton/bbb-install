@@ -246,7 +246,7 @@ This command will create an admin account and set a default password.  After run
 
 You can then select 'Site Settings' on the left-hand side and change the Registration Method to 'Approve/Decline'.
 
-![bbb-install.sh](images/gl-admin.png?raw=true "Approve/Decline")
+![bbb-install.sh](images/gl-approve.png?raw=true "Approve/Decline")
 
 You can now contol who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](http://docs.bigbluebutton.org/greenlight/gl-admin.html).
 
