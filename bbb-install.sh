@@ -26,32 +26,22 @@
 #
 #  Install BigBlueButton and configure using server's external IP address
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta
 #
 #
 #  Install BigBlueButton and configure using hostname bbb.example.com
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com
 #
 #
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com
-#
-#
-#  Install BigBlueButton with SSL + latest build of HTML5 client
-#
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com
 #
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -g
-#
-#
-#  All of the above
-#
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-200 -s bbb.example.com -e info@example.com -t -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -65,15 +55,13 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-200') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220-beta') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
-  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
-
-  -t                     Install HTML5 client (currently under development)
   -g                     Install Greenlight
 
+  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
   -p <host>              Use apt-get proxy at <host>
 
   -h                     Print help
@@ -90,8 +78,8 @@ Setup a BigBlueButton server
 
     ./bbb-install.sh -v xenial-220-beta
     ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com
-    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -t -g
-    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -t -g -c turn.example.com:1234324
+    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -g
+    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Setup a coturn server
 
@@ -145,9 +133,6 @@ main() {
       g)
         GREENLIGHT=true
         ;;
-      t)
-        HTML5=true
-        ;;
 
       :)
         err "Missing option argument for -$OPTARG"
@@ -179,13 +164,6 @@ main() {
   need_ubuntu 16.04
   need_mem
   check_apache2
-
-  #if [ ! -z "$GREENLIGHT" ]; then
-  #  if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -g option requires both the -s and -e options"; fi
-  #fi
-  #if [ ! -z "$HTML5" ]; then
-  #  if [ -z "$HOST" ] || [ -z $EMAIL ]; then err "The -t option requires both the -s and -e options"; fi
-  #fi
 
   get_IP
   if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
@@ -226,9 +204,7 @@ main() {
   need_pkg bbb-demo
   while [ ! -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
 
-  if [ ! -z "$HTML5" ]; then
-    install_HTML5
-  fi
+  install_HTML5
 
   if [ ! -z "$HOST" ] && [ ! -z "$EMAIL" ]; then
     install_ssl_letsencrypt
@@ -254,6 +230,10 @@ main() {
     sed -i "s/^CPUSchedulingPolicy=rr/#CPUSchedulingPolicy=rr/g" /lib/systemd/system/freeswitch.service
     systemctl daemon-reload
     systemctl restart freeswitch
+  fi
+
+  if ! systemctl show-environment | grep LANG= | grep -q UTF-8; then
+    sudo systemctl set-environment LANG=C.UTF-8
   fi
 
   bbb-conf --check
@@ -542,7 +522,12 @@ install_HTML5() {
   fi
 
   sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
-  
+
+  # Make the HTML5 client default
+  sed -i 's/^attendeesJoinViaHTML5Client=.*/attendeesJoinViaHTML5Client=true/'   $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
+  sed -i 's/^moderatorsJoinViaHTML5Client=.*/moderatorsJoinViaHTML5Client=true/' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
+
+  sed -n 's/swfSlidesRequired=true/swfSlidesRequired=false/g'                    $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 }
 
 install_greenlight(){
@@ -767,6 +752,7 @@ HERE
     rm /etc/cron.d/renew-letsencrypt
   fi
 
+  # Setup automatic renewal of Let's Encrypt certificate
   if [ ! -f /etc/cron.daily/renew-letsencrypt ]; then
     cat <<HERE > /etc/cron.daily/renew-letsencrypt
 #!/bin/bash
@@ -776,7 +762,7 @@ HERE
   fi
   chmod 644 /etc/cron.daily/renew-letsencrypt
 
-  # Setup rest of BigBlueButton Configuration for SSL
+  # Configure rest of BigBlueButton Configuration for SSL
   sed -i "s/<param name=\"wss-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
 
   sed -i 's/http:/https:/g' /etc/bigbluebutton/nginx/sip.nginx
