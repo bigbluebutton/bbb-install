@@ -129,7 +129,7 @@ OPTIONS (install BigBlueButton):
 OPTIONS (install coturn):
 
   -c <hostname>:<secret> Configure coturn with <hostname> and <secret> (required)
-  -e <email>             E-mail for Let's Encrypt certbot (required)
+  -e <email>             Email for Let's Encrypt certbot (required)
 
 
 EXAMPLES
