@@ -242,11 +242,11 @@ docker exec greenlight-v2 bundle exec rake admin:create
 
 This command will create an admin account and set a default password.  After running this command, login using the given username/password and change the default password. Next, select 'Administrator' and choose 'Organization'.
 
-![bbb-install.sh](images/gl-amdin.png?raw=true "Greenlight Admin page")
+![bbb-install.sh](images/gl-admin.png?raw=true "Organization")
 
 You can then select 'Site Settings' on the left-hand side and change the Registration Method to 'Approve/Decline'.
 
-![bbb-install.sh](images/gl-amdin.png?raw=true "Greenlight Admin page")
+![bbb-install.sh](images/gl-admin.png?raw=true "Approve/Decline")
 
 You can now contol who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](http://docs.bigbluebutton.org/greenlight/gl-admin.html).
 
