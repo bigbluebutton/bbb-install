@@ -748,18 +748,11 @@ server {
 }
 HERE
 
-  if [ -f /etc/cron.d/renew-letsencrypt ]; then 
-    rm /etc/cron.d/renew-letsencrypt
-  fi
-
-  # Setup automatic renewal of Let's Encrypt certificate
-  if [ ! -f /etc/cron.daily/renew-letsencrypt ]; then
-    cat <<HERE > /etc/cron.daily/renew-letsencrypt
+  cat <<HERE > /etc/cron.daily/renew-letsencrypt
 #!/bin/bash
-/usr/bin/letsencrypt renew >> /var/log/letsencrypt-renew.log
+/usr/bin/letsencrypt renew >> /var/log/letsencrypt/renew.log
 /bin/systemctl reload nginx
 HERE
-  fi
   chmod 644 /etc/cron.daily/renew-letsencrypt
 
   # Configure rest of BigBlueButton Configuration for SSL
