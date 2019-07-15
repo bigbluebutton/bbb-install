@@ -82,11 +82,7 @@ If you want to install BigBlueButton on a server behind a firewall, such an Amaz
   * TCP/IP ports 80/443 (for HTTP/HTTPS)
   * UDP ports in the range 16384 - 32768 (for FreeSWITCH/HTML5 client RTP streams)
 
-Amazon calls the firewall for EC2 a 'security group'.   Here's a screen shot how the EC2 security group configuration should look after configuring it to forward incoming traffic on the above ports:
-
-![Security Group](images/security-group.png?raw=true "Security Group")
-
-If you are using EC2, you need to assign your server an [Elastic IP address](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html) to prevent it from getting a new IP address on reboot.
+Amazon calls the firewall for EC2 a 'security group'.   If you are using EC2, you need to assign your server an [Elastic IP address](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html) to prevent it from getting a new IP address on reboot.
 
 ### Installation Videos
 
