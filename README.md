@@ -116,7 +116,6 @@ OPTIONS (install BigBlueButton):
   -g                     Install GreenLight
 
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
-  -g                     Install GreenLight
 
   -p <host>              Use apt-get proxy at <host>
 
