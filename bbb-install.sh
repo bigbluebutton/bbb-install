@@ -846,7 +846,7 @@ HERE
 }
 
 install_coturn() {
-  IP=$(hostname -I | cut -f1 -d' ')
+  IP=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4 && echo)
   if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $COTURN_HOST resolved to $DIG_IP but didn't match local IP of $IP."; fi
 
   apt-get update
