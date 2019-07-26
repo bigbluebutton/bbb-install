@@ -386,6 +386,7 @@ check_coturn() {
   if ! echo $1 | grep -q ':'; then err "Option for coturn must be <hostname>:<secret>"; fi
   COTURN_HOST=$(echo $OPTARG | cut -d':' -f1)
   COTURN_SECRET=$(echo $OPTARG | cut -d':' -f2)
+  COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
 
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
   if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
@@ -867,6 +868,9 @@ install_coturn() {
 # These are the two network ports used by the TURN server which the client
 # may connect to. We enable the standard unencrypted port 3478 for STUN,
 # as well as port 443 for TURN over TLS, which can bypass firewalls.
+# Note that if your client is connecting from behind a restrictive firewall
+# then you may need to change listening-port to 80, as this is likely to
+# be open.
 listening-port=3478
 tls-listening-port=443
 
@@ -903,7 +907,7 @@ static-auth-secret=$COTURN_SECRET
 # If the realm value is unspecified, it defaults to the TURN server hostname.
 # You probably want to configure it to a domain name that you control to
 # improve log output. There is no functional impact.
-# realm=example.com
+realm=$COTURN_REALM
 
 # Configure TLS support.
 # Adjust these paths to match the locations of your certificate files
