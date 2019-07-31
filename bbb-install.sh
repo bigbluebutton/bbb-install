@@ -48,7 +48,7 @@ usage() {
     cat 1>&2 <<HERE
 Installer script for setting up a BigBlueButton 2.2-beta (or later) server.  
 
-This script also supports installation of a separate coturn (TURN) server on a separate server.
+This script also supports installation of a coturn (TURN) server on a separate server.
 
 USAGE:
     bbb-install.sh [OPTIONS]
@@ -58,7 +58,7 @@ OPTIONS (install BigBlueButton):
   -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220-beta') (required)
 
   -s <hostname>          Configure server with <hostname>
-  -e <email>             Email for Let's Encrypt certbot
+  -e <email>             Configure email for Let's Encrypt certbot
   -g                     Install Greenlight
 
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
@@ -68,8 +68,8 @@ OPTIONS (install BigBlueButton):
 
 OPTIONS (install coturn):
 
-  -c <hostname>:<secret> Configure coturn with <hostname> and <secret> (required)
-  -e <email>             E-mail for Let's Encrypt certbot (required)
+  -c <hostname>:<secret> Setup a coturn server with <hostname> and <secret> (required)
+  -e <email>             Configure email for Let's Encrypt certbot (required)
 
 
 EXAMPLES
@@ -111,6 +111,12 @@ main() {
         fi
         check_host $HOST
         ;;
+      e)
+        EMAIL=$OPTARG
+        if [ "$EMAIL" == "info@example.com" ]; then 
+          err "You must specify a valid email address (not the email in the docs)."
+        fi
+        ;;
       c)
         COTURN=$OPTARG
         check_coturn $COTURN
@@ -118,13 +124,6 @@ main() {
       v)
         VERSION=$OPTARG
         check_version $VERSION
-        ;;
-      e)
-        EMAIL=$OPTARG
-        if [ "$EMAIL" == "info@example.com" ]; then 
-          err "You must specify a valid email address (not the email in the docs)."
-
-        fi
         ;;
       p)
         PROXY=$OPTARG
@@ -146,10 +145,19 @@ main() {
     esac
   done
 
+  check_apache2
+
+  get_IP
+  if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
+
+  if [ ! -z "$PROXY" ]; then
+    echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
+  fi
+
   # Check if we're installing coturn (need an e-mail address for Let's Encerypt)
   if [ -z "$VERSION" ] && [ ! -z $COTURN ]; then
     if [ -z $EMAIL ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
-    need_ubuntu 18.04
+    check_ubuntu 18.04
 
     install_coturn
     exit 0
@@ -161,31 +169,19 @@ main() {
   fi
 
   # We're installing BigBlueButton
-  need_ubuntu 16.04
-  need_mem
-  check_apache2
-
-  get_IP
-  if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
+  check_ubuntu 16.04
+  check_mem
 
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
   need_ppa jonathonf-ubuntu-ffmpeg-4-xenial.list ppa:jonathonf/ffmpeg-4 F06FC659 F06FC659	# Latest version of ffmpeg
   need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq           CC86BB64 CC86BB64   # Edit yaml files with yq
-
-  if [ ! -z "$PROXY" ]; then
-    echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
-  fi
-
   apt-get update
+
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
   apt-get dist-upgrade -yq
 
-  need_pkg curl
-  need_pkg haveged
-  need_pkg build-essential
-  need_pkg yq
-
+  need_pkg curl haveged build-essential yq default-jre
   need_pkg bigbluebutton
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
@@ -248,17 +244,17 @@ err() {
   exit 1
 }
 
-need_root() {
+check_root() {
   if [ $EUID != 0 ]; then err "You must run this command as root."; fi
 }
 
-need_mem() {
+check_mem() {
   MEM=`grep MemTotal /proc/meminfo | awk '{print $2}'`
   MEM=$((MEM/1000))
   if (( $MEM < 3940 )); then err "Your server needs to have (at least) 4G of memory."; fi
 }
 
-need_ubuntu(){
+check_ubuntu(){
   RELEASE=$(lsb_release -r | sed 's/^[^0-9]*//g')
   if [ "$RELEASE" != $1 ]; then err "You must run this command on Ubuntu $1 server."; fi
 }
@@ -292,47 +288,37 @@ get_IP() {
 
   # Check if the external IP reaches the internal IP
   if [ ! -z "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
-    need_pkg nginx
-    if [ ! -L /etc/nginx/sites-enabled/default ]; then
-      err "The default symbolic link for nginx does not exist."
+    if which nginx; then
+      systemctl stop nginx
     fi
 
-    if [ -L /etc/nginx/sites-enabled/bigbluebutton ]; then
-      rm -f /etc/nginx/sites-enabled/bigbluebutton
-      systemctl restart nginx
-    fi
-      # Test if we can we reach this server from the external IP
-      cd /var/www/html
-      local tmp_file="$(mktemp XXXXXX.html)"
-      chown www-data:www-data $tmp_file
-      if timeout 5 wget -qS --spider "http://$external_ip/$tmp_file" > /dev/null 2>&1; then
-        INTERNAL_IP=$IP
-        IP=$external_ip
-      fi
-      rm -f $tmp_file
+    nc -l 80 &
+    nc_PID=$!
+    
+     # Check if we can reach the server through it's external IP address
+     if nc -zvw3 $external_ip 80 > /dev/null 2>&1; then
+       INTERNAL_IP=$IP
+       IP=$external_ip
+     fi
 
-    if [ -f /etc/nginx/sites-available/bigbluebutton ]; then
-      ln -s /etc/nginx/sites-available/bigbluebutton /etc/nginx/sites-enabled/bigbluebutton
-      systemctl restart nginx
+    kill $nc_PID  > /dev/null 2>&1;
+
+    if which nginx; then
+      systemctl start nginx
     fi
   fi
-}
-
-need_apt-get-update() {
-  # On some EC2 instanced apt-get is not run, so we'll do it 
-  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
-    apt-get update
-  elif [ -z "$ran_apt_get_update" ]; then 
-    apt-get update 
-  fi
-  ran_apt_get_update="true"
 }
 
 need_pkg() {
-  need_root
-  need_apt-get-update
-  if ! apt-cache search --names-only $1 | grep -q $1; then err "Unable to locate package: $1"; fi
-  if ! dpkg -s $1 > /dev/null 2>&1; then LC_CTYPE=C.UTF-8 apt-get install -yq $1; fi
+  check_root
+
+  LIST=${@:1}
+  for pkg in $LIST; do
+    if ! apt-cache search --names-only $pkg | grep -q $pkg; then err "Unable to locate package: $pkg"; fi
+    echo ".. $a"
+  done
+
+  LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
 }
 
 need_ppa() {
@@ -340,7 +326,7 @@ need_ppa() {
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
   fi
-  if ! apt-key list $3 | grep -q $4; then
+  if ! apt-key list $3 | grep -q $4; then  # Let's try it a second time
     LC_CTYPE=C.UTF-8 add-apt-repository $2 -y
     if ! apt-key list $3 | grep -q $4; then
       err "Unable to setup PPA for $2"
@@ -354,7 +340,7 @@ check_version() {
   if ! wget -qS --spider "https://ubuntu.bigbluebutton.org/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1."
   fi
-  need_root
+  check_root
   need_pkg apt-transport-https
   if ! apt-key list | grep -q BigBlueButton; then
     wget https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc -O- | apt-key add -
@@ -384,6 +370,7 @@ check_host() {
 
 check_coturn() {
   if ! echo $1 | grep -q ':'; then err "Option for coturn must be <hostname>:<secret>"; fi
+
   COTURN_HOST=$(echo $OPTARG | cut -d':' -f1)
   COTURN_SECRET=$(echo $OPTARG | cut -d':' -f2)
 
@@ -512,7 +499,7 @@ install_HTML5() {
 
   need_pkg nodejs
   need_pkg bbb-html5
-  apt-get install -yq bbb-webrtc-sfu
+  need_pkg bbb-webrtc-sfu
   apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0 > /dev/null 2>&1  # Remove older packages
 
   # Use Google's default STUN server
@@ -577,7 +564,7 @@ install_greenlight(){
   fi
 
   BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
-  BIGBLUEBUTTONSECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | grep securitySalt | cut -d= -f2)
+  BIGBLUEBUTTONSECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties   | grep -v '#' | grep securitySalt | cut -d= -f2)
 
   # Update Greenlight configuration file in ~/greenlight/env
   sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                       ~/greenlight/.env
@@ -753,7 +740,7 @@ HERE
 /usr/bin/letsencrypt renew >> /var/log/letsencrypt/renew.log
 /bin/systemctl reload nginx
 HERE
-  chmod 644 /etc/cron.daily/renew-letsencrypt
+  chmod 755 /etc/cron.daily/renew-letsencrypt
 
   # Configure rest of BigBlueButton Configuration for SSL
   sed -i "s/<param name=\"wss-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
@@ -845,8 +832,7 @@ HERE
 }
 
 install_coturn() {
-  IP=$(hostname -I | cut -f1 -d' ')
-  if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $COTURN_HOST resolved to $DIG_IP but didn't match local IP of $IP."; fi
+  if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $COTURN_HOST resolved to $DIG_IP but didn't match external IP of $IP."; fi
 
   apt-get update
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
@@ -860,6 +846,8 @@ install_coturn() {
   certbot certonly --standalone --non-interactive --preferred-challenges http \
     --deploy-hook "systemctl restart coturn" \
     -d $COTURN_HOST --email $EMAIL --agree-tos -n
+
+  COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
 
   cat <<HERE > /etc/turnserver.conf
 # Example coturn configuration for BigBlueButton
@@ -878,7 +866,7 @@ tls-listening-port=443
 
 # If the server is behind NAT, you need to specify the external IP address.
 # If there is only one external address, specify it like this:
-#external-ip=172.17.19.120
+external-ip=$IP
 # If you have multiple external addresses, you have to specify which
 # internal address each corresponds to, like this. The first address is the
 # external ip, and the second address is the corresponding internal IP.
@@ -904,6 +892,7 @@ static-auth-secret=$COTURN_SECRET
 # You probably want to configure it to a domain name that you control to
 # improve log output. There is no functional impact.
 # realm=example.com
+realm=$COTURN_REALM
 
 # Configure TLS support.
 # Adjust these paths to match the locations of your certificate files
@@ -925,6 +914,7 @@ no-tlsv1_1
 # Log to a single filename (rather than new log files each startup). You'll
 # want to install a logrotate configuration (see below)
 log-file=/var/log/coturn.log
+simple-log
 HERE
 
   cat <<HERE > /etc/logrotate.d/coturn
@@ -959,3 +949,4 @@ HERE
 }
 
 main "$@" || exit 1
+
