@@ -850,9 +850,9 @@ install_coturn() {
   if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $COTURN_HOST resolved to $DIG_IP but didn't match local IP of $IP."; fi
   INTIP=$(hostname -I | cut -f1 -d' ')
   if [ "$DIG_IP" != "$INTIP" ]; then 
-    EXTIP=$(external-ip=$DIG_IP)
+    EXTIP="external-ip=$DIG_IP"
   else 
-    EXTIP="#external-ip=172.17.19.131"
+    EXTIP="#external ip not different to internal ip"
   fi
     
   apt-get update
@@ -889,8 +889,8 @@ tls-listening-port=443
 # If the server is behind NAT, you need to specify the external IP address.
 # If there is only one external address, specify it like this:
 #external-ip=172.17.19.120
-#This has been done for you - if the script detects that external-ip !=
-#internal-ip then it will set external-ip
+# If the line below is set with an external-ip, then the install script
+# detected external-ip != internal-ip.
 $EXTIP
 # If you have multiple external addresses, you have to specify which
 # internal address each corresponds to, like this. The first address is the
