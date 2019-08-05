@@ -45,13 +45,15 @@
 #
 
 usage() {
+    set +x
     cat 1>&2 <<HERE
-Installer script for setting up a BigBlueButton 2.2-beta (or later) server.  
+
+Script for installing a BigBlueButton 2.2-beta (or later) server in about 15 minutes.
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
 USAGE:
-    bbb-install.sh [OPTIONS]
+    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- [OPTIONS]
 
 OPTIONS (install BigBlueButton):
 
@@ -72,18 +74,18 @@ OPTIONS (install coturn):
   -e <email>             Configure email for Let's Encrypt certbot (required)
 
 
-EXAMPLES
+EXAMPLES:
 
-Setup a BigBlueButton server
+Sample options for setup a BigBlueButton server
 
-    ./bbb-install.sh -v xenial-220-beta
-    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com
-    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -g
-    ./bbb-install.sh -v xenial-220-beta -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v xenial-220-beta
+    -v xenial-220-beta -s bbb.example.com -e info@example.com
+    -v xenial-220-beta -s bbb.example.com -e info@example.com -g
+    -v xenial-220-beta -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
-Setup a coturn server
+Sample options for setup of a coturn server (on a different server)
 
-    ./bbb-install.sh -c turn.example.com:1234324 -e info@example.com
+    -c turn.example.com:1234324 -e info@example.com
 
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
@@ -147,9 +149,6 @@ main() {
 
   check_apache2
 
-  get_IP
-  if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
-
   if [ ! -z "$PROXY" ]; then
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
@@ -171,6 +170,8 @@ main() {
   # We're installing BigBlueButton
   check_ubuntu 16.04
   check_mem
+
+  get_IP
 
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
@@ -280,10 +281,10 @@ get_IP() {
   elif [ -r /sys/firmware/dmi/tables/smbios_entry_point ] && which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
     local external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
-  else
-    # Try and determine the external IP
+  elif [ ! -z "$1" ]; then
+    # Try and determine the external IP from the given hostname
     need_pkg dnsutils
-    local external_ip=$(dig +short $HOST @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
+    local external_ip=$(dig +short $1 @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
   fi
 
   # Check if the external IP reaches the internal IP
@@ -292,7 +293,7 @@ get_IP() {
       systemctl stop nginx
     fi
 
-    nc -l 80 &
+    nc -l 80 > /dev/null 2>&1 &
     nc_PID=$!
     
      # Check if we can reach the server through it's external IP address
@@ -307,6 +308,8 @@ get_IP() {
       systemctl start nginx
     fi
   fi
+
+  if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
 }
 
 need_pkg() {
@@ -364,7 +367,7 @@ check_host() {
   need_pkg dnsutils
   DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
   if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
-  get_IP
+  get_IP $1
   if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
 }
 
@@ -383,10 +386,6 @@ check_coturn() {
   if [ "$COTURN_SECRET" == "1234abcd" ]; then 
     err "You must specify a new password (not the example given in the docs)."
   fi
-
-  need_pkg dnsutils
-  DIG_IP=$(dig +short $COTURN_HOST | grep '^[.0-9]*$' | tail -n1)
-  if [ -z "$DIG_IP" ]; then err "Unable to resolve $COTURN_HOST to an external IP address using DNS lookup."; fi
 }
 
 check_apache2() {
@@ -563,13 +562,13 @@ install_greenlight(){
     docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
   fi
 
-  BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
-  BIGBLUEBUTTONSECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties   | grep -v '#' | grep securitySalt | cut -d= -f2)
+  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
+  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties   | grep -v '#' | grep securitySalt | cut -d= -f2)
 
   # Update Greenlight configuration file in ~/greenlight/env
-  sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                       ~/greenlight/.env
-  sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/.env
-  sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTONSECRET|"       ~/greenlight/.env
+  sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                   ~/greenlight/.env
+  sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
+  sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  ~/greenlight/.env
 
   # need_pkg bbb-webhooks
 
@@ -768,8 +767,8 @@ HERE
 
   # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
-    BIGBLUEBUTTONENDPOINT=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
-    sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTONENDPOINT|" ~/greenlight/.env
+    BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
+    sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
     docker-compose -f ~/greenlight/docker-compose.yml down
     docker-compose -f ~/greenlight/docker-compose.yml up -d
   fi
@@ -832,7 +831,7 @@ HERE
 }
 
 install_coturn() {
-  if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $COTURN_HOST resolved to $DIG_IP but didn't match external IP of $IP."; fi
+  check_host $COTURN_HOST
 
   apt-get update
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
@@ -867,6 +866,7 @@ tls-listening-port=443
 # If the server is behind NAT, you need to specify the external IP address.
 # If there is only one external address, specify it like this:
 external-ip=$IP
+
 # If you have multiple external addresses, you have to specify which
 # internal address each corresponds to, like this. The first address is the
 # external ip, and the second address is the corresponding internal IP.
