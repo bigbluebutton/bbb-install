@@ -15,20 +15,6 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 
 The command will pull down the latest version of `bbb-install.sh`, send it to the BASH shell interpreter, and pass the parameter `-v xenial-220-beta` (the only required parameter) which specifies you want to install BigBlueButton 2.2-beta, referred hereafter as simply BigBlueButton 2.2.
 
-When `bbb-install.sh` finishes, you'll see a message that gives you a test URL launch the BigBlueButton client and join a meeting meeting called 'Demo Meeting'.
-
-~~~
-# Warning: The API demos are installed and accessible from:
-#
-#    http://xxx.xxx.xxx.xxx/demo/demo1.jsp
-#
-# These API demos allow anyone to access your server without authentication
-# to create/manage meetings and recordings. They are for testing purposes only.
-# If you are running a production system, remove them by running:
-#
-#    sudo apt-get purge bbb-demo
-~~~
-
 Note: If your server is behind firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before you can launch the client.
 
 When you open the URL, you should see a login to join the meeting `Demo Meeting`.
@@ -218,6 +204,7 @@ The `bbb-install.sh` script will also install a cron job that automatically news
 
 
 ## Install API Demos
+
 You can install the API demos by adding the `-a` option.
 
 ~~~
@@ -258,6 +245,16 @@ You can then select 'Site Settings' on the left-hand side and change the Registr
 ![bbb-install.sh](images/gl-approve.png?raw=true "Approve/Decline")
 
 You can now contol who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](http://docs.bigbluebutton.org/greenlight/gl-admin.html).
+
+## Linking /var/bigbluebutton to another directory
+
+The install script allows you to pass a path which will be used to create a symbolic link with /var/bigbluebutton
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -m /mnt/test
+~~~
+
+This allows users to store the contents of /var/bigbluebutton which can get large on a seperate volume
 
 ## Doing everything with a single command
 
