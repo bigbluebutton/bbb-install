@@ -113,6 +113,7 @@ OPTIONS (install BigBlueButton):
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
+  -a                     Install BBB API demos
   -g                     Install GreenLight
 
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
@@ -215,6 +216,15 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 
 The `bbb-install.sh` script will also install a cron job that automatically news the Let's Encrypt certificate so it doesn't expire.  Cool.
 
+
+## Install API Demos
+You can install the API demos by adding the `-a` option.
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -a
+~~~
+
+Warning these API demos allow anyone to access your server without authentication to create/manage meetings and recordings. They are for testing purposes only.
 
 ## Install Greenlight
 
