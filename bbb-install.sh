@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with BigBlueButton; if not, see <http://www.gnu.org/licenses/>.
 
-# BlueButton is an open source conferencing system.  For more informaiton see
+# BigBlueButton is an open source conferencing system.  For more information see
 #    http://www.bigbluebutton.org/.
 #
-# This bbb-install.sh scrip automates many of the instrallation and configuration
+# This bbb-install.sh script automates many of the installation and configuration
 # steps at
 #    http://docs.bigbluebutton.org/install/install.html
 #
@@ -89,7 +89,7 @@ Sample options for setup of a coturn server (on a different server)
 
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
-   Commnity: https://bigbluebutton.org/support
+   Community: https://bigbluebutton.org/support
 
 HERE
 }
@@ -153,7 +153,7 @@ main() {
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
   fi
 
-  # Check if we're installing coturn (need an e-mail address for Let's Encerypt)
+  # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ ! -z $COTURN ]; then
     if [ -z $EMAIL ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
     check_ubuntu 18.04
@@ -278,7 +278,7 @@ get_IP() {
   # Determine external IP 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
-  elif [ -r /sys/firmware/dmi/tables/smbios_entry_point ] && which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
+  elif which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
     local external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
   elif [ ! -z "$1" ]; then
