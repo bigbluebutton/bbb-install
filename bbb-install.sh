@@ -293,11 +293,11 @@ get_IP() {
       systemctl stop nginx
     fi
 
-    nc -l 80 > /dev/null 2>&1 &
+    nc -l 443 > /dev/null 2>&1 &
     nc_PID=$!
     
      # Check if we can reach the server through it's external IP address
-     if nc -zvw3 $external_ip 80 > /dev/null 2>&1; then
+     if nc -zvw3 $external_ip 443 > /dev/null 2>&1; then
        INTERNAL_IP=$IP
        IP=$external_ip
      fi
