@@ -88,6 +88,14 @@ If you want to install BigBlueButton on a server behind a firewall, such an Amaz
 
 Amazon calls the firewall for EC2 a 'security group'.   If you are using EC2, you need to assign your server an [Elastic IP address](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html) to prevent it from getting a new IP address on reboot.
 
+On Google Compute Engine, when you create an instance you need to enable traffic on port 80 and 443.
+
+![Google Compute Engine 80-443](images/gce-80-443.png?raw=true "GCE 80 and 443")
+
+After the instance is crated, you need to add a firewall rule to allow incoming UDP traffic on the port range 16384-32768.
+
+![Google Compute Engine Firewall](images/gce-firewall.png?raw=true "GCE Firewall")
+
 ### Installation Videos
 
 Using Digital Ocean as an example, put together this video to get you going quickly: [Using bbb-install.sh to setup BigBlueButton on Digital Ocean](https://youtu.be/D1iYEwxzk0M).
