@@ -182,7 +182,7 @@ main() {
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
   apt-get dist-upgrade -yq
 
-  need_pkg curl haveged build-essential yq default-jre
+  need_pkg curl apt-transport-https haveged build-essential yq default-jre
   need_pkg bigbluebutton
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
