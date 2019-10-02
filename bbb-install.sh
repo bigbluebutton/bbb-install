@@ -278,6 +278,9 @@ get_IP() {
   # Determine external IP 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
+  elif [ -f /run/scw-metadata.cache ]; then
+    # Scaleway
+    local external_ip=$(grep "PUBLIC_IP_ADDRESS" /run/scw-metadata.cache | cut -d '=' -f 2)
   elif which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
     local external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
@@ -293,11 +296,11 @@ get_IP() {
       systemctl stop nginx
     fi
 
-    nc -l 443 > /dev/null 2>&1 &
+    nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
     
      # Check if we can reach the server through it's external IP address
-     if nc -zvw3 $external_ip 443 > /dev/null 2>&1; then
+     if nc -zvw3 $external_ip 443  > /dev/null 2>&1; then
        INTERNAL_IP=$IP
        IP=$external_ip
      fi
@@ -317,7 +320,12 @@ need_pkg() {
 
   LIST=${@:1}
   for pkg in $LIST; do
-    if ! apt-cache search --names-only $pkg | grep -q $pkg; then err "Unable to locate package: $pkg"; fi
+    if ! apt-cache search --names-only $pkg | grep -q $pkg; then 
+      apt-get update
+      if ! apt-cache search --names-only $pkg | grep -q $pkg; then 
+        err "Unable to locate package: $pkg"
+      fi
+    fi
     echo ".. $a"
   done
 
@@ -364,7 +372,7 @@ check_version() {
 }
 
 check_host() {
-  need_pkg dnsutils
+  need_pkg dnsutils apt-transport-https
   DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
   if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
   get_IP $1
