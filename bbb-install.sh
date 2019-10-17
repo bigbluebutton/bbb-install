@@ -61,7 +61,10 @@ OPTIONS (install BigBlueButton):
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Configure email for Let's Encrypt certbot
+  -a                     Install BBB API demos
   -g                     Install Greenlight
+
+  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
   -p <host>              Use apt-get proxy at <host>
@@ -99,7 +102,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:c:v:e:p:gt" opt "${@}"; do
+  while builtin getopts "hs:c:v:e:p:m:gta" opt "${@}"; do
     case $opt in
       h)
         usage
@@ -133,6 +136,12 @@ main() {
 
       g)
         GREENLIGHT=true
+        ;;
+      a)
+        API_DEMOS=true
+        ;;
+      m)
+        LINK_PATH=$OPTARG
         ;;
 
       :)
@@ -198,8 +207,14 @@ main() {
   check_lxc
   check_nat
 
+  if [ ! -z "$API_DEMOS" ]; then
   need_pkg bbb-demo
   while [ ! -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
+  fi
+
+  if [ ! -z "$LINK_PATH" ]; then
+    ln -s "$LINK_PATH" "/var/bigbluebutton"
+  fi
 
   install_HTML5
 
