@@ -219,7 +219,7 @@ main() {
   install_HTML5
 
   if [ ! -z "$HOST" ] && [ ! -z "$EMAIL" ]; then
-    install_ssl_letsencrypt
+    install_ssl
   fi
 
   if [ ! -z "$GREENLIGHT" ]; then
@@ -628,7 +628,7 @@ HERE
 }
 
 
-install_ssl_letsencrypt() {
+install_ssl() {
   sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
 
   if ! grep -q $HOST /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
@@ -637,7 +637,10 @@ install_ssl_letsencrypt() {
 
   mkdir -p /etc/nginx/ssl
 
-  need_pkg letsencrypt
+  add-apt-repository universe
+  need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694 75BCA694
+  apt-get update
+  need_pkg certbot
 
   if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
     openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
@@ -673,7 +676,7 @@ HERE
       systemctl restart nginx
     fi
 
-    if ! letsencrypt --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ -d $HOST --non-interactive certonly; then
+    if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ -d $HOST --non-interactive certonly; then
       cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
       systemctl restart nginx
       err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
@@ -759,14 +762,14 @@ HERE
 
   cat <<HERE > /etc/cron.daily/renew-letsencrypt
 #!/bin/bash
-/usr/bin/letsencrypt renew >> /var/log/letsencrypt/renew.log
+/usr/bin/certbot renew >> /var/log/letsencrypt/renew.log
 /bin/systemctl reload nginx
 HERE
   chmod 755 /etc/cron.daily/renew-letsencrypt
 
   # Configure rest of BigBlueButton Configuration for SSL
   sed -i "s/<param name=\"wss-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
-
+nginx
   sed -i 's/http:/https:/g' /etc/bigbluebutton/nginx/sip.nginx
   sed -i 's/5066/7443/g'    /etc/bigbluebutton/nginx/sip.nginx
 
