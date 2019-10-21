@@ -331,6 +331,23 @@ You can also do a number of [customizations](http://docs.bigbluebutton.org/2.2/c
 
 ## Troubleshooting
 
+### Packaging server is blocked
+
+We are currently hosting the packaging on a Digital Ocean servlet, but recently the IP range for some Digital Ocean servers has been [blocked in some countries](https://www.digitalocean.com/community/questions/unable-to-reach-digitalocean-server-from-russia).
+
+If your having troubles installing, try running the `bbb-install.sh` command but change the value
+
+~~~
+https://ubuntu.bigbluebutton.org/bbb-install.sh
+~~~
+
+to
+
+~~~
+https://packages-eu.bigbluebutton.org/bbb-install.sh
+~~~
+
+
 ### Greenlight not running
 
 If on first install Greenlight gives you a `500 error` when accessing it, you can [restart Greenlight](http://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
