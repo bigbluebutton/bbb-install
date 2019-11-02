@@ -292,7 +292,11 @@ get_IP() {
 
   # Determine external IP 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
+    # Ec2
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
+  elif [ grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases ]; then
+    # Azure
+    local external_ip=$(curl -H Metadata:true "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-08-01&format=text")
   elif [ -f /run/scw-metadata.cache ]; then
     # Scaleway
     local external_ip=$(grep "PUBLIC_IP_ADDRESS" /run/scw-metadata.cache | cut -d '=' -f 2)

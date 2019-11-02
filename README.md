@@ -79,7 +79,7 @@ For quick setup, [Digital Ocean](https://www.digitalocean.com/) offers both virt
 
 Other popular choices, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/), offer servers that are setup behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configure BigBlueButton accordingly.  
 
-Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.xlarge` (or larger) instance.  All EC2 servers are, by default, is behind a firewall (which Amazon calls a `security group`). You will need to manually configure he security group before installing BigBlueButton (we provide steps in the next section).  
+Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.xlarge` (or larger) instance.  All EC2 servers are, by default, is behind a firewall (which Amazon calls a `security group`).  You will need to manually configure the security group before installing BigBlueButton on EC2 and, in a similar manner, on Azure and Google Compute Engine (GCE).  (See screen shots in next section.)
 
 Finally, if `bbb-install.sh` is unable to configure your server behind NAT, we recommend going through the [step-by-step](http://docs.bigbluebutton.org/2.2/install.html) for installing BigBlueButton.  (Going through the steps is also a good way to understand more about how BigBlueButton works).
 
@@ -94,11 +94,15 @@ If you want to install BigBlueButton on a server behind a firewall, such an Amaz
 
 If you are using EC2, you should also assign your server an [Elastic IP address](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html) to prevent it from getting a new IP address on reboot.
 
+On Microsot Azure, when you create an instance you need to enable traffic on ports 80, 443, and UDP 16384-32768
+
+![Azure Cloud ](images/azure-firewall.png?raw=true "GCE 80 and 443")
+
 On Google Compute Engine, when you create an instance you need to enable traffic on port 80 and 443.
 
 ![Google Compute Engine 80-443](images/gce-80-443.png?raw=true "GCE 80 and 443")
 
-After the instance is crated, you need to add a firewall rule to allow incoming UDP traffic on the port range 16384-32768.
+After the instance is created, you need to add a firewall rule to allow incoming UDP traffic on the port range 16384-32768.
 
 ![Google Compute Engine Firewall](images/gce-firewall.png?raw=true "GCE Firewall")
 
