@@ -94,9 +94,9 @@ If you want to install BigBlueButton on a server behind a firewall, such an Amaz
 
 If you are using EC2, you should also assign your server an [Elastic IP address](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html) to prevent it from getting a new IP address on reboot.
 
-On Microsot Azure, when you create an instance you need to enable traffic on ports 80, 443, and UDP 16384-32768
+On Microsot Azure, when you create an instance you need to add the following inbound port rules to enable incomming connections on ports 80, 443, and UDP port range 16384-32768:
 
-![Azure Cloud ](images/azure-firewall.png?raw=true "GCE 80 and 443")
+![Azure Cloud ](images/azure-firewall.png?raw=true "Azure 80, 443, and UDP 16384-32768")
 
 On Google Compute Engine, when you create an instance you need to enable traffic on port 80 and 443.
 
