@@ -22,6 +22,10 @@ When `bbb-install.sh` finishes, you'll see a message that gives you a test URL l
 ~~~ 
 # Warning: The API demos are installed and accessible from: 
 # 
+#    http://xxx.xxx.xxx.xxx
+# 
+# and
+#
 #    http://xxx.xxx.xxx.xxx/demo/demo1.jsp  
 # 
 # These API demos allow anyone to access your server without authentication 
