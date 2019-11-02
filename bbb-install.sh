@@ -63,11 +63,12 @@ OPTIONS (install BigBlueButton):
   -e <email>             Configure email for Let's Encrypt certbot
   -a                     Install BBB API demos
   -g                     Install Greenlight
+  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
-  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
   -p <host>              Use apt-get proxy at <host>
+  -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
   -h                     Print help
 
@@ -91,18 +92,19 @@ Sample options for setup of a coturn server (on a different server)
     -c turn.example.com:1234324 -e info@example.com
 
 SUPPORT:
-     Source: https://github.com/bigbluebutton/bbb-install
-   Community: https://bigbluebutton.org/support
+    Community: https://bigbluebutton.org/support
+         Docs: https://github.com/bigbluebutton/bbb-install
 
 HERE
 }
 
 main() {
   export DEBIAN_FRONTEND=noninteractive
+  PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
 
   need_x64
 
-  while builtin getopts "hs:c:v:e:p:m:gta" opt "${@}"; do
+  while builtin getopts "hs:p:c:v:e:p:m:gta" opt "${@}"; do
     case $opt in
       h)
         usage
@@ -115,6 +117,9 @@ main() {
           err "You must specify a valid hostname (not the hostname given in the docs)."
         fi
         check_host $HOST
+        ;;
+      p)
+        PACKAGE_REPOSITORY=$OPTARG
         ;;
       e)
         EMAIL=$OPTARG
@@ -367,13 +372,13 @@ need_ppa() {
 check_version() {
   if ! echo $1 | grep -q xenial; then err "This script can only install BigBlueButton 2.0 (or later)"; fi
   DISTRO=$(echo $1 | sed 's/-.*//g')
-  if ! wget -qS --spider "https://ubuntu.bigbluebutton.org/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
-    err "Unable to locate packages for $1."
+  if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
+    err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
   fi
   check_root
   need_pkg apt-transport-https
   if ! apt-key list | grep -q BigBlueButton; then
-    wget https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc -O- | apt-key add -
+    wget https://$PACKAGE_REPOSITORY/repo/bigbluebutton.asc -O- | apt-key add -
   fi
 
   # Check if were upgrading from 2.0 (the ownership of /etc/bigbluebutton/nginx/web has changed from bbb-client to bbb-web)
@@ -387,7 +392,7 @@ check_version() {
     fi
   fi
 
-  echo "deb https://ubuntu.bigbluebutton.org/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
+  echo "deb https://$PACKAGE_REPOSITORY/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
 check_host() {
@@ -680,7 +685,8 @@ HERE
       systemctl restart nginx
     fi
 
-    if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ -d $HOST --non-interactive certonly; then
+    if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ \
+         -d $HOST --deploy-hook "systemctl restart nginx" --non-interactive certonly; then
       cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
       systemctl restart nginx
       err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
@@ -764,16 +770,9 @@ server {
 }
 HERE
 
-  cat <<HERE > /etc/cron.daily/renew-letsencrypt
-#!/bin/bash
-/usr/bin/certbot renew >> /var/log/letsencrypt/renew.log
-/bin/systemctl reload nginx
-HERE
-  chmod 755 /etc/cron.daily/renew-letsencrypt
-
   # Configure rest of BigBlueButton Configuration for SSL
   sed -i "s/<param name=\"wss-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
-nginx
+
   sed -i 's/http:/https:/g' /etc/bigbluebutton/nginx/sip.nginx
   sed -i 's/5066/7443/g'    /etc/bigbluebutton/nginx/sip.nginx
 
