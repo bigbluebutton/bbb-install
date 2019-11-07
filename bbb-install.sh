@@ -26,22 +26,22 @@
 #
 #  Install BigBlueButton and configure using server's external IP address
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220
 #
 #
 #  Install BigBlueButton and configure using hostname bbb.example.com
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com
 #
 #
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com
 #
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220-beta -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -57,7 +57,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220-beta') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Configure email for Let's Encrypt certbot
@@ -82,10 +82,10 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v xenial-220-beta
-    -v xenial-220-beta -s bbb.example.com -e info@example.com
-    -v xenial-220-beta -s bbb.example.com -e info@example.com -g
-    -v xenial-220-beta -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v xenial-220
+    -v xenial-220 -s bbb.example.com -e info@example.com
+    -v xenial-220 -s bbb.example.com -e info@example.com -g
+    -v xenial-220 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Sample options for setup of a coturn server (on a different server)
 
