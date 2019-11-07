@@ -471,7 +471,6 @@ check_nat() {
     sed -i "s/stun:stun.freeswitch.org/$IP/g" /opt/freeswitch/etc/freeswitch/vars.xml
     sed -i "s/ext-rtp-ip\" value=\"\$\${local_ip_v4/ext-rtp-ip\" value=\"\$\${external_rtp_ip/g" /opt/freeswitch/conf/sip_profiles/external.xml
     sed -i "s/ext-sip-ip\" value=\"\$\${local_ip_v4/ext-sip-ip\" value=\"\$\${external_sip_ip/g" /opt/freeswitch/conf/sip_profiles/external.xml
-    sed -i "s/<param name=\"ws-binding\".*/<param name=\"ws-binding\"  value=\"$IP:5066\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
     sed -i "s/$INTERNAL_IP:/$IP:/g" /etc/bigbluebutton/nginx/sip.nginx
     ip addr add $IP dev lo
 
@@ -814,9 +813,6 @@ HERE
       yq w -i $TARGET kurentoIp "$IP"
     else
       yq w -i $TARGET kurento[0].ip "$IP"
-    fi
-    if [ ! -z $INTERNAL_IP ]; then
-      yq w -i $TARGET freeswitch.ip $IP
     fi
     chown bigbluebutton:bigbluebutton $TARGET
     chmod 644 $TARGET
