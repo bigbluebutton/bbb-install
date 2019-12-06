@@ -72,8 +72,6 @@ OPTIONS (install BigBlueButton):
 
   -h                     Print help
 
-  -d                     Skip SSL certificates request (use provided certificates from mounted volume)
-
 OPTIONS (install coturn):
 
   -c <hostname>:<secret> Setup a coturn server with <hostname> and <secret> (required)
@@ -107,6 +105,7 @@ main() {
   need_x64
 
   while builtin getopts "hs:p:c:v:e:p:m:gtad" opt "${@}"; do
+
     case $opt in
       h)
         usage
@@ -154,6 +153,7 @@ main() {
         PROVIDED_CERTIFICATE=true
         ;;
 
+
       :)
         err "Missing option argument for -$OPTARG"
         exit 1
@@ -187,27 +187,49 @@ main() {
   fi
 
   # We're installing BigBlueButton
-  check_ubuntu 16.04
+  env
+  if [ "$DISTRO" == "xenial" ]; then check_ubuntu 16.04; fi
+  if [ "$DISTRO" == "bionic" ]; then check_ubuntu 18.04; fi
   check_mem
 
   get_IP
 
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
-  need_ppa jonathonf-ubuntu-ffmpeg-4-xenial.list ppa:jonathonf/ffmpeg-4 F06FC659 F06FC659	# Latest version of ffmpeg
-  need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq           CC86BB64 CC86BB64   # Edit yaml files with yq
+  if [ "$DISTRO" == "xenial" ]; then 
+    need_ppa jonathonf-ubuntu-ffmpeg-4-xenial.list ppa:jonathonf/ffmpeg-4 F06FC659 # Latest version of ffmpeg
+    need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq           CC86BB64 # Edit yaml files with yq
+    apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
+  fi
+  if [ "$DISTRO" == "bionic" ]; then
+    add-apt-repository -y ppa:jonathonf/ffmpeg-4
+    add-apt-repository -y ppa:rmescandon/yq
+    if ! apt-key list 5AFA7A83 | grep -q 4096; then   # Add Kurento package
+      sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
+      sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
+# Kurento Media Server - Release packages
+deb [arch=amd64] http://ubuntu.openvidu.io/6.11.0 $DISTRO kms6
+HERE
+    fi
+  fi
+
   apt-get update
 
-  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
   apt-get dist-upgrade -yq
 
-  need_pkg curl apt-transport-https haveged build-essential yq default-jre
+  need_pkg curl apt-transport-https haveged build-essential yq # default-jre
   need_pkg bigbluebutton
 
+  . /etc/lsb-release    # Get value for DISTRIB_CODENAME
+  if [ "$DISTRIB_CODENAME" == "xenial" ]; then TOMCAT_USER=tomcat7; fi
+  if [ "$DISTRIB_CODENAME" == "bionic" ]; then TOMCAT_USER=tomcat8; fi
+
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
+    # 2.2
     SERVLET_DIR=/usr/share/bbb-web
     TURN_XML=$SERVLET_DIR/WEB-INF/classes/spring/turn-stun-servers.xml
   else
+    # 2.0
     SERVLET_DIR=/var/lib/tomcat7/webapps/bigbluebutton
     TURN_XML=$SERVLET_DIR/WEB-INF/spring/turn-stun-servers.xml
   fi
@@ -219,7 +241,7 @@ main() {
 
   if [ ! -z "$API_DEMOS" ]; then
   need_pkg bbb-demo
-  while [ ! -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
+  while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
   fi
 
   if [ ! -z "$LINK_PATH" ]; then
@@ -266,9 +288,7 @@ say() {
 }
 
 err() {
-  echo
   say "$1" >&2
-  echo
   exit 1
 }
 
@@ -369,16 +389,16 @@ need_ppa() {
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
   fi
-  if ! apt-key list $3 | grep -q $4; then  # Let's try it a second time
+  if ! apt-key list $3 | grep -q 4096; then  # Let's try it a second time
     LC_CTYPE=C.UTF-8 add-apt-repository $2 -y
-    if ! apt-key list $3 | grep -q $4; then
+    if ! apt-key list $3 | grep -q 4096; then
       err "Unable to setup PPA for $2"
     fi
   fi
 }
 
 check_version() {
-  if ! echo $1 | grep -q xenial; then err "This script can only install BigBlueButton 2.0 (or later)"; fi
+  if ! echo $1 | egrep -q "xenial|bionic"; then err "This script can only install BigBlueButton 2.0 (or later)"; fi
   DISTRO=$(echo $1 | sed 's/-.*//g')
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
@@ -407,10 +427,10 @@ check_host() {
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
     need_pkg dnsutils apt-transport-https
     DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
-    if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
+    if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
     get_IP $1
     if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
-  fi;
+  fi
 }
 
 check_coturn() {
@@ -548,7 +568,9 @@ install_HTML5() {
    sed -i 's/.*stunServerPort.*/stunServerPort=19302/g'                /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
   fi
 
-  sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
+  if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
+    sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
+  fi
 
   # Make the HTML5 client default
   sed -i 's/^attendeesJoinViaHTML5Client=.*/attendeesJoinViaHTML5Client=true/'   $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
@@ -647,7 +669,9 @@ HERE
 
 
 install_ssl() {
-  sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
+  if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
+    sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
+  fi
 
   if ! grep -q $HOST /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
     bbb-conf --setip $HOST
@@ -655,10 +679,9 @@ install_ssl() {
 
   mkdir -p /etc/nginx/ssl
 
-  add-apt-repository universe
-
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
-    need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694 75BCA694
+    add-apt-repository universe
+    need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694
     apt-get update
     need_pkg certbot
   fi
@@ -699,7 +722,7 @@ HERE
 
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
       if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ \
-          -d $HOST --deploy-hook "systemctl restart nginx" --non-interactive certonly; then
+           -d $HOST --deploy-hook "systemctl restart nginx" --non-interactive certonly; then
         cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
         systemctl restart nginx
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
@@ -796,16 +819,17 @@ HERE
 
   sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 
-  sed -i 's/jnlpUrl=http/jnlpUrl=https/g'   /usr/share/red5/webapps/screenshare/WEB-INF/screenshare.properties
-  sed -i 's/jnlpFile=http/jnlpFile=https/g' /usr/share/red5/webapps/screenshare/WEB-INF/screenshare.properties
-
-  sed -i 's|http://|https://|g' /var/www/bigbluebutton/client/conf/config.xml
+  if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
+    sed -i 's|http://|https://|g' /var/www/bigbluebutton/client/conf/config.xml
+    sed -i 's/jnlpUrl=http/jnlpUrl=https/g'   /usr/share/red5/webapps/screenshare/WEB-INF/screenshare.properties
+    sed -i 's/jnlpFile=http/jnlpFile=https/g' /usr/share/red5/webapps/screenshare/WEB-INF/screenshare.properties
+  fi
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
 
-  if [ -f /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp ]; then
-    sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/tomcat7/webapps/demo/bbb_api_conf.jsp
+  if [ -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; then
+    sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp
   fi
 
   if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
@@ -829,9 +853,12 @@ HERE
   TARGET=/usr/local/bigbluebutton/bbb-webrtc-sfu/config/default.yml
   if [ -f $TARGET ]; then
     if grep -q kurentoIp $TARGET; then
+      # 2.0
       yq w -i $TARGET kurentoIp "$IP"
     else
+      # 2.2
       yq w -i $TARGET kurento[0].ip "$IP"
+      yq w -i $TARGET freeswitch.sip_ip "$IP"
     fi
     chown bigbluebutton:bigbluebutton $TARGET
     chmod 644 $TARGET
@@ -883,15 +910,12 @@ install_coturn() {
   need_pkg coturn
 
   need_pkg software-properties-common 
-  
-  if [ -z "$PROVIDED_CERTIFICATE" ]; then
-    need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
-    apt-get -y install certbot
-  
-    certbot certonly --standalone --non-interactive --preferred-challenges http \
-      --deploy-hook "systemctl restart coturn" \
-      -d $COTURN_HOST --email $EMAIL --agree-tos -n
-  fi
+  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
+  apt-get -y install certbot
+
+  certbot certonly --standalone --non-interactive --preferred-challenges http \
+    --deploy-hook "systemctl restart coturn" \
+    -d $COTURN_HOST --email $EMAIL --agree-tos -n
 
   COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
 
