@@ -72,6 +72,8 @@ OPTIONS (install BigBlueButton):
 
   -h                     Print help
 
+  -d                     Skip SSL certificates request (use provided certificates from mounted volume)
+
 OPTIONS (install coturn):
 
   -c <hostname>:<secret> Setup a coturn server with <hostname> and <secret> (required)
@@ -104,7 +106,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:p:c:v:e:p:m:gta" opt "${@}"; do
+  while builtin getopts "hs:p:c:v:e:p:m:gtad" opt "${@}"; do
     case $opt in
       h)
         usage
@@ -147,6 +149,9 @@ main() {
         ;;
       m)
         LINK_PATH=$OPTARG
+        ;;
+      d)
+        PROVIDED_CERTIFICATE=true
         ;;
 
       :)
@@ -223,7 +228,7 @@ main() {
 
   install_HTML5
 
-  if [ ! -z "$HOST" ] && [ ! -z "$EMAIL" ]; then
+  if [ ! -z "$HOST" ] && [ ! -z "$EMAIL" || ! -z "$PROVIDED_CERTIFICATE" ] ; then
     install_ssl
   fi
 
@@ -261,7 +266,9 @@ say() {
 }
 
 err() {
+  echo
   say "$1" >&2
+  echo
   exit 1
 }
 
@@ -299,7 +306,7 @@ get_IP() {
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
     # Ec2
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
-  elif [ grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases ]; then
+  elif [ -f /var/lib/dhcp/dhclient.eth0.leases ] && grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases; then
     # Azure
     local external_ip=$(curl -H Metadata:true "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-08-01&format=text")
   elif [ -f /run/scw-metadata.cache ]; then
@@ -320,6 +327,7 @@ get_IP() {
       systemctl stop nginx
     fi
 
+    need_pkg netcat-openbsd
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
     
@@ -396,11 +404,13 @@ check_version() {
 }
 
 check_host() {
-  need_pkg dnsutils apt-transport-https
-  DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
-  if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
-  get_IP $1
-  if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
+  if [ -z "$PROVIDED_CERTIFICATE" ]; then
+    need_pkg dnsutils apt-transport-https
+    DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
+    if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup."; fi
+    get_IP $1
+    if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
+  fi;
 }
 
 check_coturn() {
@@ -646,9 +656,12 @@ install_ssl() {
   mkdir -p /etc/nginx/ssl
 
   add-apt-repository universe
-  need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694 75BCA694
-  apt-get update
-  need_pkg certbot
+
+  if [ -z "$PROVIDED_CERTIFICATE" ]; then
+    need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694 75BCA694
+    apt-get update
+    need_pkg certbot
+  fi
 
   if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
     openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
@@ -684,11 +697,17 @@ HERE
       systemctl restart nginx
     fi
 
-    if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ \
-         -d $HOST --deploy-hook "systemctl restart nginx" --non-interactive certonly; then
-      cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
-      systemctl restart nginx
-      err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
+    if [ -z "$PROVIDED_CERTIFICATE" ]; then
+      if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ \
+          -d $HOST --deploy-hook "systemctl restart nginx" --non-interactive certonly; then
+        cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
+        systemctl restart nginx
+        err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
+      fi
+    else
+      mkdir -p /etc/letsencrypt/live/$HOST/
+      ln -s /local/certs/fullchain.pem /etc/letsencrypt/live/$HOST/fullchain.pem
+      ln -s /local/certs/privkey.pem /etc/letsencrypt/live/$HOST/privkey.pem
     fi
   fi
 
@@ -864,12 +883,15 @@ install_coturn() {
   need_pkg coturn
 
   need_pkg software-properties-common 
-  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
-  apt-get -y install certbot
-
-  certbot certonly --standalone --non-interactive --preferred-challenges http \
-    --deploy-hook "systemctl restart coturn" \
-    -d $COTURN_HOST --email $EMAIL --agree-tos -n
+  
+  if [ -z "$PROVIDED_CERTIFICATE" ]; then
+    need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
+    apt-get -y install certbot
+  
+    certbot certonly --standalone --non-interactive --preferred-challenges http \
+      --deploy-hook "systemctl restart coturn" \
+      -d $COTURN_HOST --email $EMAIL --agree-tos -n
+  fi
 
   COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
 
