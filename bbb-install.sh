@@ -70,6 +70,8 @@ OPTIONS (install BigBlueButton):
   -p <host>              Use apt-get proxy at <host>
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
+  -d                     Skip SSL certificates request (use provided certificates from mounted volume)
+
   -h                     Print help
 
 OPTIONS (install coturn):
