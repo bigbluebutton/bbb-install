@@ -198,6 +198,9 @@ main() {
 
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
+  # Remove old PPA
+  rm -rf /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list 
+
   if [ "$DISTRO" == "xenial" ]; then 
     need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
     need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq                 CC86BB64 # Edit yaml files with yq
