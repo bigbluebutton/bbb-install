@@ -199,12 +199,12 @@ main() {
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
   if [ "$DISTRO" == "xenial" ]; then 
-    need_ppa jonathonf-ubuntu-ffmpeg-4-xenial.list ppa:jonathonf/ffmpeg-4 F06FC659 # Latest version of ffmpeg
-    need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq           CC86BB64 # Edit yaml files with yq
+    need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
+    need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq                 CC86BB64 # Edit yaml files with yq
     apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
   fi
   if [ "$DISTRO" == "bionic" ]; then
-    add-apt-repository -y ppa:jonathonf/ffmpeg-4
+    need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
     add-apt-repository -y ppa:rmescandon/yq
     if ! apt-key list 5AFA7A83 | grep -q 4096; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
@@ -407,7 +407,7 @@ check_version() {
   fi
   check_root
   need_pkg apt-transport-https
-  if ! apt-key list | grep -q BigBlueButton; then
+  if ! apt-key list | grep -q "BigBlueButton apt-get"; then
     wget https://$PACKAGE_REPOSITORY/repo/bigbluebutton.asc -O- | apt-key add -
   fi
 
