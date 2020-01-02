@@ -255,7 +255,9 @@ HERE
 
   install_HTML5
 
-  if [ ! -z "$HOST" ] && [ ! -z "$EMAIL" || ! -z "$PROVIDED_CERTIFICATE" ] ; then
+  if [ ! -z "$PROVIDED_CERTIFICATE" ] ; then
+    install_ssl
+  elif [ ! -z "$HOST" ] && [ ! -z "$EMAIL" ] ; then
     install_ssl
   fi
 
