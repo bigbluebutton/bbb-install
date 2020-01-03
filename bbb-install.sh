@@ -106,7 +106,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:p:c:v:e:p:m:gtad" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:gtad" opt "${@}"; do
 
     case $opt in
       h)
@@ -121,7 +121,7 @@ main() {
         fi
         check_host $HOST
         ;;
-      p)
+      r)
         PACKAGE_REPOSITORY=$OPTARG
         ;;
       e)
