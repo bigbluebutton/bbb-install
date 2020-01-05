@@ -190,8 +190,14 @@ main() {
 
   # We're installing BigBlueButton
   env
-  if [ "$DISTRO" == "xenial" ]; then check_ubuntu 16.04; fi
-  if [ "$DISTRO" == "bionic" ]; then check_ubuntu 18.04; fi
+  if [ "$DISTRO" == "xenial" ]; then 
+    check_ubuntu 16.04
+    TOMCAT_USER=tomcat7
+  fi
+  if [ "$DISTRO" == "bionic" ]; then 
+    check_ubuntu 18.04
+    TOMCAT_USER=tomcat8
+  fi
   check_mem
 
   get_IP
@@ -224,10 +230,6 @@ HERE
 
   need_pkg curl apt-transport-https haveged build-essential yq # default-jre
   need_pkg bigbluebutton
-
-  . /etc/lsb-release    # Get value for DISTRIB_CODENAME
-  if [ "$DISTRIB_CODENAME" == "xenial" ]; then TOMCAT_USER=tomcat7; fi
-  if [ "$DISTRIB_CODENAME" == "bionic" ]; then TOMCAT_USER=tomcat8; fi
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
     # 2.2
