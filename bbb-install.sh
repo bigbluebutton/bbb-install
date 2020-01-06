@@ -544,10 +544,10 @@ HERE
 
 install_HTML5() {
   if ! apt-key list | grep -q MongoDB; then
-    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
+    wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
   fi
 
-  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
   apt-get update
 
   need_pkg mongodb-org
