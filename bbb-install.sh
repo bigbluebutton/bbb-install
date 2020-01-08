@@ -207,14 +207,32 @@ main() {
   # Remove old PPA
   rm -rf /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list 
 
+  need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
+  need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq                 CC86BB64 # Edit yaml files with yq
+
   if [ "$DISTRO" == "xenial" ]; then 
-    need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
-    need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq                 CC86BB64 # Edit yaml files with yq
     apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
+
+    # Remove default version of nodejs for Ubuntu 16.04 if installed
+    if dpkg -s nodejs | grep Version | grep -q 4.2.6; then
+      apt-get purge -y nodejs
+    fi
+    apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0 > /dev/null 2>&1  # Remove older packages
+
+    if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
+      curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+    fi
+    if ! apt-cache madison nodejs | grep -q node_8; then
+      err "Did not detect nodejs 8.x candidate for installation"
+    fi
+
+    if ! apt-key list | grep -q MongoDB; then
+      wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
+    fi
+    echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list
   fi
+
   if [ "$DISTRO" == "bionic" ]; then
-    need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
-    add-apt-repository -y ppa:rmescandon/yq
     if ! apt-key list 5AFA7A83 | grep -q 4096; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
       sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
@@ -222,13 +240,23 @@ main() {
 deb [arch=amd64] http://ubuntu.openvidu.io/6.11.0 $DISTRO kms6
 HERE
     fi
+
+    if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
+      curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+    fi
+    if ! apt-cache madison nodejs | grep -q node_12; then
+      err "Did not detect nodejs 8.x candidate for installation"
+    fi
+    if ! apt-key list | grep -q MongoDB; then
+      wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
+    fi
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list
   fi
 
   apt-get update
-
   apt-get dist-upgrade -yq
 
-  need_pkg curl apt-transport-https haveged build-essential yq # default-jre
+  need_pkg curl nodejs mongodb-org apt-transport-https haveged build-essential yq # default-jre
   need_pkg bigbluebutton
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
@@ -246,6 +274,8 @@ HERE
   check_lxc
   check_nat
 
+  configure_HTML5 
+
   if [ ! -z "$API_DEMOS" ]; then
   need_pkg bbb-demo
   while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
@@ -254,8 +284,6 @@ HERE
   if [ ! -z "$LINK_PATH" ]; then
     ln -s "$LINK_PATH" "/var/bigbluebutton"
   fi
-
-  install_HTML5
 
   if [ ! -z "$PROVIDED_CERTIFICATE" ] ; then
     install_ssl
@@ -542,35 +570,7 @@ HERE
   fi
 }
 
-install_HTML5() {
-  if ! apt-key list | grep -q MongoDB; then
-    wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
-  fi
-
-  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
-  apt-get update
-
-  need_pkg mongodb-org
-  service mongod start
-
-  # Remove default version of nodejs for Ubuntu 16.04 if installed
-  if dpkg -s nodejs | grep Version | grep -q 4.2.6; then
-    apt-get purge -y nodejs
-  fi
-
-  if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
-    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
-  fi
-
-  if ! apt-cache madison nodejs | grep -q node_8; then
-    err "Did not detect nodejs 8.x candidate for installation"
-  fi
-
-  need_pkg nodejs
-  need_pkg bbb-html5
-  need_pkg bbb-webrtc-sfu
-  apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0 > /dev/null 2>&1  # Remove older packages
-
+configure_HTML5() {
   # Use Google's default STUN server
   if [ ! -z "$INTERNAL_IP" ]; then
    sed -i 's/.*stunServerAddress.*/stunServerAddress=64.233.177.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
