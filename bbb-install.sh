@@ -258,6 +258,7 @@ HERE
 
   need_pkg curl nodejs mongodb-org apt-transport-https haveged build-essential yq # default-jre
   need_pkg bigbluebutton
+  need_pkg bbb-html5
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
     # 2.2
