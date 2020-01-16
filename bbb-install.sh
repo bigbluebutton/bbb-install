@@ -204,18 +204,17 @@ main() {
 
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
-  # Remove old PPA
-  rm -rf /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list 
-
-  need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
-  need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq                 CC86BB64 # Edit yaml files with yq
+  need_pkg curl
 
   if [ "$DISTRO" == "xenial" ]; then 
+    rm -rf /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list 
+    need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
+    need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq                 CC86BB64 # Edit yaml files with yq
     apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
 
     # Remove default version of nodejs for Ubuntu 16.04 if installed
     if dpkg -s nodejs | grep Version | grep -q 4.2.6; then
-      apt-get purge -y nodejs
+      apt-get purge -y nodejs > /dev/null 2>&1
     fi
     apt-get purge -yq kms-core-6.0 kms-elements-6.0 kurento-media-server-6.0 > /dev/null 2>&1  # Remove older packages
 
@@ -227,13 +226,17 @@ main() {
     fi
 
     if ! apt-key list | grep -q MongoDB; then
-      wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
+      wget -qO - https://www.mongodb.org/static/pgp/server-4.0.asc | sudo apt-key add -
     fi
-    echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+    rm -rf /etc/apt/sources.list.d/mongodb-org-3.4.list
+    echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list
   fi
 
   if [ "$DISTRO" == "bionic" ]; then
-    if ! apt-key list 5AFA7A83 | grep -q 4096; then   # Add Kurento package
+    need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
+    need_ppa libreoffice-ubuntu-ppa-bionic.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
+    need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Latest version of ffmpeg
+    if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
       sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
 # Kurento Media Server - Release packages
@@ -245,7 +248,7 @@ HERE
       curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
     fi
     if ! apt-cache madison nodejs | grep -q node_12; then
-      err "Did not detect nodejs 8.x candidate for installation"
+      err "Did not detect nodejs 12.x candidate for installation"
     fi
     if ! apt-key list | grep -q MongoDB; then
       wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
@@ -256,7 +259,7 @@ HERE
   apt-get update
   apt-get dist-upgrade -yq
 
-  need_pkg curl nodejs mongodb-org apt-transport-https haveged build-essential yq # default-jre
+  need_pkg nodejs mongodb-org apt-transport-https haveged build-essential yq # default-jre
   need_pkg bigbluebutton
   need_pkg bbb-html5
 
@@ -278,8 +281,8 @@ HERE
   configure_HTML5 
 
   if [ ! -z "$API_DEMOS" ]; then
-  need_pkg bbb-demo
-  while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
+    need_pkg bbb-demo
+    while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
   fi
 
   if [ ! -z "$LINK_PATH" ]; then
@@ -302,16 +305,15 @@ HERE
 
   apt-get auto-remove -y
 
+  if systemctl status freeswitch.service | grep -q SETSCHEDULER; then
+    sed -i "s/^CPUSchedulingPolicy=rr/#CPUSchedulingPolicy=rr/g" /lib/systemd/system/freeswitch.service
+    systemctl daemon-reload
+  fi
+
   if [ ! -z "$HOST" ]; then
     bbb-conf --setip $HOST
   else
     bbb-conf --setip $IP
-  fi
-
-  if systemctl status freeswitch.service | grep -q SETSCHEDULER; then
-    sed -i "s/^CPUSchedulingPolicy=rr/#CPUSchedulingPolicy=rr/g" /lib/systemd/system/freeswitch.service
-    systemctl daemon-reload
-    systemctl restart freeswitch
   fi
 
   if ! systemctl show-environment | grep LANG= | grep -q UTF-8; then
@@ -408,18 +410,9 @@ get_IP() {
 need_pkg() {
   check_root
 
-  LIST=${@:1}
-  for pkg in $LIST; do
-    if ! apt-cache search --names-only $pkg | grep -q $pkg; then 
-      apt-get update
-      if ! apt-cache search --names-only $pkg | grep -q $pkg; then 
-        err "Unable to locate package: $pkg"
-      fi
-    fi
-    echo ".. $a"
-  done
-
-  LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
+  if ! dpkg -s ${@:1} >/dev/null 2>&1; then
+    LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
+  fi
 }
 
 need_ppa() {
