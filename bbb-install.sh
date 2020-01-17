@@ -225,11 +225,12 @@ main() {
       err "Did not detect nodejs 8.x candidate for installation"
     fi
 
-    if ! apt-key list | grep -q MongoDB; then
-      wget -qO - https://www.mongodb.org/static/pgp/server-4.0.asc | sudo apt-key add -
+    if ! apt-key list | grep MongoDB | grep -q 3.4; then
+      wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
     fi
-    rm -rf /etc/apt/sources.list.d/mongodb-org-3.4.list
-    echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+    rm -rf /etc/apt/sources.list.d/mongodb-org-4.0.list
+    echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+    MONGODB=mongodb-org
   fi
 
   if [ "$DISTRO" == "bionic" ]; then
@@ -251,15 +252,16 @@ HERE
       err "Did not detect nodejs 12.x candidate for installation"
     fi
     if ! apt-key list | grep -q MongoDB; then
-      wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
+      wget -qO - https://www.mongodb.org/static/pgp/server-4.0.asc | sudo apt-key add -
     fi
-    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+    MONGODB=mongodb-org-server
   fi
 
   apt-get update
   apt-get dist-upgrade -yq
 
-  need_pkg nodejs mongodb-org apt-transport-https haveged build-essential yq # default-jre
+  need_pkg nodejs $MONGODB apt-transport-https haveged build-essential yq # default-jre
   need_pkg bigbluebutton
   need_pkg bbb-html5
 
@@ -420,9 +422,9 @@ need_ppa() {
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
   fi
-  if ! apt-key list $3 | grep -q 4096; then  # Let's try it a second time
+  if ! apt-key list $3 | grep -q -E "1024|4096"; then  # Let's try it a second time
     LC_CTYPE=C.UTF-8 add-apt-repository $2 -y
-    if ! apt-key list $3 | grep -q 4096; then
+    if ! apt-key list $3 | grep -q -E "1024|4096"; then
       err "Unable to setup PPA for $2"
     fi
   fi
