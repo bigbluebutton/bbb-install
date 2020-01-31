@@ -225,7 +225,10 @@ main() {
       err "Did not detect nodejs 8.x candidate for installation"
     fi
 
-    if ! apt-key list | grep MongoDB | grep -q 3.4; then
+    if ! apt-key list A15703C6 | grep -q A15703C6; then
+      wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
+    fi
+    if apt-key list A15703C6 | grep -q expired; then 
       wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
     fi
     rm -rf /etc/apt/sources.list.d/mongodb-org-4.0.list
@@ -241,7 +244,7 @@ main() {
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
       sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
 # Kurento Media Server - Release packages
-deb [arch=amd64] http://ubuntu.openvidu.io/6.11.0 $DISTRO kms6
+deb [arch=amd64] http://ubuntu.openvidu.io/6.13.0 $DISTRO kms6
 HERE
     fi
 
@@ -458,7 +461,7 @@ check_version() {
 
 check_host() {
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
-    need_pkg dnsutils apt-transport-https
+    need_pkg dnsutils apt-transport-https net-tools
     DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
     get_IP $1
