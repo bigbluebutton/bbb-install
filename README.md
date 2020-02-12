@@ -306,7 +306,6 @@ Furthermore, you can re-run the same command later to update your server to the 
 # Install a TURN server
 
 You can use `bbb-install.sh` to automate the steps to [setup a TURN server for BigBlueButton](http://docs.bigbluebutton.org/install/install.html#setup-a-turn-server).  
-
 Note: This step is optional, but recommended if your BigBlueButton server is publically available on the internet and will be accessed by users who may be behind restrictive firewalls.
 
 BigBlueButton normally requires a wide range of UDP ports to be available for WebRTC communication. In some network restricted sites or development environments, such as those behind NAT or a firewall that restricts outgoing UDP connections, users may be unable to make outgoing UDP connections to your BigBlueButton server.  
@@ -316,6 +315,15 @@ The TURN protocol is designed to allow UDP-based communication flows like WebRTC
 You need a separate server (not the BigBlueButton server) to setup as a TURN server. Specifically you need:
 
   * An Ubuntu 18.04 server with a public IP address
+
+On the TURN server, you need to have the following ports (in additon port 22) availalbe for BigBlueButton to connect (port 3478 and 443) and for the coturn to connect to your BigBlueButton server (49152 - 65535).
+
+| Ports         | Protocol      | Description |
+| ------------- | ------------- | ----------- |
+| 3478          | TCP/UDP       | coturn listening port |
+| 443           | TCP/UDP       | TLS listening port |
+| 49152-65535   | UDP           | relay ports range |
+
 
 We recommend Ubuntu 18.04 as it has a later version of [coturn](https://github.com/coturn/coturn) than Ubuntu 16.04.  Also, this TURN server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core server on Digital Ocean, for example, which offers servers with public IP addresses, is a good choice.
 
