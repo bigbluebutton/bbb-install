@@ -661,6 +661,10 @@ HERE
     docker run --rm bigbluebutton/greenlight:v2 cat ./docker-compose.yml > ~/greenlight/docker-compose.yml
   fi
 
+  PGPASSWORD=$(openssl rand -hex 8)
+  sed -i "s/PGPASSWORD=password/PGPASSWORD=$pass/g" ~/greenlight/docker-compose.yml
+  sed -i "s/DB_PASSWORD=password/DB_PASSWORD=$pass/g" ~/greenlight/.env
+
   # Remove old containers
   if docker ps | grep -q greenlight_db_1; then
     docker rm -f greenlight_db_1
