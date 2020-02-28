@@ -662,7 +662,7 @@ HERE
   fi
 
   PGPASSWORD=$(openssl rand -hex 8)
-  sed -i "s/PGPASSWORD=password/PGPASSWORD=$pass/g" ~/greenlight/docker-compose.yml
+  sed -i "s/POSTGRES_PASSWORD=password/POSTGRES_PASSWORD=$pass/g" ~/greenlight/docker-compose.yml
   sed -i "s/DB_PASSWORD=password/DB_PASSWORD=$pass/g" ~/greenlight/.env
 
   # Remove old containers
