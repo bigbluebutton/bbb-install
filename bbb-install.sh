@@ -71,6 +71,7 @@ OPTIONS (install BigBlueButton):
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume)
+  -l                     Install SSL certificates only (requires -s and -e)
 
   -h                     Print help
 
@@ -106,7 +107,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:gtad" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lgtad" opt "${@}"; do
 
     case $opt in
       h)
@@ -138,10 +139,14 @@ main() {
         VERSION=$OPTARG
         check_version $VERSION
         ;;
+
       p)
         PROXY=$OPTARG
         ;;
 
+      l)
+        LETS_ENCRYPT_ONLY=true
+        ;;
       g)
         GREENLIGHT=true
         ;;
@@ -180,6 +185,15 @@ main() {
     check_ubuntu 18.04
 
     install_coturn
+    exit 0
+  fi
+
+  # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
+  if [ -z "$VERSION" ] && [ ! -z "$LETS_ENCRYPT_ONLY" ]; then
+    if [ -z $EMAIL ]; then err "Installing certificate needs an e-mail address for Let's Encrypt"; fi
+    check_ubuntu 18.04
+
+    install_certificate
     exit 0
   fi
 
@@ -907,6 +921,21 @@ configure_coturn() {
     </bean>
 </beans>
 HERE
+}
+
+install_certificate() {
+  apt-get update
+  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
+  apt-get dist-upgrade -yq
+  need_pkg coturn
+
+  need_pkg software-properties-common
+  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
+  apt-get -y install certbot
+
+  certbot certonly --standalone --non-interactive --preferred-challenges http \
+    --deploy-hook "systemctl restart coturn" \
+    -d $HOST --email $EMAIL --agree-tos -n
 }
 
 install_coturn() {
