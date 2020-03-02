@@ -48,7 +48,7 @@ usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 2.2-beta (or later) server in about 15 minutes.
+Script for installing a BigBlueButton 2.2 (or later) server in about 15 minutes.
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
@@ -60,7 +60,7 @@ OPTIONS (install BigBlueButton):
   -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220') (required)
 
   -s <hostname>          Configure server with <hostname>
-  -e <email>             Configure email for Let's Encrypt certbot
+  -e <email>             Email for Let's Encrypt certbot
   -a                     Install BBB API demos
   -g                     Install Greenlight
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
@@ -71,14 +71,19 @@ OPTIONS (install BigBlueButton):
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume)
-  -l                     Install SSL certificates only (requires -s and -e)
 
   -h                     Print help
 
-OPTIONS (install coturn):
+OPTIONS (install coturn only):
 
   -c <hostname>:<secret> Setup a coturn server with <hostname> and <secret> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
+
+OPTIONS (install Let's Encrypt certificate only):
+
+  -s <hostname>          Configure server with <hostname> (required)
+  -e <email>             Configure email for Let's Encrypt certbot (required)
+  -l                     Install Let's Encrypt certificate (required)
 
 
 EXAMPLES:
@@ -180,20 +185,20 @@ main() {
   fi
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
-  if [ -z "$VERSION" ] && [ ! -z $COTURN ]; then
-    if [ -z $EMAIL ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
+  if [ -z "$VERSION" ] && [ ! -z "$LETS_ENCRYPT_ONLY" ]; then
+    if [ -z "$EMAIL" ]; then err "Installing certificate needs an e-mail address for Let's Encrypt"; fi
     check_ubuntu 18.04
 
-    install_coturn
+    install_certificate
     exit 0
   fi
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
-  if [ -z "$VERSION" ] && [ ! -z "$LETS_ENCRYPT_ONLY" ]; then
-    if [ -z $EMAIL ]; then err "Installing certificate needs an e-mail address for Let's Encrypt"; fi
+  if [ -z "$VERSION" ] && [ ! -z "$COTURN" ]; then
+    if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
     check_ubuntu 18.04
 
-    install_certificate
+    install_coturn
     exit 0
   fi
 
