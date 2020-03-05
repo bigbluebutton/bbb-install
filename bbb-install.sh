@@ -440,7 +440,7 @@ need_pkg() {
 }
 
 need_ppa() {
-  need_pkg software-properties-common
+  need_pkg software-properties-common 
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
   fi
@@ -607,7 +607,7 @@ configure_HTML5() {
 }
 
 install_greenlight(){
-  need_pkg software-properties-common
+  need_pkg software-properties-common openssl
 
   if ! dpkg -l | grep -q linux-image-extra-virtual; then
     apt-get install -y \
