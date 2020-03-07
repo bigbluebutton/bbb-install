@@ -343,7 +343,8 @@ HERE
   if ! systemctl show-environment | grep LANG= | grep -q UTF-8; then
     sudo systemctl set-environment LANG=C.UTF-8
   fi
-
+  
+  fix_bbbweb_daemon
   bbb-conf --check
 }
 
@@ -946,6 +947,12 @@ install_certificate() {
   certbot certonly --standalone --non-interactive --preferred-challenges http \
     --deploy-hook "systemctl restart coturn" \
     -d $HOST --email $EMAIL --agree-tos -n
+}
+
+fix_bbbweb_daemon() {
+    sed -i 's/^LimitNOFILE=.*/LimitNOFILE=8024/' /lib/systemd/system/bbb-web.service
+    systemctl daemon-reload
+    systemctl restart bbb-web
 }
 
 install_coturn() {
