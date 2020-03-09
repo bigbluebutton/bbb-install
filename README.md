@@ -13,7 +13,7 @@ For example, given an Ubuntu 16.04 64-bit server with a public IP address, to in
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -a
 ~~~
 
-The command will pull down the latest version of `bbb-install.sh`, send it to the BASH shell interpreter, and pass the parameters `-v xenial-220` (the only required parameter) which specifies you want to install BigBlueButton 2.2 and `-a` which specifies want to install the API demos (this makes it easy to do a few quick tests on the server).
+The command will pull down the latest version of `bbb-install.sh`, send it to the BASH shell interpreter, and pass the parameters `-v xenial-220` which specifies you want to install the latest build BigBlueButton 2.2 (i.e. 2.2.2) and `-a` which specifies want to install the API demos (this makes it easy to do a few quick tests on the server).
 
 Note: If your server is behind a firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before you can launch the client.
 
