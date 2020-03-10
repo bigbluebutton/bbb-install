@@ -253,6 +253,7 @@ main() {
     rm -rf /etc/apt/sources.list.d/mongodb-org-4.0.list
     echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list
     MONGODB=mongodb-org
+    need_pkg openjdk-8-jre
   fi
 
   if [ "$DISTRO" == "bionic" ]; then
