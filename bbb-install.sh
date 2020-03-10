@@ -647,7 +647,7 @@ install_greenlight(){
   fi
 
   # This will trigger the download of Greenlight docker image (if needed)
-  SECRET_KEY_BASE=$(echo "SECRET_KEY_BASE=$(docker run --rm bigbluebutton/greenlight:v2 bundle exec rake secret)")
+  SECRET_KEY_BASE=$(docker run --rm bigbluebutton/greenlight:v2 bundle exec rake secret)
 
   if [ ! -f ~/greenlight/.env ]; then
     docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
