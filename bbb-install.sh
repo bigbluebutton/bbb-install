@@ -915,6 +915,12 @@ configure_coturn() {
         <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
+    
+    <bean id="turn1" class="org.bigbluebutton.web.services.turn.TurnServer">
+        <constructor-arg index="0" value="$COTURN_SECRET"/>
+        <constructor-arg index="1" value="turn:$COTURN_HOST:443?transport=tcp"/>
+        <constructor-arg index="2" value="86400"/>
+    </bean>
 
     <bean id="stunTurnService"
             class="org.bigbluebutton.web.services.turn.StunTurnService">
@@ -926,6 +932,7 @@ configure_coturn() {
         <property name="turnServers">
             <set>
                 <ref bean="turn0"/>
+                <ref bean="turn1"/>
             </set>
         </property>
     </bean>
