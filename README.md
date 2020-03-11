@@ -3,7 +3,7 @@
 
 # bbb-install
 
-`bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for setting up a BigBlueButton 2.2 server. 
+`bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for setting up a BigBlueButton 2.2 server.
 
 With only a few parameters, `bbb-install.sh` can have your BigBlueButton server setup and ready for use in 15 minutes (depending on your server's internet speed to download and install packages).
 
@@ -19,21 +19,21 @@ Note: If your server is behind a firewall -- such as behind a corporate firewall
 
 When `bbb-install.sh` finishes, you'll see a message that gives you a test URL to launch the BigBlueButton client and join a meeting called 'Demo Meeting'.  
 
-~~~ 
-# Warning: The API demos are installed and accessible from: 
-# 
+~~~
+# Warning: The API demos are installed and accessible from:
+#
 #    http://xxx.xxx.xxx.xxx
-# 
+#
 # and
 #
 #    http://xxx.xxx.xxx.xxx/demo/demo1.jsp  
-# 
-# These API demos allow anyone to access your server without authentication 
-# to create/manage meetings and recordings. They are for testing purposes only. 
-# If you are running a production system, remove them by running: 
-# 
+#
+# These API demos allow anyone to access your server without authentication
+# to create/manage meetings and recordings. They are for testing purposes only.
+# If you are running a production system, remove them by running:
+#
 #    sudo apt-get purge bbb-demo  
-~~~ 
+~~~
 
 When you open the URL, you should see a login to join the meeting `Demo Meeting`.
 
@@ -55,7 +55,7 @@ Without TLS/SSL support, the browser will not allow access to the user's webam o
 ## Getting ready
 Before running `bbb-install.sh`, we _strongly_ recommend that you:
 
-  * Read through all the documentation in this page 
+  * Read through all the documentation in this page
   * Ensure that your server meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements)
   * Configure a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of the server.
 
@@ -131,6 +131,7 @@ OPTIONS (install BigBlueButton):
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
+  -x                     Use Let's Encrypt certbot with manual dns challenges
   -a                     Install BBB API demos
   -g                     Install GreenLight
 
@@ -218,7 +219,7 @@ Since this default use of `bbb-install.sh` does not configure a SSL/TLS certific
 Before `bbb-install.sh` can install a SSL/TLS certificate, you will need to provide two pieces of information:
    * A fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the public IP address of your server
    * An e-mail address
-   
+
 When you have setup the FQDN, check that it correctly resolves to the external IP address of the server using the `dig` command.
 
 ~~~
@@ -328,8 +329,8 @@ On the TURN server, you need to have the following ports (in additon port 22) av
 We recommend Ubuntu 18.04 as it has a later version of [coturn](https://github.com/coturn/coturn) than Ubuntu 16.04.  Also, this TURN server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core server on Digital Ocean, for example, which offers servers with public IP addresses, is a good choice.
 
 Next, to configure the TURN server you need:
-  
-  * A fully qualified domain name (FQDN) with a DNS entry that resolves to the external public IP address of the TURN server 
+
+  * A fully qualified domain name (FQDN) with a DNS entry that resolves to the external public IP address of the TURN server
   * An e-mail address for Let's Encrypt
   * A secret key (it can be an 8 to 16 character random string that you create).
 
@@ -347,7 +348,7 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.e
 
 `bbb-install.sh` uses Let's Encrypt to configure coturn to use a SSL certificate.  With a SSL certificate in place, coturn can relay access to your BigBlueButton server via TCP/IP on port 443.  This means if a user is behind a restrictive firewall that blocks all outgoing UDP connections, the TURN server can accept connections from the user via TCP/IP on port 443 and relay the data to your BigBlueButton server via UDP.
 
-With the TURN server in place, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and adding the same `-c <FQDN>:<SECRET>`.  For example, 
+With the TURN server in place, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and adding the same `-c <FQDN>:<SECRET>`.  For example,
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234abcd
@@ -388,7 +389,7 @@ https://packages-eu.bigbluebutton.org/bbb-install.sh
 
 If on first install Greenlight gives you a `500 error` when accessing it, you can [restart Greenlight](http://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
 
-### Tomcat7 not running 
+### Tomcat7 not running
 
 If on the initial install you see
 
@@ -408,5 +409,3 @@ If you encounter an error with the script (such as it not completing or throwing
 # Limitations
 
 If you are running your BigBlueButton behind a firewall, such as on EC2, this script will not configure your firewall.  You'll need to [configure the firewall](#configuring-the-firewall) manually.
-
-
