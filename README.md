@@ -238,6 +238,61 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 
 The `bbb-install.sh` script will also install a cron job that automatically renews the Let's Encrypt certificate so it doesn't expire.  Cool.
 
+### Installing in a private network
+
+The default installation is meant to be for servers that are publicly available. This is because Let's Encrypt requires to access nginx in order to automatically validate the FQDN provided.
+
+When installing BigBlueButton in a private network, it is possible to validate the FQDN manually, by adding the option `-x` to the command line. As in:
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com -x
+~~~
+
+Confirm the use of the email account.
+
+```
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Would you be willing to share your email address with the Electronic Frontier
+Foundation, a founding partner of the Let's Encrypt project and the non-profit
+organization that develops Certbot? We'd like to send you email about our work
+encrypting the web, EFF news, campaigns, and ways to support digital freedom.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+(Y)es/(N)o:
+```
+
+Confirm the use of the IP address
+```
+Are you OK with your IP being logged?
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+(Y)es/(N)o:
+```
+
+A challenge will be generated and shown in the console.
+
+```
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Please deploy a DNS TXT record under the name
+_acme-challenge.bbb.example.com with the following value:
+
+0bIA-3-RqbRo2EfbYTkuKk7xq2mzszUgVlr6l1OWjW8
+
+Before continuing, verify the record is deployed.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Press Enter to Continue
+```
+
+Before hitting Eneter, create a TXT record in the DNS with the challenge that was generated.
+
+```
+_acme-challenge.bbb.example.com.  TXT   "0bIA-3-RqbRo2EfbYTkuKk7xq2mzszUgVlr6l1OWjW8"   60
+```
+
+The downside of this is that because Let's Encrypt SSL certificates expire after 90 days, it will be necessary to manually update the certificates. In that case an email is sent a few days before the expiration and the next command has to be executed through the console.
+
+```
+certbot --email info@example.com --agree-tos -d bbb.example.com --deploy-hook 'systemctl restart nginx' --no-bootstrap --manual-public-ip-logging-ok --manual --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory certonly
+```
+
 
 ## Install API Demos
 
