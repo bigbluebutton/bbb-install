@@ -158,6 +158,9 @@ main() {
       l)
         LETS_ENCRYPT_ONLY=true
         ;;
+      g)
+        GREENLIGHT=true
+        ;;
       a)
         API_DEMOS=true
         ;;
@@ -167,7 +170,6 @@ main() {
       d)
         PROVIDED_CERTIFICATE=true
         ;;
-
 
       :)
         err "Missing option argument for -$OPTARG"
