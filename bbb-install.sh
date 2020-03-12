@@ -61,6 +61,7 @@ OPTIONS (install BigBlueButton):
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
+  -x                     Use Let's Encrypt certbot with manual dns challenges
   -a                     Install BBB API demos
   -g                     Install Greenlight
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
@@ -84,6 +85,7 @@ OPTIONS (install Let's Encrypt certificate only):
   -s <hostname>          Configure server with <hostname> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
   -l                     Install Let's Encrypt certificate (required)
+  -x                     Use Let's Encrypt certbot with manual dns challenges (optional)
 
 
 EXAMPLES:
@@ -109,10 +111,11 @@ HERE
 main() {
   export DEBIAN_FRONTEND=noninteractive
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
+  LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lgtad" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgtad" opt "${@}"; do
 
     case $opt in
       h)
@@ -136,6 +139,9 @@ main() {
           err "You must specify a valid email address (not the email in the docs)."
         fi
         ;;
+      x)
+        LETS_ENCRYPT_OPTIONS="--manual --preferred-challenges dns"
+        ;;
       c)
         COTURN=$OPTARG
         check_coturn $COTURN
@@ -151,9 +157,6 @@ main() {
 
       l)
         LETS_ENCRYPT_ONLY=true
-        ;;
-      g)
-        GREENLIGHT=true
         ;;
       a)
         API_DEMOS=true
@@ -754,8 +757,8 @@ HERE
     fi
 
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
-      if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 --webroot -w /var/www/bigbluebutton-default/ \
-           -d $HOST --deploy-hook "systemctl restart nginx" --non-interactive certonly; then
+      if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 -w /var/www/bigbluebutton-default/ \
+           -d $HOST --deploy-hook "systemctl restart nginx" $LETS_ENCRYPT_OPTIONS certonly; then
         cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
         systemctl restart nginx
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
