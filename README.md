@@ -5,7 +5,7 @@
 
 `bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for setting up a BigBlueButton 2.2 server.
 
-With only a few parameters, `bbb-install.sh` can have your BigBlueButton server setup and ready for use in 15 minutes (depending on your server's internet speed to download and install packages).
+With only a few parameters, `bbb-install.sh` can have your BigBlueButton server setup and ready for use in 30 minutes (depending on your server's internet speed to download and install packages).
 
 For example, given an Ubuntu 16.04 64-bit server with a public IP address, to install/update to the latest build of BigBlueButton 2.2 first SSH into the server as root and run the following command:
 
