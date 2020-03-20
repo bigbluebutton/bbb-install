@@ -307,6 +307,7 @@ HERE
 
   check_lxc
   check_nat
+  check_LimitNOFILE
 
   configure_HTML5 
 
@@ -590,6 +591,23 @@ HERE
         systemctl enable dummy-nic
         systemctl start dummy-nic
       fi
+    fi
+  fi
+}
+
+check_LimitNOFILE() {
+  CPU=$(nproc --all)
+
+  if [ "$CPU" -gt 36 ]; then
+    if [ -f /lib/systemd/system/bbb-web.service ]; then
+      # Let's create an override file to increase the number of LimitNOFILE 
+      mkdir -p /etc/systemd/system/bbb-web.service.d/
+      cat > /etc/systemd/system/bbb-web.service.d/override.conf << HERE
+[Service]
+LimitNOFILE=
+LimitNOFILE=8192
+HERE
+      systemctl daemon-reload
     fi
   fi
 }
