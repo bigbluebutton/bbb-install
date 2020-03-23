@@ -5,7 +5,7 @@
 
 `bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for setting up a BigBlueButton 2.2 server.
 
-With only a few parameters, `bbb-install.sh` can have your BigBlueButton server setup and ready for use in 30 minutes (depending on your server's internet speed to download and install packages).
+With only a few parameters, `bbb-install.sh` can have your BigBlueButton server set up and ready for use in 30 minutes (depending on your server's internet speed to download and install packages).
 
 For example, given an Ubuntu 16.04 64-bit server with a public IP address, to install/update to the latest build of BigBlueButton 2.2 first SSH into the server as root and run the following command:
 
@@ -59,12 +59,12 @@ Before running `bbb-install.sh`, we _strongly_ recommend that you:
   * Ensure that your server meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements)
   * Configure a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of the server.
 
-To setup a FQDN, you need to purchase a domain name from a domain name system (DNS) provider, such as [GoDaddy](https://godaddy.com) or [Network Solutions](https://networksolutions.com).  Once purchased, you'll use the web tools provided by the DNS provider to create an `A Record` that resolves to the public IP address of your BigBlueButton server.  (Check the DNS provider's documentation for details on how to setup the `A Record`.)
+To set up a FQDN, you need to purchase a domain name from a domain name system (DNS) provider, such as [GoDaddy](https://godaddy.com) or [Network Solutions](https://networksolutions.com).  Once purchased, you'll use the web tools provided by the DNS provider to create an `A Record` that resolves to the public IP address of your BigBlueButton server.  (Check the DNS provider's documentation for details on how to set up the `A Record`.)
 
 With a FQDN domain name place, you can then pass a few additional parameters to `bbb-install.sh` to have it:
 
   * Request and install a 4096 bit TLS/SSL certificate from Let's Encrypt (we love Let's Encrypt), and (optionally)
-  * Install and configure [Greenlight](http://docs.bigbluebutton.org/greenlight/gl-overview.html) to provide a simple front-end for users to enable them to setup rooms, hold online sessions, and manage recordings.  (Greenlight also lets you, the administrator, manage user accounts within Greenlight).
+  * Install and configure [Greenlight](http://docs.bigbluebutton.org/greenlight/gl-overview.html) to provide a simple front-end for users to enable them to set up rooms, hold online sessions, and manage recordings.  (Greenlight also lets you, the administrator, manage user accounts within Greenlight).
 
 Once the BigBlueButton server is configured with an TLS/SSL certificate, your users can use FireFox and Chrome (recommended browsers) to access and share their audio, video, and screen in a BigBlueButton session via WebRTC.
 
@@ -77,7 +77,7 @@ There are many hosting companies that can provide you virtual and dedicated serv
 
 For quick setup, [Digital Ocean](https://www.digitalocean.com/) offers both virtual servers with Ubuntu 16.04 64-bit and a single public IP address (no firewall).  [Hetzner](https://hetzner.cloud/) offers dedicated servers with single IP address.
 
-Other popular choices, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/), offer servers that are setup behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configure BigBlueButton accordingly.  
+Other popular choices, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/), offer servers that are set up behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configure BigBlueButton accordingly.  
 
 Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.xlarge` (or larger) instance.  All EC2 servers are, by default, is behind a firewall (which Amazon calls a `security group`).  You will need to manually configure the security group before installing BigBlueButton on EC2 and, in a similar manner, on Azure and Google Compute Engine (GCE).  (See screen shots in next section.)
 
@@ -108,7 +108,7 @@ After the instance is created, you need to add a firewall rule to allow incoming
 
 ### Installation Videos
 
-Using Digital Ocean as an example, we put together this video to get you going quickly: [Using bbb-install.sh to setup BigBlueButton on Digital Ocean](https://youtu.be/D1iYEwxzk0M).
+Using Digital Ocean as an example, we put together this video to get you going quickly: [Using bbb-install.sh to set up BigBlueButton on Digital Ocean](https://youtu.be/D1iYEwxzk0M).
 
 Using Amazon EC2, see [Install using bbb-install.sh on EC2](https://youtu.be/-E9WIrH_yTs).
 
@@ -220,7 +220,7 @@ Before `bbb-install.sh` can install a SSL/TLS certificate, you will need to prov
    * A fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the public IP address of your server
    * An e-mail address
 
-When you have setup the FQDN, check that it correctly resolves to the external IP address of the server using the `dig` command.
+When you have set up the FQDN, check that it correctly resolves to the external IP address of the server using the `dig` command.
 
 ~~~
 dig bbb.example.com @8.8.8.8
@@ -321,7 +321,7 @@ To launch Greenlight, simply open the URL of your server, such as `https://bbb.e
 
 ![bbb-install.sh](images/greenlight.png?raw=true "Greenlight")
 
-To setup an administrator account for Greenlight (so you can approve/deny signups), enter the following commands
+To set up an administrator account for Greenlight (so you can approve/deny signups), enter the following commands
 
 ~~~
 cd greenlight/
@@ -350,7 +350,7 @@ This allows users to store the contents of /var/bigbluebutton, which can get qui
 
 ## Doing everything with a single command
 
-If you want to setup BigBlueButton 2.2 with a TLS/SSL certificate and GreenLight, you can do this all with a single command:
+If you want to set up BigBlueButton 2.2 with a TLS/SSL certificate and GreenLight, you can do this all with a single command:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com -g
@@ -361,14 +361,14 @@ Furthermore, you can re-run the same command later to update your server to the 
 
 # Install a TURN server
 
-You can use `bbb-install.sh` to automate the steps to [setup a TURN server for BigBlueButton](http://docs.bigbluebutton.org/install/install.html#setup-a-turn-server).  
+You can use `bbb-install.sh` to automate the steps to [set up a TURN server for BigBlueButton](http://docs.bigbluebutton.org/install/install.html#setup-a-turn-server).  
 Note: This step is optional, but recommended if your BigBlueButton server is publically available on the internet and will be accessed by users who may be behind restrictive firewalls.
 
 BigBlueButton normally requires a wide range of UDP ports to be available for WebRTC communication. In some network restricted sites or development environments, such as those behind NAT or a firewall that restricts outgoing UDP connections, users may be unable to make outgoing UDP connections to your BigBlueButton server.  
 
 The TURN protocol is designed to allow UDP-based communication flows like WebRTC to bypass NAT or firewalls by having the client connect to the TURN server, and then have the TURN server connect to the destination on their behalf.
 
-You need a separate server (not the BigBlueButton server) to setup as a TURN server. Specifically you need:
+You need a separate server (not the BigBlueButton server) to set up as a TURN server. Specifically you need:
 
   * An Ubuntu 18.04 server with a public IP address
 
@@ -389,13 +389,13 @@ Next, to configure the TURN server you need:
   * An e-mail address for Let's Encrypt
   * A secret key (it can be an 8 to 16 character random string that you create).
 
-With the above information, you can setup a TURN server for BigBlueButton using `bbb-install.sh` as follows
+With the above information, you can set up a TURN server for BigBlueButton using `bbb-install.sh` as follows
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c <FQDN>:<SECRET> -e <EMAIL>
 ~~~
 
-Note, we've omitted the `-v` option, which causes `bbb-install.sh` to just install and configure coturn.  For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email address, you can setup a TURN server for BigBlueButton using the command
+Note, we've omitted the `-v` option, which causes `bbb-install.sh` to just install and configure coturn.  For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email address, you can set up a TURN server for BigBlueButton using the command
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.example.com:1234abcd -e info@example.com
