@@ -1,4 +1,8 @@
 language: generic
-dist: xenical
 
-script: sudo ./bbb-install.sh -v xenial-220 -a -g
+jobs:
+  include:
+  - dist: xenial
+    script: sudo ./bbb-install.sh -v xenial-220 -a -g
+  - dist: bionic
+    script: sudo ./bbb-install.sh -v bionic-220 -a -g
