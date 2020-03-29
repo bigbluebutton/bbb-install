@@ -3,6 +3,6 @@ language: generic
 jobs:
   include:
   - dist: xenial
-    script: sudo ./bbb-install.sh -v xenial-223 -a -g
+    script: sudo ./bbb-install.sh -v xenial-220 -a -g
   - dist: bionic
-    script: sudo ./bbb-install.sh -v bionic-223 -a -g
+    script: sudo ./bbb-install.sh -v xenial-220 -a -g
