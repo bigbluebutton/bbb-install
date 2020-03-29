@@ -2,7 +2,12 @@ language: generic
 
 jobs:
   include:
-  - dist: xenial
+  - name: Ubuntu 16.04 Xenial, BBB 2.2 with API
+    dist: xenial
+    script: sudo ./bbb-install.sh -v xenial-220 -a
+  - name: Ubuntu 16.04 Xenial, BBB 2.2 with API and Greenlight
+    dist: xenial
     script: sudo ./bbb-install.sh -v xenial-220 -a -g
-  - dist: bionic
-    script: sudo ./bbb-install.sh -v xenial-220 -a -g
+  - name: Ubuntu 18.04 Bionic, BBB 2.2 with API and Greenlight
+    dist: bionic
+    script: sudo ./bbb-install.sh -v bionic-220 -a -g
