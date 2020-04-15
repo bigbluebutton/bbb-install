@@ -185,9 +185,8 @@ main() {
 
   check_apache2
 
-  if [ ! -z "$PROXY" ]; then
-    echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
-  fi
+  [ ! -z "$PROXY" ] \
+      && echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ ! -z "$LETS_ENCRYPT_ONLY" ]; then
@@ -207,10 +206,8 @@ main() {
     exit 0
   fi
 
-  if [ -z "$VERSION" ]; then
-    usage
-    exit 0
-  fi
+  [ -z "$VERSION" ] \
+      && usage && exit 0
 
   # We're installing BigBlueButton
   env
@@ -316,9 +313,8 @@ HERE
     while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
   fi
 
-  if [ ! -z "$LINK_PATH" ]; then
-    ln -s "$LINK_PATH" "/var/bigbluebutton"
-  fi
+  [ ! -z "$LINK_PATH" ] \
+      && ln -s "$LINK_PATH" "/var/bigbluebutton"
 
   if [ ! -z "$PROVIDED_CERTIFICATE" ] ; then
     install_ssl
@@ -326,13 +322,11 @@ HERE
     install_ssl
   fi
 
-  if [ ! -z "$GREENLIGHT" ]; then
-    install_greenlight
-  fi
+  [ ! -z "$GREENLIGHT" ] \
+      && install_greenlight
 
-  if [ ! -z "$COTURN" ]; then
-    configure_coturn
-  fi
+  [ ! -z "$COTURN" ] \
+      && configure_coturn
 
   apt-get auto-remove -y
 
@@ -725,9 +719,8 @@ HERE
 
 
 install_ssl() {
-  if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
-    sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
-  fi
+    [ -f /var/www/bigbluebutton/client/conf/config.xml ] \
+	& sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
 
   if ! grep -q $HOST /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
     bbb-conf --setip $HOST
@@ -742,9 +735,8 @@ install_ssl() {
     need_pkg certbot
   fi
 
-  if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
-    openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
-  fi
+  [ ! -f /etc/nginx/ssl/dhp-4096.pem ] \
+      && openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
 
   if [ ! -f /etc/letsencrypt/live/$HOST/fullchain.pem ]; then
     rm -f /tmp/bigbluebutton.bak
