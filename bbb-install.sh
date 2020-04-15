@@ -720,7 +720,7 @@ HERE
 
 install_ssl() {
     [ -f /var/www/bigbluebutton/client/conf/config.xml ] \
-	& sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
+	&& sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
 
   if ! grep -q $HOST /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
     bbb-conf --setip $HOST
@@ -1090,4 +1090,3 @@ HERE
 }
 
 main "$@" || exit 1
-
