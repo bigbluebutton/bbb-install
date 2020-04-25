@@ -514,7 +514,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then err "You must unisntall the Apache2 server first"; fi
+  if dpkg -l | grep -q apache2-bin; then err "You must uninstall the Apache2 server first"; fi
 }
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
