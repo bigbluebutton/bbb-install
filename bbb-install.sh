@@ -26,22 +26,22 @@
 #
 #  Install BigBlueButton and configure using server's external IP address
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22
 #
 #
 #  Install BigBlueButton and configure using hostname bbb.example.com
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com
 #
 #
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com
 #
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -57,7 +57,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-22') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -92,10 +92,10 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v xenial-220
-    -v xenial-220 -s bbb.example.com -e info@example.com
-    -v xenial-220 -s bbb.example.com -e info@example.com -g
-    -v xenial-220 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v xenial-22
+    -v xenial-22 -s bbb.example.com -e info@example.com
+    -v xenial-22 -s bbb.example.com -e info@example.com -g
+    -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Sample options for setup of a coturn server (on a different server)
 
@@ -475,7 +475,7 @@ check_version() {
   # Check if were upgrading from 2.0 (the ownership of /etc/bigbluebutton/nginx/web has changed from bbb-client to bbb-web)
   if [ -f /etc/apt/sources.list.d/bigbluebutton.list ]; then
     if grep -q xenial-200 /etc/apt/sources.list.d/bigbluebutton.list; then
-      if echo $VERSION | grep -q xenial-220; then
+      if echo $VERSION | grep -q xenial-22; then
         if dpkg -l | grep -q bbb-client; then
           apt-get purge -y bbb-client
         fi
