@@ -421,6 +421,7 @@ get_IP() {
     need_pkg netcat-openbsd
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
+    sleep 1
     
      # Check if we can reach the server through it's external IP address
      if nc -zvw3 $external_ip 443  > /dev/null 2>&1; then
