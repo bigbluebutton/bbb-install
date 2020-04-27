@@ -26,22 +26,22 @@
 #
 #  Install BigBlueButton and configure using server's external IP address
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22
 #
 #
 #  Install BigBlueButton and configure using hostname bbb.example.com
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com
 #
 #
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com
 #
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -57,7 +57,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-22') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -93,10 +93,10 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v xenial-220
-    -v xenial-220 -s bbb.example.com -e info@example.com
-    -v xenial-220 -s bbb.example.com -e info@example.com -g
-    -v xenial-220 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v xenial-22
+    -v xenial-22 -s bbb.example.com -e info@example.com
+    -v xenial-22 -s bbb.example.com -e info@example.com -g
+    -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Sample options for setup of a coturn server (on a different server)
 
@@ -423,6 +423,7 @@ get_IP() {
     need_pkg netcat-openbsd
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
+    sleep 1
     
      # Check if we can reach the server through it's external IP address
      if nc -zvw3 $external_ip 443  > /dev/null 2>&1; then
@@ -476,7 +477,7 @@ check_version() {
   # Check if were upgrading from 2.0 (the ownership of /etc/bigbluebutton/nginx/web has changed from bbb-client to bbb-web)
   if [ -f /etc/apt/sources.list.d/bigbluebutton.list ]; then
     if grep -q xenial-200 /etc/apt/sources.list.d/bigbluebutton.list; then
-      if echo $VERSION | grep -q xenial-220; then
+      if echo $VERSION | grep -q xenial-22; then
         if dpkg -l | grep -q bbb-client; then
           apt-get purge -y bbb-client
         fi
@@ -515,7 +516,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then err "You must unisntall the Apache2 server first"; fi
+  if dpkg -l | grep -q apache2-bin; then err "You must uninstall the Apache2 server first"; fi
 }
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
@@ -994,10 +995,12 @@ install_coturn() {
       need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
       apt-get -y install certbot
 
-      certbot certonly --standalone --non-interactive --preferred-challenges http \
-	--deploy-hook "systemctl restart coturn" \
-	-d $COTURN_HOST --email $EMAIL --agree-tos -n
+  if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
+         --deploy-hook "systemctl restart coturn" \
+         -d $COTURN_HOST --email $EMAIL --agree-tos -n ; then
+      err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
   else
+      say "Using provided ssl from /local/certs."
       mkdir -p /etc/letsencrypt/live/$COTURN_HOST/
       ln -s /local/certs/fullchain.pem /etc/letsencrypt/live/$COTURN_HOST/fullchain.pem
       ln -s /local/certs/privkey.pem /etc/letsencrypt/live/$COTURN_HOST/privkey.pem
