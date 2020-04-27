@@ -995,15 +995,16 @@ install_coturn() {
       need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
       apt-get -y install certbot
 
-  if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
+      if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
          --deploy-hook "systemctl restart coturn" \
          -d $COTURN_HOST --email $EMAIL --agree-tos -n ; then
-      err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
+         err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
+      fi
   else
-      say "Using provided ssl from /local/certs."
+      say "Using provided ssl from /local/certs/"
       mkdir -p /etc/letsencrypt/live/$COTURN_HOST/
-      ln -s /local/certs/fullchain.pem /etc/letsencrypt/live/$COTURN_HOST/fullchain.pem
-      ln -s /local/certs/privkey.pem /etc/letsencrypt/live/$COTURN_HOST/privkey.pem
+      ln -fs /local/certs/fullchain.pem /etc/letsencrypt/live/$COTURN_HOST/fullchain.pem
+      ln -fs /local/certs/privkey.pem /etc/letsencrypt/live/$COTURN_HOST/privkey.pem
   fi
 
   COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
