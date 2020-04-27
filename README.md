@@ -146,8 +146,9 @@ OPTIONS (install BigBlueButton):
 
 OPTIONS (install coturn):
 
+  -d                     Skip SSL certificates request (use provided certificates from mounted volume)
   -c <hostname>:<secret> Configure coturn with <hostname> and <secret> (required)
-  -e <email>             Email for Let's Encrypt certbot (required)
+  -e <email>             Email for Let's Encrypt certbot (required, without -d)
 
 
 EXAMPLES
@@ -161,7 +162,8 @@ Setup a BigBlueButton server
 
 Setup a coturn server
 
-    ./bbb-install.sh -c turn.example.com:1234324 -e info@example.com
+    ./bbb-install.sh    -c turn.example.com:1234324 -e info@example.com
+    ./bbb-install.sh -d -c turn.example.com:1234324
 
 SUPPORT:
      Source: https://github.com/bigbluebutton/bbb-install
@@ -402,6 +404,12 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.e
 ~~~
 
 `bbb-install.sh` uses Let's Encrypt to configure coturn to use a SSL certificate.  With a SSL certificate in place, coturn can relay access to your BigBlueButton server via TCP/IP on port 443.  This means if a user is behind a restrictive firewall that blocks all outgoing UDP connections, the TURN server can accept connections from the user via TCP/IP on port 443 and relay the data to your BigBlueButton server via UDP.
+
+To use provided SSL certificates from mounted volume, put the option `-d` in front of `-c` and omit the `-e` option.
+
+~~~
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -d -c turn.example.com:1234abcd
+~~~
 
 With the TURN server in place, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and adding the same `-c <FQDN>:<SECRET>`.  For example,
 
