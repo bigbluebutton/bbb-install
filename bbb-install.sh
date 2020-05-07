@@ -599,7 +599,7 @@ HERE
 check_LimitNOFILE() {
   CPU=$(nproc --all)
 
-  if [ "$CPU" -gt 36 ]; then
+  if [ "$CPU" -gt 8 ]; then
     if [ -f /lib/systemd/system/bbb-web.service ]; then
       # Let's create an override file to increase the number of LimitNOFILE 
       mkdir -p /etc/systemd/system/bbb-web.service.d/
