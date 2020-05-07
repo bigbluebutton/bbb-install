@@ -586,7 +586,7 @@ WantedBy=multi-user.target
 HERE
 
       if [ "$DAEMON_RELOAD" == "true" ]; then
-        systemctl dameon-reload
+        systemctl daemon-reload
         systemctl restart dummy-nic
       else
         systemctl enable dummy-nic
