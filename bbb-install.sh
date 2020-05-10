@@ -759,7 +759,8 @@ server {
   listen [::]:80;
   server_name $HOST;
 
-  access_log  /var/log/nginx/bigbluebutton.access.log;
+  error_log /var/log/nginx/bigbluebutton.error.log;
+  access_log /dev/null;
 
   # BigBlueButton landing page.
   location / {
@@ -811,7 +812,8 @@ server {
     ssl_prefer_server_ciphers on;
     ssl_dhparam /etc/nginx/ssl/dhp-4096.pem;
 
-  access_log  /var/log/nginx/bigbluebutton.access.log;
+  error_log /var/log/nginx/bigbluebutton.error.log;
+  access_log /dev/null;
 
    # Handle RTMPT (RTMP Tunneling).  Forwards requests
    # to Red5 on port 5080
