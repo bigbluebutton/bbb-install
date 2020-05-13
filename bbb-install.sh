@@ -873,8 +873,7 @@ HERE
   # Configure rest of BigBlueButton Configuration for SSL
   sed -i "s/<param name=\"wss-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
 
-  sed -i 's/http:/https:/g' /etc/bigbluebutton/nginx/sip.nginx
-  sed -i 's/5066/7443/g'    /etc/bigbluebutton/nginx/sip.nginx
+  sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
 
   sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 
@@ -917,7 +916,12 @@ HERE
     else
       # 2.2
       yq w -i $TARGET kurento[0].ip "$IP"
-      yq w -i $TARGET freeswitch.sip_ip "$IP"
+      yq w -i $TARGET freeswitch.ip "$IP"
+      if [ ! -z "$INTERNAL_IP" ]; then
+        yq w -i $TARGET freeswitch.sip_ip "$INTERNAL_IP"
+      else
+        yq w -i $TARGET freeswitch.sip_ip "$IP"
+      fi
     fi
     chown bigbluebutton:bigbluebutton $TARGET
     chmod 644 $TARGET
