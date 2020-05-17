@@ -77,6 +77,7 @@ OPTIONS (install BigBlueButton):
 
 OPTIONS (install coturn only):
 
+  -d                     Skip SSL certificates request (use provided certificates from mounted volume)
   -c <hostname>:<secret> Setup a coturn server with <hostname> and <secret> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
 
@@ -100,6 +101,7 @@ Sample options for setup a BigBlueButton server
 Sample options for setup of a coturn server (on a different server)
 
     -c turn.example.com:1234324 -e info@example.com
+    -d -c turn.example.com:1234324
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -200,7 +202,7 @@ main() {
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ ! -z "$COTURN" ]; then
-    if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
+    if [ -z "$EMAIL" ] && [ -z "$PROVIDED_CERTIFICATE" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt, or -d Skip SSL certificates"; fi
     check_ubuntu 18.04
 
     install_coturn
@@ -994,14 +996,21 @@ install_coturn() {
   apt-get dist-upgrade -yq
   need_pkg coturn
 
-  need_pkg software-properties-common 
-  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
-  apt-get -y install certbot
+  need_pkg software-properties-common
+  if [ -z "$PROVIDED_CERTIFICATE" ] ; then
+      need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
+      apt-get -y install certbot
 
-  if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
+      if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
          --deploy-hook "systemctl restart coturn" \
          -d $COTURN_HOST --email $EMAIL --agree-tos -n ; then
-     err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
+         err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
+      fi
+  else
+      say "Using provided ssl from /local/certs/"
+      mkdir -p /etc/letsencrypt/live/$COTURN_HOST/
+      ln -fs /local/certs/fullchain.pem /etc/letsencrypt/live/$COTURN_HOST/fullchain.pem
+      ln -fs /local/certs/privkey.pem /etc/letsencrypt/live/$COTURN_HOST/privkey.pem
   fi
 
   COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
