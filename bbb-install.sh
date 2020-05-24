@@ -798,9 +798,14 @@ server {
   listen 80;
   listen [::]:80;
   server_name $HOST;
+  
+   return 301 https://$server_name$request_uri; #redirect HTTP to HTTPS
 
+}
+server {
   listen 443 ssl;
   listen [::]:443 ssl;
+  server_name $HOST;
 
     ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$HOST/privkey.pem;
@@ -810,6 +815,9 @@ server {
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers on;
     ssl_dhparam /etc/nginx/ssl/dhp-4096.pem;
+    
+    # HSTS
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
