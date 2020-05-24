@@ -799,7 +799,7 @@ server {
   listen [::]:80;
   server_name $HOST;
   
-   return 301 https://$server_name$request_uri; #redirect HTTP to HTTPS
+   return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
 
 }
 server {
