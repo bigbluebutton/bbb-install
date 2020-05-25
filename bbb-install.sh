@@ -816,8 +816,8 @@ server {
     ssl_prefer_server_ciphers on;
     ssl_dhparam /etc/nginx/ssl/dhp-4096.pem;
     
-    # HSTS
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # HSTS (comment out to enable)
+    #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
