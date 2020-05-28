@@ -66,7 +66,7 @@ OPTIONS (install BigBlueButton):
   -g                     Install Greenlight
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
-  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
+  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path>
 
   -p <host>              Use apt-get proxy at <host>
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
@@ -112,6 +112,7 @@ main() {
   export DEBIAN_FRONTEND=noninteractive
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
+  SOURCES_FETCHED=false
 
   need_x64
 
@@ -125,7 +126,7 @@ main() {
 
       s)
         HOST=$OPTARG
-        if [ "$HOST" == "bbb.example.com" ]; then 
+        if [ "$HOST" == "bbb.example.com" ]; then
           err "You must specify a valid hostname (not the hostname given in the docs)."
         fi
         check_host $HOST
@@ -135,7 +136,7 @@ main() {
         ;;
       e)
         EMAIL=$OPTARG
-        if [ "$EMAIL" == "info@example.com" ]; then 
+        if [ "$EMAIL" == "info@example.com" ]; then
           err "You must specify a valid email address (not the email in the docs)."
         fi
         ;;
@@ -214,11 +215,11 @@ main() {
 
   # We're installing BigBlueButton
   env
-  if [ "$DISTRO" == "xenial" ]; then 
+  if [ "$DISTRO" == "xenial" ]; then
     check_ubuntu 16.04
     TOMCAT_USER=tomcat7
   fi
-  if [ "$DISTRO" == "bionic" ]; then 
+  if [ "$DISTRO" == "bionic" ]; then
     check_ubuntu 18.04
     TOMCAT_USER=tomcat8
   fi
@@ -230,8 +231,8 @@ main() {
 
   need_pkg curl
 
-  if [ "$DISTRO" == "xenial" ]; then 
-    rm -rf /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list 
+  if [ "$DISTRO" == "xenial" ]; then
+    rm -rf /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list
     need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
     need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq                 CC86BB64 # Edit yaml files with yq
     apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
@@ -252,7 +253,7 @@ main() {
     if ! apt-key list A15703C6 | grep -q A15703C6; then
       wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
     fi
-    if apt-key list A15703C6 | grep -q expired; then 
+    if apt-key list A15703C6 | grep -q expired; then
       wget -qO - https://www.mongodb.org/static/pgp/server-3.4.asc | sudo apt-key add -
     fi
     rm -rf /etc/apt/sources.list.d/mongodb-org-4.0.list
@@ -309,7 +310,7 @@ HERE
   check_nat
   check_LimitNOFILE
 
-  configure_HTML5 
+  configure_HTML5
 
   if [ ! -z "$API_DEMOS" ]; then
     need_pkg bbb-demo
@@ -393,7 +394,7 @@ get_IP() {
     IP=$(hostname -I | cut -f1 -d' ')
   fi
 
-  # Determine external IP 
+  # Determine external IP
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
     # Ec2
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
@@ -422,7 +423,7 @@ get_IP() {
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
     sleep 1
-    
+
      # Check if we can reach the server through it's external IP address
      if nc -zvw3 $external_ip 443  > /dev/null 2>&1; then
        INTERNAL_IP=$IP
@@ -442,15 +443,20 @@ get_IP() {
 need_pkg() {
   check_root
 
+  if [ ! "$SOURCES_FETCHED" = true ]; then
+    apt-get update
+    SOURCES_FETCHED=true
+  fi
+
   if ! dpkg -s ${@:1} >/dev/null 2>&1; then
     LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
   fi
 }
 
 need_ppa() {
-  need_pkg software-properties-common 
+  need_pkg software-properties-common
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
-    LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
+    LC_CTYPE=C.UTF-8 add-apt-repository -y $2
   fi
   if ! apt-key list $3 | grep -q -E "1024|4096"; then  # Let's try it a second time
     LC_CTYPE=C.UTF-8 add-apt-repository $2 -y
@@ -505,10 +511,10 @@ check_coturn() {
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
   if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
 
-  if [ "$COTURN_HOST" == "turn.example.com" ]; then 
+  if [ "$COTURN_HOST" == "turn.example.com" ]; then
     err "You must specify a valid hostname (not the example given in the docs)"
   fi
-  if [ "$COTURN_SECRET" == "1234abcd" ]; then 
+  if [ "$COTURN_SECRET" == "1234abcd" ]; then
     err "You must specify a new password (not the example given in the docs)."
   fi
 }
@@ -569,8 +575,8 @@ check_nat() {
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
     if ! grep -q $IP /lib/systemd/system/dummy-nic.service > /dev/null 2>&1; then
-      if [ -f /lib/systemd/system/dummy-nic.service ]; then 
-        DAEMON_RELOAD=true; 
+      if [ -f /lib/systemd/system/dummy-nic.service ]; then
+        DAEMON_RELOAD=true;
       fi
 
       cat > /lib/systemd/system/dummy-nic.service << HERE
@@ -601,7 +607,7 @@ check_LimitNOFILE() {
 
   if [ "$CPU" -gt 8 ]; then
     if [ -f /lib/systemd/system/bbb-web.service ]; then
-      # Let's create an override file to increase the number of LimitNOFILE 
+      # Let's create an override file to increase the number of LimitNOFILE
       mkdir -p /etc/systemd/system/bbb-web.service.d/
       cat > /etc/systemd/system/bbb-web.service.d/override.conf << HERE
 [Service]
@@ -884,7 +890,7 @@ HERE
   fi
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
-  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
+  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
 
   if [ -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; then
     sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp
@@ -946,7 +952,7 @@ configure_coturn() {
         <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
-    
+
     <bean id="turn1" class="org.bigbluebutton.web.services.turn.TurnServer">
         <constructor-arg index="0" value="$COTURN_SECRET"/>
         <constructor-arg index="1" value="turn:$COTURN_HOST:443?transport=tcp"/>
@@ -994,7 +1000,7 @@ install_coturn() {
   apt-get dist-upgrade -yq
   need_pkg coturn
 
-  need_pkg software-properties-common 
+  need_pkg software-properties-common
   need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
   apt-get -y install certbot
 
@@ -1096,7 +1102,7 @@ HERE
   cat 1>&2 <<HERE
 
 #
-# This TURN server is ready.  To configure your BigBlueButton server to use this TURN server, 
+# This TURN server is ready.  To configure your BigBlueButton server to use this TURN server,
 # add the option
 #
 #  -c $COTURN_HOST:$COTURN_SECRET
@@ -1107,4 +1113,3 @@ HERE
 }
 
 main "$@" || exit 1
-
