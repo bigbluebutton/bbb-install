@@ -124,6 +124,10 @@ main() {
         exit 0
         ;;
 
+      p)
+        echo "Acquire::http::Proxy \"http://$OPTARG:3142\";"  > /etc/apt/apt.conf.d/01proxy
+        ;;
+
       s)
         HOST=$OPTARG
         if [ "$HOST" == "bbb.example.com" ]; then
@@ -150,10 +154,6 @@ main() {
       v)
         VERSION=$OPTARG
         check_version $VERSION
-        ;;
-
-      p)
-        PROXY=$OPTARG
         ;;
 
       l)
@@ -185,10 +185,6 @@ main() {
   done
 
   check_apache2
-
-  if [ ! -z "$PROXY" ]; then
-    echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
-  fi
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ ! -z "$LETS_ENCRYPT_ONLY" ]; then
