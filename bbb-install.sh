@@ -129,7 +129,6 @@ main() {
         if [ "$HOST" == "bbb.example.com" ]; then 
           err "You must specify a valid hostname (not the hostname given in the docs)."
         fi
-        check_host $HOST
         ;;
       r)
         PACKAGE_REPOSITORY=$OPTARG
@@ -149,7 +148,6 @@ main() {
         ;;
       v)
         VERSION=$OPTARG
-        check_version $VERSION
         ;;
 
       p)
@@ -188,6 +186,14 @@ main() {
 
   if [ ! -z "$PROXY" ]; then
     echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
+  fi
+
+  if [ ! -z "$HOST" ]; then
+    check_host $HOST
+  fi
+
+  if [ ! -z "$VERSION" ]; then
+    check_version $VERSION
   fi
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
