@@ -112,6 +112,7 @@ main() {
   export DEBIAN_FRONTEND=noninteractive
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
+  SOURCES_FETCHED=false
 
   need_x64
 
@@ -441,6 +442,11 @@ get_IP() {
 
 need_pkg() {
   check_root
+
+  if [ ! "$SOURCES_FETCHED" = true ]; then
+    apt-get update
+    SOURCES_FETCHED=true
+  fi
 
   if ! dpkg -s ${@:1} >/dev/null 2>&1; then
     LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
