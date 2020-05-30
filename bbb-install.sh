@@ -61,7 +61,9 @@ OPTIONS (install BigBlueButton):
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
+
   -x                     Use Let's Encrypt certbot with manual dns challenges
+
   -a                     Install BBB API demos
   -g                     Install Greenlight
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
@@ -112,10 +114,11 @@ main() {
   export DEBIAN_FRONTEND=noninteractive
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
+  SOURCES_FETCHED=false
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgtad" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgtadw" opt "${@}"; do
 
     case $opt in
       h)
@@ -128,7 +131,6 @@ main() {
         if [ "$HOST" == "bbb.example.com" ]; then 
           err "You must specify a valid hostname (not the hostname given in the docs)."
         fi
-        check_host $HOST
         ;;
       r)
         PACKAGE_REPOSITORY=$OPTARG
@@ -148,11 +150,13 @@ main() {
         ;;
       v)
         VERSION=$OPTARG
-        check_version $VERSION
         ;;
 
       p)
         PROXY=$OPTARG
+        if [ ! -z "$PROXY" ]; then
+          echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
+        fi
         ;;
 
       l)
@@ -170,6 +174,13 @@ main() {
       d)
         PROVIDED_CERTIFICATE=true
         ;;
+      w)
+        SSH_PORT=$(grep Port /etc/ssh/ssh_config | grep -v \# | sed 's/[^0-9]*//g')
+        if [[ ! -z "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
+          err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules.  See http://docs.bigbluebutton.org/2.2/customize.html#secure-your-system--restrict-access-to-specific-ports"
+        fi
+        UFW=true
+        ;;
 
       :)
         err "Missing option argument for -$OPTARG"
@@ -183,11 +194,15 @@ main() {
     esac
   done
 
-  check_apache2
-
-  if [ ! -z "$PROXY" ]; then
-    echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
+  if [ ! -z "$HOST" ]; then
+    check_host $HOST
   fi
+
+  if [ ! -z "$VERSION" ]; then
+    check_version $VERSION
+  fi
+
+  check_apache2
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ ! -z "$LETS_ENCRYPT_ONLY" ]; then
@@ -232,8 +247,9 @@ main() {
 
   if [ "$DISTRO" == "xenial" ]; then 
     rm -rf /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list 
+    need_ppa rmescandon-ubuntu-yq-xenial.list         ppa:rmescandon/yq         CC86BB64 # Edit yaml files with yq
+    need_ppa libreoffice-ubuntu-ppa-xenial.list       ppa:libreoffice/ppa       1378B444 # Latest libreoffice
     need_ppa bigbluebutton-ubuntu-support-xenial.list ppa:bigbluebutton/support E95B94BC # Latest version of ffmpeg
-    need_ppa rmescandon-ubuntu-yq-xenial.list ppa:rmescandon/yq                 CC86BB64 # Edit yaml files with yq
     apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
 
     # Remove default version of nodejs for Ubuntu 16.04 if installed
@@ -341,6 +357,10 @@ HERE
     systemctl daemon-reload
   fi
 
+  if [ "$UFW" == "true" ]; then
+   setup_ufw 
+  fi
+
   if [ ! -z "$HOST" ]; then
     bbb-conf --setip $HOST
   else
@@ -441,6 +461,11 @@ get_IP() {
 
 need_pkg() {
   check_root
+
+  if [ ! "$SOURCES_FETCHED" = true ]; then
+    apt-get update
+    SOURCES_FETCHED=true
+  fi
 
   if ! dpkg -s ${@:1} >/dev/null 2>&1; then
     LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
@@ -799,7 +824,7 @@ server {
   listen [::]:80;
   server_name $HOST;
   
-   return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
+  return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
 
 }
 server {
@@ -1112,6 +1137,20 @@ HERE
 # the the bbb-install.sh command.
 #
 HERE
+}
+
+setup_ufw() {
+  if [ ! -f /etc/bigbluebutton/bbb-conf/apply-config.sh ]; then
+    cat > /etc/bigbluebutton/bbb-conf/apply-config.sh << HERE
+#!/bin/bash
+
+# Pull in the helper functions for configuring BigBlueButton
+source /etc/bigbluebutton/bbb-conf/apply-lib.sh
+
+enableUFWRules
+HERE
+  chmod +x /etc/bigbluebutton/bbb-conf/apply-config.sh
+  fi
 }
 
 main "$@" || exit 1
