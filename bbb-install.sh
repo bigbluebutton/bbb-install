@@ -74,6 +74,7 @@ OPTIONS (install BigBlueButton):
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume)
+  -w                     Install UFW firewall
 
   -h                     Print help
 
