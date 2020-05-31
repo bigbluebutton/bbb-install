@@ -10,14 +10,15 @@ With only a few parameters, `bbb-install.sh` can have your BigBlueButton server 
 For example, given an Ubuntu 16.04 64-bit server with a public IP address, to install/update to the latest build of BigBlueButton 2.2 first SSH into the server as root and run the following command:
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v xenial-22 -a -w
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -a -w -l -s bbb.example.com -e info@example.com
 ~~~
 
 The command will pull down the latest version of `bbb-install.sh`, send it to the BASH shell interpreter, and pass the parameters 
 
   * `-v xenial-22` which specifies you want to install the latest build of BigBlueButton 2.2.N, 
-  * `-a` which specifies want to install the API demos (this makes it easy to do a few quick tests on the server), and 
-  * `-w` which installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768.
+  * `-a` which specifies want to install the API demos (this makes it easy to do a few quick tests on the server),
+  * `-w` which installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768, and
+  * `-l -s bbb.example.com -e info@example.com` which enables SSL/TLS encryption based on the Let's Encrypt service.
 
 Note: If your server is also behind an external firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the external firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before you can launch the client.
 
