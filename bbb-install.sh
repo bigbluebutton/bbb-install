@@ -48,7 +48,7 @@ usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 2.2 (or later) server in about 15 minutes.
+Script for installing a BigBlueButton 2.2 (or later) server in under 30 minutes.
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
@@ -284,11 +284,11 @@ main() {
     need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Latest version of ffmpeg
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
-      sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
-# Kurento Media Server - Release packages
-deb [arch=amd64] http://ubuntu.openvidu.io/6.13.0 $DISTRO kms6
-HERE
     fi
+    sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
+# Kurento Media Server - Release packages
+deb [arch=amd64] http://ubuntu.openvidu.io/6.13.2 $DISTRO kms6
+HERE
 
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
       curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
