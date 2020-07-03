@@ -642,8 +642,8 @@ HERE
 configure_HTML5() {
   # Use Google's default STUN server
   if [ ! -z "$INTERNAL_IP" ]; then
-   sed -i 's/;stunServerAddress.*/stunServerAddress=64.233.177.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
-   sed -i 's/;stunServerPort.*/stunServerPort=19302/g'                /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
+   sed -i 's/;stunServerAddress.*/stunServerAddress=172.217.212.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
+   sed -i 's/;stunServerPort.*/stunServerPort=19302/g'                 /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
   fi
 
   if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
