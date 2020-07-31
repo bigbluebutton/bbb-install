@@ -514,7 +514,7 @@ check_version() {
 }
 
 check_host() {
-  if [ -z "$PROVIDED_CERTIFICATE" ]; then
+  if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ]; then
     need_pkg dnsutils apt-transport-https net-tools
     DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi

@@ -19,7 +19,7 @@ When you run this command it pulls down the latest version of `bbb-install.sh`, 
   * `-a` installs the API demos (this makes it easy to do a few quick tests on the server), and 
   * `-w` installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768.
 
-Note: If your server is also behind an external firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the external firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before you can use the server to run BigBlueButton.
+Note: If your server is also behind an external firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the external firewall to forward [specific internet connections](#configuring-the-external-firewall) to the BigBlueButton server before you can launch the client.
 
 When the above command finishes, you'll see a message that gives you a test URL to launch the BigBlueButton client and join a meeting called 'Demo Meeting'.  
 
@@ -478,4 +478,4 @@ If you encounter an error with the script (such as it not completing or throwing
 
 # Limitations
 
-If you are running your BigBlueButton behind a firewall, such as on EC2, this script will not configure your firewall.  You'll need to [configure the firewall](#configuring-the-firewall) manually.
+If you are running your BigBlueButton behind a firewall, such as on EC2, this script will not configure your firewall.  You'll need to [configure the firewall](#configuring-the-external-firewall) manually.
