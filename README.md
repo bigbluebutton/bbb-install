@@ -3,25 +3,25 @@
 
 # bbb-install
 
-`bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for setting up a BigBlueButton 2.2 server.
+To help you setup a BigBlueButton server quickly, `bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for installing and conifuring up a BigBlueButton 2.2 server.
 
 With only a few parameters, `bbb-install.sh` can have your BigBlueButton server set up and ready for use in 30 minutes (depending on your server's internet speed to download and install packages).
 
-For example, given an Ubuntu 16.04 64-bit server with a public IP address, to install/update to the latest build of BigBlueButton 2.2 first SSH into the server as root and run the following command:
+For example, given an Ubuntu 16.04 64-bit server with a public IP address, you can install the latest build of BigBlueButton 2.2 by logging into your server via SSH and running the following command as root.
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v xenial-22 -a -w
 ~~~
 
-The command will pull down the latest version of `bbb-install.sh`, send it to the BASH shell interpreter, and pass the parameters 
+When you run this command it pulls down the latest version of `bbb-install.sh`, sends it to the BASH shell interpreter, and passes the parameters 
 
-  * `-v xenial-22` which specifies you want to install the latest build of BigBlueButton 2.2.N, 
-  * `-a` which specifies want to install the API demos (this makes it easy to do a few quick tests on the server), and 
-  * `-w` which installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768.
+  * `-v xenial-22` installs the latest build of BigBlueButton 2.2.x, 
+  * `-a` installs the API demos (this makes it easy to do a few quick tests on the server), and 
+  * `-w` installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768.
 
-Note: If your server is also behind an external firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the external firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before you can launch the client.
+Note: If your server is also behind an external firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the external firewall to forward [specific internet connections](#configuring-the-firewall) to the BigBlueButton server before you can use the server to run BigBlueButton.
 
-When `bbb-install.sh` finishes, you'll see a message that gives you a test URL to launch the BigBlueButton client and join a meeting called 'Demo Meeting'.  
+When the above command finishes, you'll see a message that gives you a test URL to launch the BigBlueButton client and join a meeting called 'Demo Meeting'.  
 
 ~~~
 # Warning: The API demos are installed and accessible from:
@@ -39,7 +39,7 @@ When `bbb-install.sh` finishes, you'll see a message that gives you a test URL t
 #    sudo apt-get purge bbb-demo  
 ~~~
 
-When you open the URL, you should see a login to join the meeting `Demo Meeting`.
+Open the URL in either Chrome or FireFox (recommended browsers).  You should see a login to join the meeting `Demo Meeting`.
 
 ![bbb-install.sh](images/html5-join.png?raw=true "HTML5 Page")
 
@@ -47,11 +47,11 @@ Enter your name and click Join.  The BigBlueButton client should then load in yo
 
 ![bbb-install.sh](images/html5.png?raw=true "HTML5 Client")
 
-Click the '[x]' to skip joining the audio.  Why?  In this example BigBlueButton server is configured to use an IP address (HTTP not HTTPS) and, as such, the browser will block access to the webcam and microphone.  
+Click '[x]' to skip joining the audio.  Why?  Using the above `bbb-install.sh` commnad, the BigBlueButton server is configured to use an IP address (HTTP not HTTPS) and, as such, Chrome and FireFox will block access to your webcam and microphone.  
 
-For a production setup of BigBlueButton, you need to configure transport level security (TLS) on the server.  Only when web pages are servied via HTTPS will the browser prompt the user for access to the webcam, microphone, or screen (for screen sharing) using the built-in real-time communications (WebRTC) libraries.
+For a production setup of BigBlueButton, you need to configure transport level security (TLS) on the server.  Only when web pages are servied via HTTPS will the browser allow access to your webcam, microphone, or screen (for screen sharing) using the browser's built-in real-time communications (WebRTC) libraries.
 
-The good news is `bbb-install.sh` can automatically request a TLS/SSL certificate from Let's Encrypt and configure BigBlueButton to use that certificate.  The following sections show you how.
+The good news is `bbb-install.sh` can automatically request a TLS/SSL certificate from Let's Encrypt and configure your BigBlueButton server to use that certificate.  The following sections show you how.
 
 
 ## Getting ready
@@ -123,7 +123,7 @@ Using Amazon EC2, see [Install using bbb-install.sh on EC2](https://youtu.be/-E9
 You can get help by passing the `-h` option.
 
 ~~~
-Script for installing a BigBlueButton 2.2 (or later) server in about 15 minutes.
+Script for installing a BigBlueButton 2.2 (or later) server in about 30 minutes.
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
