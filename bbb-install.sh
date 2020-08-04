@@ -1042,7 +1042,7 @@ install_coturn() {
   COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
   
   if [ -z $IP ]; then
-    COMMENT_EXTERNAL_IP="#"
+    COMMENT_EXTERNAL_IP="#external-ip="
   else
     COMMENT_EXTERNAL_IP="external-ip="
   fi
