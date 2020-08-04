@@ -1044,7 +1044,7 @@ install_coturn() {
   if [ -z $IP ]; then
     COMMENT_EXTERNAL_IP="#"
   else
-    COMMENT_EXTERNAL_IP=""
+    COMMENT_EXTERNAL_IP="external-ip="
   fi
 
   cat <<HERE > /etc/turnserver.conf
@@ -1064,7 +1064,7 @@ tls-listening-port=443
 
 # If the server is behind NAT, you need to specify the external IP address.
 # If there is only one external address, specify it like this:
-$COMMENT_EXTERNAL_IPexternal-ip=$IP
+$COMMENT_EXTERNAL_IP$IP
 
 # If you have multiple external addresses, you have to specify which
 # internal address each corresponds to, like this. The first address is the
