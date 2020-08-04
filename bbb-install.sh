@@ -1064,7 +1064,7 @@ tls-listening-port=443
 
 # If the server is behind NAT, you need to specify the external IP address.
 # If there is only one external address, specify it like this:
-external-ip=$IP
+$COMMENT_EXTERNAL_IPexternal-ip=$IP
 
 # If you have multiple external addresses, you have to specify which
 # internal address each corresponds to, like this. The first address is the
