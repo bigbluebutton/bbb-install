@@ -1040,6 +1040,12 @@ install_coturn() {
   fi
 
   COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
+  
+  if [ -z $IP ]; then
+    COMMENT_EXTERNAL_IP="#"
+  else
+    COMMENT_EXTERNAL_IP=""
+  fi
 
   cat <<HERE > /etc/turnserver.conf
 # Example coturn configuration for BigBlueButton
