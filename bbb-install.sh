@@ -514,7 +514,7 @@ check_version() {
 }
 
 check_host() {
-  if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ]; then
+  if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ] && [ -z "$COTURN" ]; then
     need_pkg dnsutils apt-transport-https net-tools
     DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
@@ -1040,6 +1040,12 @@ install_coturn() {
   fi
 
   COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
+  
+  if [ -z $IP ]; then
+    COMMENT_EXTERNAL_IP="#external-ip="
+  else
+    COMMENT_EXTERNAL_IP="external-ip="
+  fi
 
   cat <<HERE > /etc/turnserver.conf
 # Example coturn configuration for BigBlueButton
@@ -1058,7 +1064,7 @@ tls-listening-port=443
 
 # If the server is behind NAT, you need to specify the external IP address.
 # If there is only one external address, specify it like this:
-external-ip=$IP
+$COMMENT_EXTERNAL_IP$IP
 
 # If you have multiple external addresses, you have to specify which
 # internal address each corresponds to, like this. The first address is the
