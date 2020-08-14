@@ -409,6 +409,7 @@ get_IP() {
   if [ ! -z "$IP" ]; then return 0; fi
 
   # Determine local IP
+  need_pkg net-tools
   if LANG=c ifconfig | grep -q 'venet0:0'; then
     IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
   else
