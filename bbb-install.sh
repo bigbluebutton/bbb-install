@@ -306,6 +306,14 @@ HERE
 
   apt-get update
   apt-get dist-upgrade -yq
+  
+  # improve performance with low latency kernel, higher limits and larger networking buffer | issue #260
+  # roland.alton@fairkom.eu 2020-08-20 BBB hackathon
+  apt-get install linux-lowlatency linux-headers-lowlatency
+  echo "DefaultLimitNOFILE=65000\nDefaultLimitNPROC=65000\nDefaultTasksMax=65000" | sudo tee /etc/systemd/system.conf
+  echo "# increase Linux TCP buffer limits\nnet.core.rmem_max = 10485760\nnet.core.wmem_max = 10485760\nnet.core.netdev_max_backlog=100000" | sudo tee /etc/sysctl.conf 
+  echo "# increase Linux autotuning TCP buffer limits\n# min, default, and max number of bytes to use\nnet.ipv4.tcp_mem = 382401 509869 764802\nnet.ipv4.tcp_rmem = 4096 131072	6291456\nnet.ipv4.tcp_wmem = 4096 16384 4194304" | sudo tee /etc/sysctl.conf 
+  echo "# increase Linux autotuning UDP buffer limits\nnet.ipv4.udp_mem = 764178 1018904 1528356" | sudo tee /etc/sysctl.conf 
 
   need_pkg nodejs $MONGODB apt-transport-https haveged build-essential yq # default-jre
   need_pkg bigbluebutton
