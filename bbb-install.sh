@@ -287,7 +287,7 @@ main() {
     fi
     sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
 # Kurento Media Server - Release packages
-deb [arch=amd64] http://ubuntu.openvidu.io/6.13.2 $DISTRO kms6
+deb [arch=amd64] http://ubuntu.openvidu.io/6.14.0 $DISTRO kms6
 HERE
 
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
@@ -296,12 +296,14 @@ HERE
     if ! apt-cache madison nodejs | grep -q node_12; then
       err "Did not detect nodejs 12.x candidate for installation"
     fi
-    if ! apt-key list | grep -q MongoDB; then
+    if ! apt-key list MongoDB | grep -q 4.2; then
       wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
     fi
     echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list
+    rm -f /etc/apt/sources.list.d/mongodb-org-4.0.list
 
     MONGODB=mongodb-org
+    install_docker		# needed for bbb-libreoffice-docker
   fi
 
   apt-get update
@@ -359,7 +361,7 @@ HERE
     systemctl daemon-reload
   fi
 
-  if [ "$UFW" == "true" ]; then
+  if [ ! -z "$UFW" ]; then
    setup_ufw 
   fi
 
@@ -659,29 +661,7 @@ configure_HTML5() {
 }
 
 install_greenlight(){
-  need_pkg software-properties-common openssl
-
-  if ! dpkg -l | grep -q linux-image-extra-virtual; then
-    apt-get install -y \
-      linux-image-extra-$(uname -r) \
-      linux-image-extra-virtual
-  fi
-
-  # Install Docker
-  if ! apt-key list | grep -q Docker; then
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-  fi
-
-  if ! dpkg -l | grep -q docker-ce; then
-    add-apt-repository \
-     "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-     $(lsb_release -cs) \
-     stable"
-
-    apt-get update
-    need_pkg docker-ce
-  fi
-  if ! which docker; then err "Docker did not install"; fi
+  install_docker
 
   # Install Docker Compose
   if dpkg -l | grep -q docker-compose; then
@@ -751,6 +731,39 @@ HERE
     docker-compose -f ~/greenlight/docker-compose.yml up -d
     sleep 5
   fi
+}
+
+
+install_docker() {
+  need_pkg software-properties-common openssl
+
+  if ! dpkg -l | grep -q linux-image-extra-virtual; then
+    apt-get install -y \
+      linux-image-extra-$(uname -r) \
+      linux-image-extra-virtual
+  fi
+
+  # Install Docker
+  if ! apt-key list | grep -q Docker; then
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+  fi
+
+  if ! dpkg -l | grep -q docker-ce; then
+    add-apt-repository \
+     "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+     $(lsb_release -cs) \
+     stable"
+
+    apt-get update
+    need_pkg docker-ce
+  fi
+  if ! which docker; then err "Docker did not install"; fi
+
+  # Install Docker Compose
+  if dpkg -l | grep -q docker-compose; then
+    apt-get purge -y docker-compose
+  fi
+  if ! which docker; then err "Docker did not install"; fi
 }
 
 
