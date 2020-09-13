@@ -657,7 +657,7 @@ configure_HTML5() {
   sed -i 's/^attendeesJoinViaHTML5Client=.*/attendeesJoinViaHTML5Client=true/'   $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
   sed -i 's/^moderatorsJoinViaHTML5Client=.*/moderatorsJoinViaHTML5Client=true/' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 
-  sed -n 's/swfSlidesRequired=true/swfSlidesRequired=false/g'                    $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
+  sed -i 's/swfSlidesRequired=true/swfSlidesRequired=false/g'                    $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 }
 
 install_greenlight(){
