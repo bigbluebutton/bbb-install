@@ -7,6 +7,8 @@ To help you setup a BigBlueButton server quickly, `bbb-install.sh` is a shell sc
 
 With only a few parameters, `bbb-install.sh` can have your BigBlueButton server set up and ready for use in 30 minutes (depending on your server's internet speed to download and install packages).
 
+⚠️ Use Ubuntu 16.04, other distributions are not supported yet!
+
 For example, given an Ubuntu 16.04 64-bit server with a public IP address, you can install the latest build of BigBlueButton 2.2 by logging into your server via SSH and running the following command as root.
 
 ~~~
