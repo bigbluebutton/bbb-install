@@ -944,10 +944,12 @@ HERE
 
   # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
-    BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
-    sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
-    docker-compose -f ~/greenlight/docker-compose.yml down
-    docker-compose -f ~/greenlight/docker-compose.yml up -d
+    if ! grep ^BIGBLUEBUTTON_ENDPOINT ~/greenlight/.env | grep -q https; then
+      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
+      sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
+      docker-compose -f ~/greenlight/docker-compose.yml down
+      docker-compose -f ~/greenlight/docker-compose.yml up -d
+    fi
   fi
 
   # Update HTML5 client (if installed) to use SSL
