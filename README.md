@@ -3,23 +3,21 @@
 
 # bbb-install
 
-To help you setup a BigBlueButton server quickly, `bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for installing and conifuring up a BigBlueButton 2.2 server.
+To help you setup a BigBlueButton server, `bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for installing and conifuring up a BigBlueButton 2.2 server.   In many cases, `bbb-install.sh` can fully install and configure your BigBlueButton server ready for use in 30 under minutes (depending on your server's internet speed to download and install packages).
 
-With only a few parameters, `bbb-install.sh` can have your BigBlueButton server set up and ready for use in 30 minutes (depending on your server's internet speed to download and install packages).
-
-For example, given an Ubuntu 16.04 64-bit server with a public IP address, the hostname `bbb.example.com` that resolves to the public IP address, an e-mail address `info@example.com` (this is not a real e-mail address, but we'll use it for this example), you can install the latest build of BigBlueButton 2.2 by logging into your server via SSH and running the following command as root.
+For example, to install the latest build of BigBlueButton 2.2 on an new Ubuntu 16.04 64-bit server with a public IP address, hostname (such as `bbb.example.com`) that resolves to the public IP address, and an e-mail address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v xenial-22 -s bbb.example.com -e info@example.com -a -w
 ~~~
 
-When you run this command it pulls down the latest version of `bbb-install.sh`, sends it to the BASH shell interpreter, and passes the parameters 
+This command pulls down the latest version of `bbb-install.sh`, sends it to the BASH shell interpreter, and installs BigBlueButton using the parameters provided:
 
   * `-v xenial-22` installs the latest build of BigBlueButton 2.2.x, 
-  * `-a` installs the API demos (this makes it easy to do a few quick tests on the server), and 
-  * `-w` installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768.
-  * `-s` sets the hostname to be `bbb.example.com`
-  * `-e` provides an e-mail address for Let's Encrtyp to generate a SSL certificate
+  * `-a` installs the API demos (this makes it easy to do a few quick tests on the server), 
+  * `-w` installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768,
+  * `-s` sets the server's hostname to be `bbb.example.com`, and
+  * `-e` provides an e-mail address for Let's Encrtyp to generate a valid SSL certificate for the host.
 
 Note: If your server is also behind an external firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the external firewall to forward [specific internet connections](#configuring-the-external-firewall) to the BigBlueButton server before you can launch the client.
 
@@ -51,10 +49,11 @@ Enter your name and click Join.  The BigBlueButton client should then load in yo
 
 Only when web pages are servied via HTTPS will the browser allow access to your webcam, microphone, or screen (for screen sharing) using the browser's built-in real-time communications (WebRTC) libraries.  If you try to install BigBlueButton without specifying the `-s` and `-e` parameters, the client will not load.
 
-The following sections walk you through the options for using `bbb-install.sh` to setup/upgrade a BigBluebutton server.
+The hostname `bbb.example.com` and e-mail address `info@example.com` are just sample parameters.  The following sections walk you through the details on using `bbb-install.sh` to setup/upgrade your BigBluebutton server.
+
 
 ## Getting ready
-Before running `bbb-install.sh`, we _strongly_ recommend that you:
+Before running `bbb-install.sh`, you needed to
 
   * read through all the documentation in this page,
   * ensure that your server meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements), and
@@ -75,15 +74,15 @@ The full source code for `bbb-install.sh` is [here](https://github.com/bigbluebu
 
 ### Server choices
 
-There are many hosting companies that can provide you virtual and dedicated servers to run BigBlueButton.  We list a few popular choices below.  Note: We are not making any recommendations here, just listing some of the more popular choices.
+There are many hosting companies that can provide you with dedicated virtual and bare-metal servers to run BigBlueButton.  We list a few popular choices below (we are not making any recommendations here, just listing some of the more popular choices).
 
 For quick setup, [Digital Ocean](https://www.digitalocean.com/) offers both virtual servers with Ubuntu 16.04 64-bit and a single public IP address (no firewall).  [Hetzner](https://hetzner.cloud/) offers dedicated servers with single IP address.
 
 Other popular choices, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/), offer servers that are set up behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configure BigBlueButton accordingly.  
 
-Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.xlarge` (or larger) instance.  All EC2 servers are, by default, is behind a firewall (which Amazon calls a `security group`).  You will need to manually configure the security group before installing BigBlueButton on EC2 and, in a similar manner, on Azure and Google Compute Engine (GCE).  (See screen shots in next section.)
+Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.2xlarge` or `c5a.2xlarge` (or larger) instance.  All EC2 servers are, by default, is behind a firewall (which Amazon calls a `security group`).  You will need to manually configure the security group before installing BigBlueButton on EC2 and, in a similar manner, on Azure and Google Compute Engine (GCE).  (See screen shots in next section.)
 
-Finally, if `bbb-install.sh` is unable to configure your server behind NAT, we recommend going through the [step-by-step](http://docs.bigbluebutton.org/2.2/install.html) for installing BigBlueButton.  (Going through the steps is also a good way to understand more about how BigBlueButton works).
+Finally, if `bbb-install.sh` is unable to configure your server behind NAT, we recommend going through the [step-by-step](http://docs.bigbluebutton.org/2.2/install.html) for installing BigBlueButton (going through the steps is also a good way to understand more about how BigBlueButton works).
 
 
 ### Configuring the external firewall
@@ -183,53 +182,6 @@ SUPPORT:
          Docs: https://github.com/bigbluebutton/bbb-install
 ~~~
 
-## Install and configure with an IP address only
-
-To install BigBlueButton 2.2 (no hostname or TLS/SSL certificate):
-
-~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -w
-~~~
-
-That's it.  The installation should finish in under 30 minutes (depending on the server's internet connection) with the following message:
-
-~~~
-** Potential problems described below **
-
-......
-# Warning: The API demos are installed and accessible from:
-#
-#    http://xxx.xxx.xxx.xxx/demo/demo1.jsp
-#
-# These API demos allow anyone to access your server without authentication
-# to create/manage meetings and recordings. They are for testing purposes only.
-# If you are running a production system, remove them by running:
-#
-#    sudo apt-get purge bbb-demo
-~~~
-
-The script also installs the `bbb-demo` package so you can immediately test out the install.  If you want to remove the API demos, use the command
-
-~~~
-sudo apt-get purge bbb-demo
-~~~
-
-If you want to use this server with a third-party integration, such as Moodle, you can get the BigBlueButton server's hostname and shared secret with the command `sudo bbb-conf --secret`.
-
-~~~
-# bbb-conf --secret
-
-       URL: http://xxx.xxx.xxx.xxx/bigbluebutton/
-    Secret: yyy
-
-      Link to the API-Mate:
-      http://mconf.github.io/api-mate/#server=http://xxx.xxx.xxx.xxx/bigbluebutton/&sharedSecret=yyy
-~~~
-
-Since this default use of `bbb-install.sh` does not configure a SSL/TLS certificate, while you can login to the server, you won't be able to share audio/video as WebRTC requires a SSL/TLS certificate.
-
-## Install with SSL/TLS
-
 Before `bbb-install.sh` can install a SSL/TLS certificate, you will need to provide two pieces of information:
    * A fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the public IP address of your server
    * An e-mail address
@@ -240,7 +192,7 @@ When you have set up the FQDN, check that it correctly resolves to the external 
 dig bbb.example.com @8.8.8.8
 ~~~
 
-Note: we're using `bbb.example.com` as an example hostname. You would substitute your real hostname for the check (and for the commands below).
+Note: we're using `bbb.example.com` as an example hostname and `info@example.com` as a sample email address.  You need to substitute your real hostname and email.
 
 With just these two pieces of information -- FQDN and e-mail address -- you can use `bbb-install.sh` to automate the configuration of the BigBlueButton server with a TLS/SSL certificate.  For example, to install BigBlueButton 2.2 with a TLS/SSL certificate from Let's Encrypt using `bbb.example.com` and `info@example.com`, enter the command
 
@@ -248,9 +200,8 @@ With just these two pieces of information -- FQDN and e-mail address -- you can 
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -w
 ~~~
 
-(again, you would substitute `bbb.example.com` and `info@example.com` with your server's FQDN and your e-mail address).
-
 The `bbb-install.sh` script will also install a cron job that automatically renews the Let's Encrypt certificate so it doesn't expire.  Cool.
+
 
 ### Installing in a private network
 
