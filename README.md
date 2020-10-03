@@ -8,14 +8,14 @@ To help you setup a BigBlueButton server, `bbb-install.sh` is a shell script tha
 For example, to install the latest build of BigBlueButton 2.2 on an new Ubuntu 16.04 64-bit server with a public IP address, hostname (such as `bbb.example.com`) that resolves to the public IP address, and an e-mail address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v xenial-22 -s bbb.example.com -e info@example.com -a -w
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v xenial-22 -s bbb.example.com -e info@example.com
 ~~~
 
 This command pulls down the latest version of `bbb-install.sh`, sends it to the BASH shell interpreter, and installs BigBlueButton using the parameters provided:
 
-  * `-v xenial-22` installs the latest build of BigBlueButton 2.2.x, 
-  * `-a` installs the API demos (this makes it easy to do a few quick tests on the server), 
   * `-w` installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768,
+  * `-a` installs the API demos (this makes it easy to do a few quick tests on the server), 
+  * `-v xenial-22` installs the latest build of BigBlueButton 2.2.x, 
   * `-s` sets the server's hostname to be `bbb.example.com`, and
   * `-e` provides an e-mail address for Let's Encrtyp to generate a valid SSL certificate for the host.
 

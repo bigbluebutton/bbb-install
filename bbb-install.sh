@@ -87,7 +87,7 @@ OPTIONS (install Let's Encrypt certificate only):
 
   -s <hostname>          Configure server with <hostname> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
-  -l                     Install Let's Encrypt certificate (required)
+  -l                     Only install Let's Encrypt certificate (not BigBlueButton)
   -x                     Use Let's Encrypt certbot with manual dns challenges (optional)
 
 
