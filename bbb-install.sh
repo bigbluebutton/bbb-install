@@ -415,7 +415,7 @@ get_IP() {
   if LANG=c ifconfig | grep -q 'venet0:0'; then
     IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
   else
-    IP=$(hostname -I | cut -f1 -d' ')
+    IP=$(ifconfig `route | grep ^default | sed "s/.* //"` | grep -Po '(?<=inet addr:)[\d.]+')
   fi
 
   # Determine external IP 
