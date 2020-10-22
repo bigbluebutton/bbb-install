@@ -796,6 +796,7 @@ install_ssl() {
       cp /etc/nginx/sites-available/bigbluebutton /tmp/bigbluebutton.bak
       cat <<HERE > /etc/nginx/sites-available/bigbluebutton
 server {
+  server_tokens off;
   listen 80;
   listen [::]:80;
   server_name $HOST;
@@ -836,6 +837,7 @@ HERE
 
   cat <<HERE > /etc/nginx/sites-available/bigbluebutton
 server {
+  server_tokens off;
   listen 80;
   listen [::]:80;
   server_name $HOST;
