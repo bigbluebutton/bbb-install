@@ -795,8 +795,8 @@ install_ssl() {
     if ! grep -q $HOST /etc/nginx/sites-available/bigbluebutton; then  # make sure we can do the challenge
       cp /etc/nginx/sites-available/bigbluebutton /tmp/bigbluebutton.bak
       cat <<HERE > /etc/nginx/sites-available/bigbluebutton
+server_tokens off;
 server {
-  server_tokens off;
   listen 80;
   listen [::]:80;
   server_name $HOST;
@@ -836,8 +836,8 @@ HERE
   fi
 
   cat <<HERE > /etc/nginx/sites-available/bigbluebutton
+server_tokens off;
 server {
-  server_tokens off;
   listen 80;
   listen [::]:80;
   server_name $HOST;
