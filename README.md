@@ -326,10 +326,10 @@ Furthermore, you can re-run the same command later to update your server to the 
 
 # Install a TURN server
 
-You can use `bbb-install.sh` to automate the steps to [set up a TURN server for BigBlueButton](http://docs.bigbluebutton.org/install/install.html#setup-a-turn-server).  
-Note: This step is optional, but recommended if your BigBlueButton server is publically available on the internet and will be accessed by users who may be behind restrictive firewalls.
+You can use `bbb-install.sh` to automate the steps to [set up a TURN server for BigBlueButton](https://docs.bigbluebutton.org/2.2/setup-turn-server.html).
+Note: This step is optional, but recommended if your BigBlueButton server is publicly available on the internet and will be accessed by users who may be behind restrictive firewalls.
 
-BigBlueButton normally requires a wide range of UDP ports to be available for WebRTC communication. In some network restricted sites or development environments, such as those behind NAT or a firewall that restricts outgoing UDP connections, users may be unable to make outgoing UDP connections to your BigBlueButton server.  
+BigBlueButton normally requires a wide range of UDP ports to be available for WebRTC communication. In some network restricted sites or development environments, such as those behind NAT or a firewall that restricts outgoing UDP connections, users may be unable to make outgoing UDP connections to your BigBlueButton server.
 
 The TURN protocol is designed to allow UDP-based communication flows like WebRTC to bypass NAT or firewalls by having the client connect to the TURN server, and then have the TURN server connect to the destination on their behalf.
 
