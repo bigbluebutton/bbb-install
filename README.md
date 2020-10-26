@@ -3,7 +3,7 @@
 
 # bbb-install
 
-To help you setup a BigBlueButton server, `bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for installing and conifuring up a BigBlueButton 2.2 server.   In many cases, `bbb-install.sh` can fully install and configure your BigBlueButton server ready for use in 30 under minutes (depending on your server's internet speed to download and install packages).
+To help you setup a BigBlueButton server, `bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for installing and configuring up a BigBlueButton 2.2 server.   In many cases, `bbb-install.sh` can fully install and configure your BigBlueButton server ready for use in 30 under minutes (depending on your server's internet speed to download and install packages).
 
 For example, to install the latest build of BigBlueButton 2.2 on an new Ubuntu 16.04 64-bit server with a public IP address, hostname (such as `bbb.example.com`) that resolves to the public IP address, and an e-mail address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
 
