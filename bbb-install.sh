@@ -287,7 +287,7 @@ main() {
     fi
     sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
 # Kurento Media Server - Release packages
-deb [arch=amd64] http://ubuntu.openvidu.io/6.14.0 $DISTRO kms6
+deb [arch=amd64] http://ubuntu.openvidu.io/6.15.0 $DISTRO kms6
 HERE
 
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
@@ -364,6 +364,34 @@ HERE
 
   if [ ! -z "$UFW" ]; then
    setup_ufw 
+  fi
+
+  # Add overrides to ensure redis-server is started before bbb-apps-akka, bbb-fsesl-akka, and bbb-transcode-akka
+  if [ ! -f /etc/systemd/system/bbb-apps-akka.service.d/override.conf ];then
+    mkdir -p /etc/systemd/system/bbb-apps-akka.service.d
+    cat > /etc/systemd/system/bbb-apps-akka.service.d/override.conf <<HERE
+    [Unit]
+    Requires=redis-server.service
+    After=redis-server.service
+HERE
+  fi
+
+  if [ ! -f /etc/systemd/system/bbb-fsesl-akka.service.d/override.conf ]; then
+    mkdir -p /etc/systemd/system/bbb-fsesl-akka.service.d
+    cat > /etc/systemd/system/bbb-fsesl-akka.service.d/override.conf <<HERE
+    [Unit]
+    Requires=redis-server.service
+    After=redis-server.service
+HERE
+  fi
+
+  if [ ! -f /etc/systemd/system/bbb-transcode-akka.service.d/override.conf ]; then
+    mkdir -p /etc/systemd/system/bbb-transcode-akka.service.d
+    cat > /etc/systemd/system/bbb-transcode-akka.service.d/override.conf <<HERE
+    [Unit]
+    Requires=redis-server.service
+    After=redis-server.service
+HERE
   fi
 
   if [ ! -z "$HOST" ]; then
@@ -838,6 +866,7 @@ HERE
 
   cat <<HERE > /etc/nginx/sites-available/bigbluebutton
 server_tokens off;
+
 server {
   listen 80;
   listen [::]:80;
