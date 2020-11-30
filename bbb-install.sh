@@ -469,7 +469,7 @@ get_IP() {
     need_pkg netcat-openbsd
 
     echo "Waiting for port 443 to clear "
-    while netstat -antp | grep -q ":443"; do sleep 1; echo -n '.'; done
+    while netstat -antp | grep TIME_WAIT | grep -q ":443"; do sleep 1; echo -n '.'; done
     echo 
 
     nc -l -p 443 > /dev/null 2>&1 &
