@@ -467,6 +467,11 @@ get_IP() {
     fi
 
     need_pkg netcat-openbsd
+
+    echo "Waiting for port 443 to clear "
+    while netstat -antp | grep -q ":443"; do sleep 1; echo -n '.'; done
+    echo 
+
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
     sleep 1
@@ -674,7 +679,11 @@ configure_HTML5() {
   if [ ! -z "$INTERNAL_IP" ]; then
    sed -i 's/;stunServerAddress.*/stunServerAddress=172.217.212.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
    sed -i 's/;stunServerPort.*/stunServerPort=19302/g'                 /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
+
+   sed -i "s/[;]*externalIPv4=.*/externalIPv4=$IP/g"                   /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
+   sed -i "s/[;]*niceAgentIceTcp=.*/niceAgentIceTcp=0/g"               /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
   fi
+
 
   if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
     sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
@@ -949,7 +958,7 @@ server {
 HERE
 
   # Configure rest of BigBlueButton Configuration for SSL
-  sed -i "s/<param name=\"wss-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
+  xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
 
   sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
 
