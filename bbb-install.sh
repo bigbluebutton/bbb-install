@@ -365,7 +365,7 @@ HERE
     mkdir -p /etc/systemd/system/bbb-apps-akka.service.d
     cat > /etc/systemd/system/bbb-apps-akka.service.d/override.conf <<HERE
 [Unit]
-Requires=redis-server.service
+Wants=redis-server.service
 After=redis-server.service
 HERE
   fi
@@ -374,7 +374,7 @@ HERE
     mkdir -p /etc/systemd/system/bbb-fsesl-akka.service.d
     cat > /etc/systemd/system/bbb-fsesl-akka.service.d/override.conf <<HERE
 [Unit]
-Requires=redis-server.service
+Wants=redis-server.service
 After=redis-server.service
 HERE
   fi
@@ -383,7 +383,7 @@ HERE
     mkdir -p /etc/systemd/system/bbb-transcode-akka.service.d
     cat > /etc/systemd/system/bbb-transcode-akka.service.d/override.conf <<HERE
 [Unit]
-Requires=redis-server.service
+Wants=redis-server.service
 After=redis-server.service
 HERE
   fi
