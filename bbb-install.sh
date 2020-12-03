@@ -234,7 +234,7 @@ main() {
   fi
   check_mem
 
-  get_IP
+  get_IP $HOST
 
   echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
