@@ -666,7 +666,6 @@ check_LimitNOFILE() {
       mkdir -p /etc/systemd/system/bbb-web.service.d/
       cat > /etc/systemd/system/bbb-web.service.d/override.conf << HERE
 [Service]
-LimitNOFILE=
 LimitNOFILE=8192
 HERE
       systemctl daemon-reload
