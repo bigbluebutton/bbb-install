@@ -3,21 +3,21 @@
 
 # bbb-install
 
-To help you setup a BigBlueButton server, `bbb-install.sh` is a shell script that automates the [step-by-step instructions](http://docs.bigbluebutton.org/2.2/install.html) for installing and configuring up a BigBlueButton 2.2 server.   In many cases, `bbb-install.sh` can fully install and configure your BigBlueButton server ready for use in 30 under minutes (depending on your server's internet speed to download and install packages).
+To help you set up a BigBlueButton server, `bbb-install.sh` is a shell script that automates the [step-by-step instructions for installing and configuring a BigBlueButton 2.2 server](http://docs.bigbluebutton.org/2.2/install.html).   In many cases, `bbb-install.sh` can fully install and configure your BigBlueButton server, making it ready to use in under 30 minutes (depending on your server's internet speed to download and install packages).
 
-For example, to install the latest build of BigBlueButton 2.2 on an new Ubuntu 16.04 64-bit server with a public IP address, hostname (such as `bbb.example.com`) that resolves to the public IP address, and an e-mail address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
+For example, to install the latest build of BigBlueButton 2.2 on a new 64-bit Ubuntu 16.04 server with a public IP address, a hostname (such as `bbb.example.com`) that resolves to the public IP address, and an email address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v xenial-22 -s bbb.example.com -e info@example.com
 ~~~
 
-This command pulls down the latest version of `bbb-install.sh`, sends it to the BASH shell interpreter, and installs BigBlueButton using the parameters provided:
+This command pulls down the latest version of `bbb-install.sh`, sends it to the Bash shell interpreter, and installs BigBlueButton using the parameters provided:
 
   * `-w` installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768,
-  * `-a` installs the API demos (this makes it easy to do a few quick tests on the server), 
+  * `-a` installs the API demos (making it easy to do a few quick tests on the server), 
   * `-v xenial-22` installs the latest build of BigBlueButton 2.2.x, 
   * `-s` sets the server's hostname to be `bbb.example.com`, and
-  * `-e` provides an e-mail address for Let's Encrtyp to generate a valid SSL certificate for the host.
+  * `-e` provides an email address for Let's Encrypt to generate a valid SSL certificate for the host.
 
 Note: If your server is also behind an external firewall -- such as behind a corporate firewall or behind an AWS Security Group -- you will need to manually configure the external firewall to forward [specific internet connections](#configuring-the-external-firewall) to the BigBlueButton server before you can launch the client.
 
@@ -39,32 +39,33 @@ When the above command finishes, you'll see a message that gives you a test URL 
 #    sudo apt-get purge bbb-demo  
 ~~~
 
-Open the URL in either Chrome or FireFox (recommended browsers).  You should see a login to join the meeting `Demo Meeting`.
+Open the URL in either Chrome or FireFox (recommended browsers).  You should see a login to join the meeting 'Demo Meeting'.
 
 ![bbb-install.sh](images/html5-join.png?raw=true "HTML5 Page")
 
-Enter your name and click Join.  The BigBlueButton client should then load in your browser and prompt you to join the audio.  
+Enter your name and click 'Join'.  The BigBlueButton client should then load in your browser and prompt you to join the audio.
 
 ![bbb-install.sh](images/html5.png?raw=true "HTML5 Client")
 
-Only when web pages are servied via HTTPS will the browser allow access to your webcam, microphone, or screen (for screen sharing) using the browser's built-in real-time communications (WebRTC) libraries.  If you try to install BigBlueButton without specifying the `-s` and `-e` parameters, the client will not load.
+Only when web pages are served via HTTPS will the browser allow access to your webcam, microphone, or screen (for screen sharing) using the browser's built-in real-time communications (WebRTC) libraries.  If you try to install BigBlueButton without specifying the `-s` and `-e` parameters, the client will not load.
 
-The hostname `bbb.example.com` and e-mail address `info@example.com` are just sample parameters.  The following sections walk you through the details on using `bbb-install.sh` to setup/upgrade your BigBluebutton server.
+The hostname `bbb.example.com` and email address `info@example.com` are just sample parameters.  The following sections walk you through the details on using `bbb-install.sh` to setup/upgrade your BigBlueButton server.
 
 
 ## Getting ready
-Before running `bbb-install.sh`, you needed to
+
+Before running `bbb-install.sh`, you need to
 
   * read through all the documentation in this page,
   * ensure that your server meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements), and
   * configure a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of your server.
 
-To set up a FQDN, you need to purchase a domain name from a domain name system (DNS) provider, such as [GoDaddy](https://godaddy.com) or [Network Solutions](https://networksolutions.com).  Once purchased, you'll need to use steps provided by the DNS provider to create an `A Record` for your FQDN that resolves to the public IP address of your server.  (Check the DNS provider's documentation for details on how to set up the `A Record`.)
+To set up your FQDN, purchase a domain name from a domain name registrar and web hosting provider, such as [GoDaddy](https://godaddy.com) or [Network Solutions](https://networksolutions.com).  Once purchased, follow the steps indicated by your provider to create an `A Record` for your FQDN that resolves to the public IP address of your server.  (Check the provider's documentation for details on how to set up the `A Record`.)
 
-With a FQDN domain name place, you can then pass a few additional parameters to `bbb-install.sh` to have it:
+With your FQDN in place, you can then pass a few additional parameters to `bbb-install.sh` to have it:
 
-  * request and install a 4096 bit TLS/SSL certificate from Let's Encrypt (we love Let's Encrypt),
-  * install a firewall to restrict access only to neede ports (recommened),
+  * request and install a 4096-bit TLS/SSL certificate from Let's Encrypt (we love Let's Encrypt),
+  * install a firewall to restrict access to only the needed ports (recommended),
   * install and configure [Greenlight](http://docs.bigbluebutton.org/greenlight/gl-overview.html) to provide a simple front-end for users to enable them to set up rooms, hold online sessions, and manage recordings (optional).  
 
 If you install Greenlight, you'll have the ability to be the [Greenlight administrator](http://docs.bigbluebutton.org/greenlight/gl-admin.html), giving you the ability manage user accounts.
@@ -74,20 +75,20 @@ The full source code for `bbb-install.sh` is [here](https://github.com/bigbluebu
 
 ### Server choices
 
-There are many hosting companies that can provide you with dedicated virtual and bare-metal servers to run BigBlueButton.  We list a few popular choices below (we are not making any recommendations here, just listing some of the more popular choices).
+There are many hosting companies that can provide you with dedicated virtual and bare-metal servers to run BigBlueButton.  We list a few popular choices below (we are not making any recommendation here, just listing some of the more popular choices).
 
 For quick setup, [Digital Ocean](https://www.digitalocean.com/) offers both virtual servers with Ubuntu 16.04 64-bit and a single public IP address (no firewall).  [Hetzner](https://hetzner.cloud/) offers dedicated servers with single IP address.
 
 Other popular choices, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/), offer servers that are set up behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configure BigBlueButton accordingly.  
 
-Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.2xlarge` or `c5a.2xlarge` (or larger) instance.  All EC2 servers are, by default, is behind a firewall (which Amazon calls a `security group`).  You will need to manually configure the security group before installing BigBlueButton on EC2 and, in a similar manner, on Azure and Google Compute Engine (GCE).  (See screen shots in next section.)
+Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.2xlarge` or `c5a.2xlarge` (or larger) instance.  All EC2 servers are, by default, behind a firewall (which Amazon calls a `security group`).  You will need to manually configure the security group before installing BigBlueButton on EC2 and, in a similar manner, on Azure and Google Compute Engine (GCE).  (See screen shots in next section.)
 
-Finally, if `bbb-install.sh` is unable to configure your server behind NAT, we recommend going through the [step-by-step](http://docs.bigbluebutton.org/2.2/install.html) for installing BigBlueButton (going through the steps is also a good way to understand more about how BigBlueButton works).
+Finally, if `bbb-install.sh` is unable to configure your server behind NAT, we recommend going through the [step-by-step instructions for installing BigBlueButton](http://docs.bigbluebutton.org/2.2/install.html) (going through the steps is also a good way to understand more about how BigBlueButton works).
 
 
 ### Configuring the external firewall
 
-If you install BigBlueButton on a server behind a external firewall, such an Amazon's EC2 security group, you first need to configure the external firewall to forward incoming traffic on the following ports:
+If you install BigBlueButton on a server behind a external firewall, such an Amazon's EC2 security group, you need to configure the external firewall to forward incoming traffic on the following ports:
 
   * TCP/IP port 22 (for SSH)
   * TCP/IP ports 80/443 (for HTTP/HTTPS)
@@ -107,16 +108,16 @@ After the instance is created, you need to add a firewall rule to allow incoming
 
 ![Google Compute Engine Firewall](images/gce-firewall.png?raw=true "GCE Firewall")
 
-We make a disction here between the firewall installed with `-w` and the external firewall on a separate server.  Even with an external firewall, its good practice to still install the UFW firewall on the BigBlueButton server.
+We make a distinction here between the firewall installed with `-w` and the external firewall on a separate server.  Even with an external firewall, it is good practice to still install the UFW firewall on the BigBlueButton server.
 
 
-### Installation Videos
+### Installation videos
 
 Using Digital Ocean as an example, we put together this video to get you going quickly: [Using bbb-install.sh to set up BigBlueButton on Digital Ocean](https://youtu.be/D1iYEwxzk0M).
 
 Using Amazon EC2, see [Install using bbb-install.sh on EC2](https://youtu.be/-E9WIrH_yTs).
 
-# Command options
+## Command options
 
 You can get help by passing the `-h` option.
 
@@ -184,7 +185,7 @@ SUPPORT:
 
 Before `bbb-install.sh` can install a SSL/TLS certificate, you will need to provide two pieces of information:
    * A fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the public IP address of your server
-   * An e-mail address
+   * An email address
 
 When you have set up the FQDN, check that it correctly resolves to the external IP address of the server using the `dig` command.
 
@@ -192,9 +193,9 @@ When you have set up the FQDN, check that it correctly resolves to the external 
 dig bbb.example.com @8.8.8.8
 ~~~
 
-Note: we're using `bbb.example.com` as an example hostname and `info@example.com` as a sample email address.  You need to substitute your real hostname and email.
+Note: we're using `bbb.example.com` as an example hostname and `info@example.com` as an example email address.  You need to substitute your real hostname and email.
 
-With just these two pieces of information -- FQDN and e-mail address -- you can use `bbb-install.sh` to automate the configuration of the BigBlueButton server with a TLS/SSL certificate.  For example, to install BigBlueButton 2.2 with a TLS/SSL certificate from Let's Encrypt using `bbb.example.com` and `info@example.com`, enter the command
+With just these two pieces of information -- FQDN and email address -- you can use `bbb-install.sh` to automate the configuration of the BigBlueButton server with a TLS/SSL certificate.  For example, to install BigBlueButton 2.2 with a TLS/SSL certificate from Let's Encrypt using `bbb.example.com` and `info@example.com`, enter the command
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -w
@@ -246,7 +247,7 @@ Before continuing, verify the record is deployed.
 Press Enter to Continue
 ```
 
-Before hitting Eneter, create a TXT record in the DNS with the challenge that was generated.
+Before hitting Enter, create a TXT record in the DNS with the challenge that was generated.
 
 ```
 _acme-challenge.bbb.example.com.  TXT   "0bIA-3-RqbRo2EfbYTkuKk7xq2mzszUgVlr6l1OWjW8"   60
@@ -259,7 +260,7 @@ certbot --email info@example.com --agree-tos -d bbb.example.com --deploy-hook 's
 ```
 
 
-## Install API Demos
+### Install API demos
 
 You can install the API demos by adding the `-a` option.
 
@@ -270,7 +271,7 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 Warning: These API demos allow anyone to access your server without authentication to create/manage meetings and recordings. They are for testing purposes only.  Once you are finished testing, you can remove the API demos with `sudo apt-get purge bbb-demo`.
 
 
-## Install Greenlight
+### Install Greenlight
 
 [Greenlight](https://docs.bigbluebutton.org/greenlight/gl-overview.html) is a simple front-end for BigBlueButton written in Ruby on Rails.  It lets users create accounts, have permanent rooms, and manage their recordings.  It also lets you, as the administrator, manage the user accounts (such as approve or deny users).
 
@@ -303,17 +304,17 @@ You can then select 'Site Settings' on the left-hand side and change the Registr
 
 You can now contol who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](http://docs.bigbluebutton.org/greenlight/gl-admin.html).
 
-## Linking /var/bigbluebutton to another directory
+### Linking `/var/bigbluebutton` to another directory
 
-The install script allows you to pass a path which will be used to create a symbolic link with /var/bigbluebutton
+The install script allows you to pass a path which will be used to create a symbolic link with `/var/bigbluebutton`:
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -w -m /mnt/test
 ~~~
 
-This allows users to store the contents of /var/bigbluebutton, which can get quite large in a seperate volume
+This allows users to store the contents of /`var/bigbluebutton`, which can get quite large, in a separate volume.
 
-## Doing everything with a single command
+### Doing everything with a single command
 
 If you want to set up BigBlueButton 2.2 with a TLS/SSL certificate and GreenLight, you can do this all with a single command:
 
@@ -321,12 +322,13 @@ If you want to set up BigBlueButton 2.2 with a TLS/SSL certificate and GreenLigh
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -w -g
 ~~~
 
-Furthermore, you can re-run the same command later to update your server to the latest version of BigBlueButton 2.2.  We announce updates to BigBlueButton to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
+Furthermore, you can re-run the same command later to update your server to the latest version of BigBlueButton 2.2.  We announce BigBlueButton updates to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
 
 
-# Install a TURN server
+### Install a TURN server
 
 You can use `bbb-install.sh` to automate the steps to [set up a TURN server for BigBlueButton](https://docs.bigbluebutton.org/2.2/setup-turn-server.html).
+
 Note: This step is optional, but recommended if your BigBlueButton server is publicly available on the internet and will be accessed by users who may be behind restrictive firewalls.
 
 BigBlueButton normally requires a wide range of UDP ports to be available for WebRTC communication. In some network restricted sites or development environments, such as those behind NAT or a firewall that restricts outgoing UDP connections, users may be unable to make outgoing UDP connections to your BigBlueButton server.
@@ -337,7 +339,7 @@ You need a separate server (not the BigBlueButton server) to set up as a TURN se
 
   * An Ubuntu 18.04 server with a public IP address
 
-On the TURN server, you need to have the following ports (in additon port 22) availalbe for BigBlueButton to connect (port 3478 and 443) and for the coturn to connect to your BigBlueButton server (49152 - 65535).
+On the TURN server, you need to have the following ports (in additon to port 22) available for BigBlueButton to connect (port 3478 and 443) and for the coturn to connect to your BigBlueButton server (49152 - 65535).
 
 | Ports         | Protocol      | Description |
 | ------------- | ------------- | ----------- |
@@ -351,10 +353,10 @@ We recommend Ubuntu 18.04 as it has a later version of [coturn](https://github.c
 Next, to configure the TURN server you need:
 
   * A fully qualified domain name (FQDN) with a DNS entry that resolves to the external public IP address of the TURN server
-  * An e-mail address for Let's Encrypt
+  * An email address for Let's Encrypt
   * A secret key (it can be an 8 to 16 character random string that you create).
 
-With the above information, you can set up a TURN server for BigBlueButton using `bbb-install.sh` as follows
+With the above information, you can set up a TURN server for BigBlueButton using `bbb-install.sh` using the command
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c <FQDN>:<SECRET> -e <EMAIL>
@@ -376,7 +378,7 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial
 
 You can re-use a single TURN server for multiple BigBlueButton installations.
 
-# Next Steps
+## Next steps
 
 If you intend to use this server for production you should uninstall the API demos using the command
 
@@ -409,6 +411,7 @@ https://packages-eu.bigbluebutton.org/bbb-install.sh
 
 If on first install Greenlight gives you a `500 error` when accessing it, you can [restart Greenlight](http://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
 
+
 ### Tomcat7 not running
 
 If on the initial install you see
@@ -419,13 +422,14 @@ If on the initial install you see
 
 just run `sudo bbb-conf --check` again.  Tomcat7 may take a bit longer to start up and isn't running the first time you run `sudo bbb-conf --check`.
 
-### Getting Help
+
+### Getting help
 
 If you have feedback on the script, or need help using it, please post to the [BigBlueButton Setup](https://bigbluebutton.org/support/community/) mailing list with details of the issue (and include related information such as steps to reproduce the error).
 
-If you encounter an error with the script (such as it not completing or throwing an error), please open [GitHub issue](https://github.com/bigbluebutton/bbb-install/issues) and provide steps to reproduce the issue.
+If you encounter an error with the script (such as it not completing or throwing an error), please open a [GitHub issue](https://github.com/bigbluebutton/bbb-install/issues) and provide steps to reproduce the issue.
 
 
-# Limitations
+## Limitations
 
 If you are running your BigBlueButton behind a firewall, such as on EC2, this script will not configure your firewall.  You'll need to [configure the firewall](#configuring-the-external-firewall) manually.
