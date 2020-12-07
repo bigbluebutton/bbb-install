@@ -480,6 +480,12 @@ get_IP() {
      if nc -zvw3 $external_ip 443  > /dev/null 2>&1; then
        INTERNAL_IP=$IP
        IP=$external_ip
+       echo 
+       echo "  Detected this server has an internal/external IP address."
+       echo 
+       echo "      INTERNAL_IP: $INTERNAL_IP"
+       echo "    (external) IP: $IP"
+       echo 
      fi
 
     kill $nc_PID  > /dev/null 2>&1;
