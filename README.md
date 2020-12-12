@@ -373,7 +373,7 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.e
 With the TURN server in place, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and adding the same `-c <FQDN>:<SECRET>`.  For example,
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234abcd
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -c turn.example.com:1234abcd
 ~~~
 
 You can re-use a single TURN server for multiple BigBlueButton installations.
