@@ -964,11 +964,16 @@ HERE
 
   # Configure rest of BigBlueButton Configuration for SSL
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
-
-  # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-  yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.media.sipjsHackViaWs true
-  sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /etc/bigbluebutton/nginx/sip.nginx
-  xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
+ 
+  source /etc/bigbluebutton/bigbluebutton-release
+  if [ ! -z "$(echo $BIGBLUEBUTTON_RELEASE | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+    sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
+  else
+    # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
+    yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.media.sipjsHackViaWs true
+    sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /etc/bigbluebutton/nginx/sip.nginx
+    xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
+  fi
 
   sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 
@@ -1014,7 +1019,17 @@ HERE
       # 2.2
       yq w -i $TARGET kurento[0].ip "$IP"
       yq w -i $TARGET freeswitch.ip "$IP"
-      yq w -i $TARGET freeswitch.sip_ip "$IP"
+
+      if [ ! -z "$(echo $BIGBLUEBUTTON_RELEASE | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+        if [ ! -z "$INTERNAL_IP" ]; then
+          yq w -i $TARGET freeswitch.sip_ip "$INTERNAL_IP"
+        else
+          yq w -i $TARGET freeswitch.sip_ip "$IP"
+        fi
+      else
+        # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
+        yq w -i $TARGET freeswitch.sip_ip "$IP"
+      fi
     fi
     chown bigbluebutton:bigbluebutton $TARGET
     chmod 644 $TARGET
