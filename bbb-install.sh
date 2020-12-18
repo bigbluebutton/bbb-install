@@ -299,6 +299,8 @@ HERE
     touch /root/.rnd
     MONGODB=mongodb-org
     install_docker		# needed for bbb-libreoffice-docker
+    need_pkg ruby
+    gem install bundler -v 2.1.4
   fi
 
   apt-get update
