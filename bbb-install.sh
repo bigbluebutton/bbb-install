@@ -65,7 +65,7 @@ OPTIONS (install BigBlueButton):
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
   -p <host>              Use apt-get proxy at <host>
-  -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
+  -r <host>              Use alternative apt repository (such as https://packages-eu.bigbluebutton.org)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume)
   -w                     Install UFW firewall (recommended)
@@ -107,7 +107,7 @@ HERE
 
 main() {
   export DEBIAN_FRONTEND=noninteractive
-  PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
+  PACKAGE_REPOSITORY=https://ubuntu.bigbluebutton.org
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
   SOURCES_FETCHED=false
 
@@ -129,6 +129,10 @@ main() {
         ;;
       r)
         PACKAGE_REPOSITORY=$OPTARG
+	# backwards compatibility with old usage that omitted URL scheme
+	if [ echo $PACKAGE_REPOSITORY | grep '^https?:' ]; then
+	    PACKAGE_REPOSITORY=https://$PACKAGE_REPOSITORY
+	fi
         ;;
       e)
         EMAIL=$OPTARG
@@ -529,13 +533,13 @@ need_ppa() {
 check_version() {
   if ! echo $1 | egrep -q "xenial|bionic"; then err "This script can only install BigBlueButton 2.0 (or later)"; fi
   DISTRO=$(echo $1 | sed 's/-.*//g')
-  if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
+  if ! wget -qS --spider "$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
   fi
   check_root
   need_pkg apt-transport-https
   if ! apt-key list | grep -q "BigBlueButton apt-get"; then
-    wget https://$PACKAGE_REPOSITORY/repo/bigbluebutton.asc -O- | apt-key add -
+    wget $PACKAGE_REPOSITORY/repo/bigbluebutton.asc -O- | apt-key add -
   fi
 
   # Check if were upgrading from 2.0 (the ownership of /etc/bigbluebutton/nginx/web has changed from bbb-client to bbb-web)
@@ -549,7 +553,7 @@ check_version() {
     fi
   fi
 
-  echo "deb https://$PACKAGE_REPOSITORY/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
+  echo "deb $PACKAGE_REPOSITORY/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
 check_host() {
