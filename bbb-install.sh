@@ -774,13 +774,7 @@ HERE
 
 
 install_docker() {
-  need_pkg software-properties-common openssl
-
-  if ! dpkg -l | grep -q linux-image-extra-virtual; then
-    apt-get install -y \
-      linux-image-extra-$(uname -r) \
-      linux-image-extra-virtual
-  fi
+  need_pkg apt-transport-https ca-certificates curl gnupg-agent software-properties-common openssl
 
   # Install Docker
   if ! apt-key list | grep -q Docker; then
@@ -794,7 +788,7 @@ install_docker() {
      stable"
 
     apt-get update
-    need_pkg docker-ce
+    need_pkg docker-ce docker-ce-cli containerd.io
   fi
   if ! which docker; then err "Docker did not install"; fi
 
