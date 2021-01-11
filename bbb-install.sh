@@ -690,10 +690,6 @@ configure_HTML5() {
   fi
 
 
-  if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
-    sed -i 's/offerWebRTC="false"/offerWebRTC="true"/g' /var/www/bigbluebutton/client/conf/config.xml
-  fi
-
   # Make the HTML5 client default
   sed -i 's/^attendeesJoinViaHTML5Client=.*/attendeesJoinViaHTML5Client=true/'   $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
   sed -i 's/^moderatorsJoinViaHTML5Client=.*/moderatorsJoinViaHTML5Client=true/' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
@@ -809,10 +805,6 @@ install_docker() {
 
 
 install_ssl() {
-  if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
-    sed -i 's/tryWebRTCFirst="false"/tryWebRTCFirst="true"/g' /var/www/bigbluebutton/client/conf/config.xml
-  fi
-
   if ! grep -q $HOST /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
     bbb-conf --setip $HOST
   fi
@@ -968,12 +960,6 @@ HERE
   sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
 
   sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
-
-  if [ -f /var/www/bigbluebutton/client/conf/config.xml ]; then
-    sed -i 's|http://|https://|g' /var/www/bigbluebutton/client/conf/config.xml
-    sed -i 's/jnlpUrl=http/jnlpUrl=https/g'   /usr/share/red5/webapps/screenshare/WEB-INF/screenshare.properties
-    sed -i 's/jnlpFile=http/jnlpFile=https/g' /usr/share/red5/webapps/screenshare/WEB-INF/screenshare.properties
-  fi
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
