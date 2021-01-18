@@ -3,7 +3,7 @@
 
 # bbb-install
 
-To help you set up a BigBlueButton server, `bbb-install.sh` is a shell script that automates the [step-by-step instructions for installing and configuring a BigBlueButton 2.2 server](http://docs.bigbluebutton.org/2.2/install.html).   In many cases, `bbb-install.sh` can fully install and configure your BigBlueButton server, making it ready to use in under 30 minutes (depending on your server's internet speed to download and install packages).
+To help you set up a BigBlueButton server (or upgrade an existing one), `bbb-install.sh` is a shell script that automates the [step-by-step instructions for installing and configuring a BigBlueButton 2.2 server](http://docs.bigbluebutton.org/2.2/install.html).   In many cases, `bbb-install.sh` can fully install and configure your BigBlueButton server, making it ready to use in under 30 minutes (depending on your server's internet speed to download and install packages).
 
 For example, to install the latest build of BigBlueButton 2.2 on a new 64-bit Ubuntu 16.04 server with a public IP address, a hostname (such as `bbb.example.com`) that resolves to the public IP address, and an email address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
 
@@ -26,11 +26,11 @@ When the above command finishes, you'll see a message that gives you a test URL 
 ~~~
 # Warning: The API demos are installed and accessible from:
 #
-#    http://bbb.example.com
+#    https://bbb.example.com
 #
 # and
 #
-#    http://bbb.example.com/demo/demo1.jsp  
+#    https://bbb.example.com/demo/demo1.jsp  
 #
 # These API demos allow anyone to access your server without authentication
 # to create/manage meetings and recordings. They are for testing purposes only.
@@ -47,7 +47,7 @@ Enter your name and click 'Join'.  The BigBlueButton client should then load in 
 
 ![bbb-install.sh](images/html5.png?raw=true "HTML5 Client")
 
-Only when web pages are served via HTTPS will the browser allow access to your webcam, microphone, or screen (for screen sharing) using the browser's built-in real-time communications (WebRTC) libraries.  If you try to install BigBlueButton without specifying the `-s` and `-e` parameters, the client will not load.
+Note the web pages are served via HTTPS.  The browsers now require this before allowing access to your webcam, microphone, or screen (for screen sharing) using the browser's built-in real-time communications (WebRTC) libraries.  If you try to install BigBlueButton without specifying the `-s` and `-e` parameters, the client will not load.
 
 The hostname `bbb.example.com` and email address `info@example.com` are just sample parameters.  The following sections walk you through the details on using `bbb-install.sh` to setup/upgrade your BigBlueButton server.
 
@@ -437,3 +437,5 @@ If you encounter an error with the script (such as it not completing or throwing
 ## Limitations
 
 If you are running your BigBlueButton behind a firewall, such as on EC2, this script will not configure your firewall.  You'll need to [configure the firewall](#configuring-the-external-firewall) manually.
+
+If you are upgrading from a very old version of 2.2.x (such as 2.2.3) and `sudo bbb-conf --check` still shows the older version `bbb-install.sh` finishes, try running `dpkg --configure -a` and then run `bbb-install.sh` again.
