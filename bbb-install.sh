@@ -211,7 +211,7 @@ main() {
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ ! -z "$COTURN" ]; then
     if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
-    check_ubuntu 18.04
+    check_ubuntu 20.04
 
     install_coturn
     exit 0
@@ -432,6 +432,12 @@ need_x64() {
   if [ "$UNAME" != "x86_64" ]; then err "You must run this command on a 64-bit server."; fi
 }
 
+wait_443() {
+  echo "Waiting for port 443 to clear "
+  while netstat -antp | grep TIME_WAIT | grep -q ":443"; do sleep 1; echo -n '.'; done
+  echo 
+}
+
 get_IP() {
   if [ ! -z "$IP" ]; then return 0; fi
 
@@ -470,9 +476,7 @@ get_IP() {
 
     need_pkg netcat-openbsd
 
-    echo "Waiting for port 443 to clear "
-    while netstat -antp | grep TIME_WAIT | grep -q ":443"; do sleep 1; echo -n '.'; done
-    echo 
+    wait_443
 
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
@@ -553,7 +557,7 @@ check_version() {
 }
 
 check_host() {
-  if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ] && [ -z "$COTURN" ]; then
+  if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ]; then
     need_pkg dnsutils apt-transport-https net-tools
     DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
@@ -577,6 +581,8 @@ check_coturn() {
   if [ "$COTURN_SECRET" == "1234abcd" ]; then 
     err "You must specify a new password (not the example given in the docs)."
   fi
+
+  check_host $COTURN_HOST
 }
 
 check_apache2() {
@@ -1065,7 +1071,6 @@ install_certificate() {
   apt-get update
   apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
   apt-get dist-upgrade -yq
-  need_pkg coturn
 
   need_pkg software-properties-common
   need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
@@ -1076,131 +1081,110 @@ install_certificate() {
     -d $HOST --email $EMAIL --agree-tos -n
 }
 
+
 install_coturn() {
-  check_host $COTURN_HOST
-
   apt-get update
-  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
   apt-get dist-upgrade -yq
-  need_pkg coturn
 
-  need_pkg software-properties-common 
-  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
-  apt-get -y install certbot
+  need_pkg software-properties-common certbot
 
   if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
-         --deploy-hook "systemctl restart coturn" \
          -d $COTURN_HOST --email $EMAIL --agree-tos -n ; then
      err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
   fi
 
-  COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
-  
-  if [ -z $IP ]; then
-    COMMENT_EXTERNAL_IP="#external-ip="
-  else
-    COMMENT_EXTERNAL_IP="external-ip="
+  need_pkg coturn
+
+  if [ ! -z $INTERNAL_IP ]; then
+    EXTERNAL_IP="external-ip=$IP/$INTERNAL_IP"
   fi
 
   cat <<HERE > /etc/turnserver.conf
-# Example coturn configuration for BigBlueButton
-
-# These are the two network ports used by the TURN server which the client
-# may connect to. We enable the standard unencrypted port 3478 for STUN,
-# as well as port 443 for TURN over TLS, which can bypass firewalls.
 listening-port=3478
 tls-listening-port=443
 
-# If the server has multiple IP addresses, you may wish to limit which
-# addresses coturn is using. Do that by setting this option (it can be
-# specified multiple times). The default is to listen on all addresses.
-# You do not normally need to set this option.
-#listening-ip=172.17.19.101
+listening_ip=$IP
+relay_ip=$IP
+$EXTERNAL_IP
 
-# If the server is behind NAT, you need to specify the external IP address.
-# If there is only one external address, specify it like this:
-$COMMENT_EXTERNAL_IP$IP
+min-port=32769
+max-port=65535
+verbose
 
-# If you have multiple external addresses, you have to specify which
-# internal address each corresponds to, like this. The first address is the
-# external ip, and the second address is the corresponding internal IP.
-#external-ip=172.17.19.131/10.0.0.11
-#external-ip=172.17.18.132/10.0.0.12
-
-# Fingerprints in TURN messages are required for WebRTC
 fingerprint
-
-# The long-term credential mechanism is required for WebRTC
 lt-cred-mech
-
-# Configure coturn to use the "TURN REST API" method for validating time-
-# limited credentials. BigBlueButton will generate credentials in this
-# format. Note that the static-auth-secret value specified here must match
-# the configuration in BigBlueButton's turn-stun-servers.xml
-# You can generate a new random value by running the command:
-#   openssl rand -hex 16
 use-auth-secret
 static-auth-secret=$COTURN_SECRET
+realm=$(echo $COTURN_HOST | cut -d'.' -f2-)
 
-# If the realm value is unspecified, it defaults to the TURN server hostname.
-# You probably want to configure it to a domain name that you control to
-# improve log output. There is no functional impact.
-# realm=example.com
-realm=$COTURN_REALM
+cert=/etc/turnserver/fullchain.pem
+pkey=/etc/turnserver/privkey.pem
+# From https://ssl-config.mozilla.org/ Intermediate, openssl 1.1.0g, 2020-01
+cipher-list="ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
+dh-file=/etc/turnserver/dhp.pem
 
-# Configure TLS support.
-# Adjust these paths to match the locations of your certificate files
-cert=/etc/letsencrypt/live/$COTURN_HOST/fullchain.pem
-pkey=/etc/letsencrypt/live/$COTURN_HOST/privkey.pem
+keep-address-family
 
-# Limit the allowed ciphers to improve security
-# Based on https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
-cipher-list="ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS"
-
-# Enable longer DH TLS key to improve security
-dh2066
-
-# All WebRTC-compatible web browsers support TLS 1.2 or later, so disable
-# older protocols
+no-cli
 no-tlsv1
 no-tlsv1_1
-
-# Log to a single filename (rather than new log files each startup). You'll
-# want to install a logrotate configuration (see below)
-log-file=/var/log/coturn.log
-simple-log
 HERE
+
+  mkdir -p /etc/turnserver
+  if [ ! -f /etc/turnserver/dhp.pem ]; then
+    openssl dhparam -dsaparam  -out /etc/turnserver/dhp.pem 2048
+  fi
+
+  mkdir -p /var/log/turnserver
+  chown turnserver:turnserver /var/log/turnserver
 
   cat <<HERE > /etc/logrotate.d/coturn
-/var/log/coturn.log
+/var/log/turnserver/*.log
 {
-    rotate 30
-    daily
-    missingok
-    notifempty
-    delaycompress
-    compress
-    postrotate
-    systemctl kill -sHUP coturn.service
-    endscript
+	rotate 7
+	daily
+	missingok
+	notifempty
+	compress
+	postrotate
+		/bin/systemctl kill -s HUP coturn.service
+	endscript
 }
 HERE
 
-  sed -i 's/#TURNSERVER_ENABLED=1/TURNSERVER_ENABLED=1/g' /etc/default/coturn
-  systemctl restart coturn
-
-  cat 1>&2 <<HERE
-
-#
-# This TURN server is ready.  To configure your BigBlueButton server to use this TURN server, 
-# add the option
-#
-#  -c $COTURN_HOST:$COTURN_SECRET
-#
-# the the bbb-install.sh command.
-#
+  # Eanble coturn to bind to port 443 with CAP_NET_BIND_SERVICE
+  mkdir -p /etc/systemd/system/coturn.service.d
+  cat > /etc/systemd/system/coturn.service.d/ansible.conf <<HERE
+[Service]
+LimitNOFILE=1048576
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+ExecStart=
+ExecStart=/usr/bin/turnserver --daemon -c /etc/turnserver.conf --pidfile /run/turnserver/turnserver.pid --no-stdout-log --simple-log --log-file /var/log/turnserver/turnserver.log
+Restart=always
 HERE
+
+  # Since coturn runs as user turnserver, copy certs so they can be read
+  mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+  cat > /etc/letsencrypt/renewal-hooks/deploy/coturn <<HERE
+#!/bin/bash -e
+
+for certfile in fullchain.pem privkey.pem ; do
+	cp -L /etc/letsencrypt/live/$COTURN_HOST/"\${certfile}" /etc/turnserver/"\${certfile}".new
+	chown turnserver:turnserver /etc/turnserver/"\${certfile}".new
+	mv /etc/turnserver/"\${certfile}".new /etc/turnserver/"\${certfile}"
+done
+
+systemctl kill -sUSR2 coturn.service
+HERE
+  chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/coturn
+  /etc/letsencrypt/renewal-hooks/deploy/coturn
+
+  systemctl daemon-reload
+  systemctl stop coturn
+  wait_443
+  systemctl start coturn
 }
+
 
 setup_ufw() {
   if [ ! -f /etc/bigbluebutton/bbb-conf/apply-config.sh ]; then

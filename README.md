@@ -96,7 +96,7 @@ If you install BigBlueButton on a server behind a external firewall, such an Ama
 
 If you are using EC2, you should also assign the server an [Elastic IP address](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html) to prevent it from getting a new IP address on reboot.
 
-On Microsot Azure, when you create an instance you need to add the following inbound port rules to enable incoming connections on ports 80, 443, and UDP port range 16384-32768:
+On Microsoft Azure, when you create an instance you need to add the following inbound port rules to enable incoming connections on ports 80, 443, and UDP port range 16384-32768:
 
 ![Azure Cloud ](images/azure-firewall.png?raw=true "Azure 80, 443, and UDP 16384-32768")
 
@@ -162,7 +162,7 @@ OPTIONS (install Let's Encrypt certificate only):
   -s <hostname>          Configure server with <hostname> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
   -l                     Install Let's Encrypt certificate (required)
-  -x                     Use Let's Encrypt certbot with manual dns challenges (optional)
+  -x                     Use Let's Encrypt certbot with manual DNS challenges (optional)
 
 
 EXAMPLES:
@@ -287,7 +287,7 @@ To launch Greenlight, simply open the URL of your server, such as `https://bbb.e
 
 ![bbb-install.sh](images/greenlight.png?raw=true "Greenlight")
 
-To set up an administrator account for Greenlight (so you can approve/deny signups), enter the following commands
+To set up an administrator account for Greenlight (so you can approve/deny sign ups), enter the following commands
 
 ~~~
 cd greenlight/
@@ -302,7 +302,7 @@ You can then select 'Site Settings' on the left-hand side and change the Registr
 
 ![bbb-install.sh](images/gl-approve.png?raw=true "Approve/Decline")
 
-You can now contol who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](http://docs.bigbluebutton.org/greenlight/gl-admin.html).
+You can now control who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](http://docs.bigbluebutton.org/greenlight/gl-admin.html).
 
 ### Linking `/var/bigbluebutton` to another directory
 
@@ -327,19 +327,13 @@ Furthermore, you can re-run the same command later to update your server to the 
 
 ### Install a TURN server
 
-You can use `bbb-install.sh` to automate the steps to [set up a TURN server for BigBlueButton](https://docs.bigbluebutton.org/2.2/setup-turn-server.html).
+Running the BigBlueButton client requires a wide range of UDP ports to be available for WebRTC communication.  However, in some network restricted sites or development environments, such as those behind NAT or a corporate firewall that restricts UDP connections, users may be unable to make outgoing UDP connections to your BigBlueButton server.
 
-Note: This step is optional, but recommended if your BigBlueButton server is publicly available on the internet and will be accessed by users who may be behind restrictive firewalls.
+If you have setup your BigBlueButton on the internet, and you have users accessing the BigBlueButton server behind a restrictive firewall that blocks UDP connections, then setting up a separate TURN server will allow users to have the TURN server (connected via port 443) proxy their UDP-based WebRTC media (audio, webcam, and screen share) to the BigBlueButton server.
 
-BigBlueButton normally requires a wide range of UDP ports to be available for WebRTC communication. In some network restricted sites or development environments, such as those behind NAT or a firewall that restricts outgoing UDP connections, users may be unable to make outgoing UDP connections to your BigBlueButton server.
+We recommend Ubuntu 20.04 as it has a newer version of [coturn](https://github.com/coturn/coturn) than Ubuntu 16.04.  The server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core server on Digital Ocean should be sufficient for a dozen BigBlueButton servers.  
 
-The TURN protocol is designed to allow UDP-based communication flows like WebRTC to bypass NAT or firewalls by having the client connect to the TURN server, and then have the TURN server connect to the destination on their behalf.
-
-You need a separate server (not the BigBlueButton server) to set up as a TURN server. Specifically you need:
-
-  * An Ubuntu 18.04 server with a public IP address
-
-On the TURN server, you need to have the following ports (in additon to port 22) available for BigBlueButton to connect (port 3478 and 443) and for the coturn to connect to your BigBlueButton server (49152 - 65535).
+The server should have the following additional ports available:
 
 | Ports         | Protocol      | Description |
 | ------------- | ------------- | ----------- |
@@ -348,29 +342,39 @@ On the TURN server, you need to have the following ports (in additon to port 22)
 | 49152-65535   | UDP           | relay ports range |
 
 
-We recommend Ubuntu 18.04 as it has a later version of [coturn](https://github.com/coturn/coturn) than Ubuntu 16.04.  Also, this TURN server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core server on Digital Ocean, for example, which offers servers with public IP addresses, is a good choice.
+Before running `bbb-install.sh` to setup the TURN server (which installs and configures the `coturn` package), you need
 
-Next, to configure the TURN server you need:
-
-  * A fully qualified domain name (FQDN) with a DNS entry that resolves to the external public IP address of the TURN server
+  * A fully qualified domain name (FQDN) with 
+    * an A record that resolves to the server's public IPV4 address
+    * an AAAA record that resolves to the server's public IPV6 address
   * An email address for Let's Encrypt
   * A secret key (it can be an 8 to 16 character random string that you create).
 
-With the above information, you can set up a TURN server for BigBlueButton using `bbb-install.sh` using the command
+With the above in place, you can set up a TURN server for BigBlueButton using the command
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c <FQDN>:<SECRET> -e <EMAIL>
 ~~~
 
-Note, we've omitted the `-v` option, which causes `bbb-install.sh` to just install and configure coturn.  For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email address, you can set up a TURN server for BigBlueButton using the command
+Note, we've omitted the `-v` option, which causes `bbb-install.sh` to just install and configure coturn.  For example, using `turn.example.com` as the FQDN, `1234abcd` as the shared secret, and `info@example.com` as the email address (you would need to substitute your own values), logging into the server via SSH and running the following command as root
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -c turn.example.com:1234abcd -e info@example.com
 ~~~
 
-`bbb-install.sh` uses Let's Encrypt to configure coturn to use a SSL certificate.  With a SSL certificate in place, coturn can relay access to your BigBlueButton server via TCP/IP on port 443.  This means if a user is behind a restrictive firewall that blocks all outgoing UDP connections, the TURN server can accept connections from the user via TCP/IP on port 443 and relay the data to your BigBlueButton server via UDP.
+will do the following
 
-With the TURN server in place, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and adding the same `-c <FQDN>:<SECRET>`.  For example,
+  * Install the latest version of coturn available for Ubuntu 20.04
+    * Provide a minimal configuration for `/etc/turnserver.conf`
+    * Add a systemd override to ensure coturn can bind to port 443
+    * Configure logging to `/var/log/turnserver/turnserver.log`
+    * Add a logrotate configuration to keep the logs for 7 days
+  * Setup a SSL certificate using Let's Encrypt
+    * Add a deploy hook for Let's Encrypt to have coturn reload the certificates upon renewal 
+
+With a SSL certificate in place, coturn can relay access to your BigBlueButton server via TCP/IP on port 443.  This means if a user is behind a restrictive firewall that blocks all outgoing UDP connections, the TURN server can accept connections from the user via TCP/IP on port 443 and relay the data to your BigBlueButton server via UDP.
+
+After the TURN server is setup, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and add the parameter `-c <FQDN>:<SECRET>` (this tells `bbb-install.sh` to setup the configuration for the TURN server running at <FQDN> using the share secret <SECRET>.  For example,
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -c turn.example.com:1234abcd
