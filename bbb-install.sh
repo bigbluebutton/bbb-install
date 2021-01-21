@@ -1156,7 +1156,8 @@ HERE
 
   # Eanble coturn to bind to port 443 with CAP_NET_BIND_SERVICE
   mkdir -p /etc/systemd/system/coturn.service.d
-  cat > /etc/systemd/system/coturn.service.d/ansible.conf <<HERE
+  rm -rf /etc/systemd/system/coturn.service.d/ansible.conf      # Remove previous file 
+  cat > /etc/systemd/system/coturn.service.d/override.conf <<HERE
 [Service]
 LimitNOFILE=1048576
 AmbientCapabilities=CAP_NET_BIND_SERVICE
