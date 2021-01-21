@@ -651,6 +651,7 @@ check_nat() {
       cat > /lib/systemd/system/dummy-nic.service << HERE
 [Unit]
 Description=Configure dummy NIC for FreeSWITCH
+Before=freeswitch.service
 After=network.target
 
 [Service]
