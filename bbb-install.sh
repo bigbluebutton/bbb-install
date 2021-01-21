@@ -434,8 +434,9 @@ need_x64() {
 
 wait_443() {
   echo "Waiting for port 443 to clear "
-  while netstat -antp | grep TIME_WAIT | grep -q ":443"; do sleep 1; echo -n '.'; done
-  echo 
+  # netstat fields 4 and 6 are Local Address and State
+  while netstat -ant | awk '{print $4, $6}' | grep TIME_WAIT | grep -q ":443"; do sleep 1; echo -n '.'; done
+  echo
 }
 
 get_IP() {
