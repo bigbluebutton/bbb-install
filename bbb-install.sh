@@ -123,6 +123,7 @@ main() {
         ;;
 
       X)
+        DEBUG=true
         set -x
         ;;
 
@@ -228,7 +229,9 @@ main() {
   fi
 
   # We're installing BigBlueButton
-  env
+  if [ ! -z "$DEBUG" ]; then
+    env
+  fi
   if [ "$DISTRO" == "xenial" ]; then 
     check_ubuntu 16.04
     TOMCAT_USER=tomcat7
