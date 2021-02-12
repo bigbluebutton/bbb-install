@@ -130,7 +130,7 @@ main() {
       r)
         PACKAGE_REPOSITORY=$OPTARG
 	# backwards compatibility with old usage that omitted URL scheme
-	if [ echo $PACKAGE_REPOSITORY | grep '^https?:' ]; then
+	if echo $PACKAGE_REPOSITORY | grep -v -q '^https?:'; then
 	    PACKAGE_REPOSITORY=https://$PACKAGE_REPOSITORY
 	fi
         ;;
