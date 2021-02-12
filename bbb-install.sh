@@ -289,7 +289,7 @@ main() {
     if ! apt-key list MongoDB | grep -q 4.2; then
       wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
     fi
-    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list > /dev/null
     rm -f /etc/apt/sources.list.d/mongodb-org-4.0.list
 
     touch /root/.rnd
@@ -755,7 +755,7 @@ install_greenlight(){
   # need_pkg bbb-webhooks
 
   if [ ! -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx
+    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx >/dev/null
     cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
   return 307 /b;
