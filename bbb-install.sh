@@ -110,6 +110,9 @@ main() {
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
   SOURCES_FETCHED=false
 
+  # If grep'ing for a key in "apt-key list" is dangerous, should we find a better way to do it?
+  export APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=true
+
   need_x64
 
   while builtin getopts "hs:r:c:v:e:p:m:lxgadw" opt "${@}"; do
