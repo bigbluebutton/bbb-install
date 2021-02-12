@@ -484,8 +484,9 @@ get_IP() {
 
   # Check if the external IP reaches the internal IP
   if [ -n "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
-    if which nginx; then
+    if systemctl -q is-active nginx; then
       systemctl stop nginx
+      NGINX_WAS_RUNING=true
     fi
 
     need_pkg netcat-openbsd
@@ -510,7 +511,7 @@ get_IP() {
 
     kill $nc_PID  > /dev/null 2>&1;
 
-    if which nginx; then
+    if [ ! -z $NGINX_WAS_RUNING ]; then
       systemctl start nginx
     fi
   fi
