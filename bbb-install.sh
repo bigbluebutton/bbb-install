@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 # Copyright (c) 2018 BigBlueButton Inc.
 #
@@ -70,6 +70,7 @@ OPTIONS (install BigBlueButton):
   -d                     Skip SSL certificates request (use provided certificates from mounted volume)
   -w                     Install UFW firewall (recommended)
 
+  -X                     Debugging (set bash -x flag to print each command as its executed)
   -h                     Print help
 
 OPTIONS (install coturn only):
@@ -113,12 +114,17 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgtadw" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgtadwX" opt "${@}"; do
 
     case $opt in
       h)
         usage
         exit 0
+        ;;
+
+      X)
+        DEBUG=true
+        set -x
         ;;
 
       s)
@@ -223,7 +229,9 @@ main() {
   fi
 
   # We're installing BigBlueButton
-  env
+  if [ ! -z "$DEBUG" ]; then
+    env
+  fi
   if [ "$DISTRO" == "xenial" ]; then 
     check_ubuntu 16.04
     TOMCAT_USER=tomcat7
