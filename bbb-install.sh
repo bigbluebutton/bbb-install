@@ -589,7 +589,7 @@ check_coturn() {
   if [ "$COTURN_HOST" == "turn.example.com" ]; then 
     err "You must specify a valid hostname (not the example given in the docs)"
   fi
-  if [ "$COTURN_SECRET" == "12341234" ]; then 
+  if [ "$COTURN_SECRET" == "1234324" ]; then
     err "You must specify a new password (not the example given in the docs)."
   fi
 
