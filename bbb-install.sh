@@ -70,7 +70,6 @@ OPTIONS (install BigBlueButton):
   -d                     Skip SSL certificates request (use provided certificates from mounted volume)
   -w                     Install UFW firewall (recommended)
 
-  -X                     Debugging (set bash -x flag to print each command as its executed)
   -h                     Print help
 
 OPTIONS (install coturn only):
@@ -120,11 +119,6 @@ main() {
       h)
         usage
         exit 0
-        ;;
-
-      X)
-        DEBUG=true
-        set -x
         ;;
 
       s)
@@ -229,9 +223,8 @@ main() {
   fi
 
   # We're installing BigBlueButton
-  if [ ! -z "$DEBUG" ]; then
-    env
-  fi
+  env
+
   if [ "$DISTRO" == "xenial" ]; then 
     check_ubuntu 16.04
     TOMCAT_USER=tomcat7
@@ -370,32 +363,42 @@ HERE
     setup_ufw 
   fi
 
-  # Add overrides to ensure redis-server is started before bbb-apps-akka, bbb-fsesl-akka, and bbb-transcode-akka
-  if [ ! -f /etc/systemd/system/bbb-apps-akka.service.d/override.conf ];then
-    mkdir -p /etc/systemd/system/bbb-apps-akka.service.d
-    cat > /etc/systemd/system/bbb-apps-akka.service.d/override.conf <<HERE
-[Unit]
-Wants=redis-server.service
-After=redis-server.service
+
+  if [ "$DISTRO" == "xenial" ]; then 
+    # Add overrides to ensure redis-server is started before bbb-apps-akka, bbb-fsesl-akka, and bbb-transcode-akka
+    if [ ! -f /etc/systemd/system/bbb-apps-akka.service.d/override.conf ];then
+      mkdir -p /etc/systemd/system/bbb-apps-akka.service.d
+      cat > /etc/systemd/system/bbb-apps-akka.service.d/override.conf <<HERE
+  [Unit]
+  Wants=redis-server.service
+  After=redis-server.service
 HERE
+    fi
+
+    if [ ! -f /etc/systemd/system/bbb-fsesl-akka.service.d/override.conf ]; then
+      mkdir -p /etc/systemd/system/bbb-fsesl-akka.service.d
+      cat > /etc/systemd/system/bbb-fsesl-akka.service.d/override.conf <<HERE
+  [Unit]
+  Wants=redis-server.service
+  After=redis-server.service
+HERE
+    fi
+
+    if [ ! -f /etc/systemd/system/bbb-transcode-akka.service.d/override.conf ]; then
+      mkdir -p /etc/systemd/system/bbb-transcode-akka.service.d
+      cat > /etc/systemd/system/bbb-transcode-akka.service.d/override.conf <<HERE
+  [Unit]
+  Wants=redis-server.service
+  After=redis-server.service
+HERE
+    fi
   fi
 
-  if [ ! -f /etc/systemd/system/bbb-fsesl-akka.service.d/override.conf ]; then
-    mkdir -p /etc/systemd/system/bbb-fsesl-akka.service.d
-    cat > /etc/systemd/system/bbb-fsesl-akka.service.d/override.conf <<HERE
-[Unit]
-Wants=redis-server.service
-After=redis-server.service
-HERE
-  fi
+  # Fix URLS for upgrade from earlier version of 2.3-dev
+  if [ "$DISTRO" == "bionic" ]; then
+    sed -i 's/^defaultHTML5ClientUrl=${bigbluebutton.web.serverURL}\/html5client\/%%INSTANCEID%%\/join/defaultHTML5ClientUrl=${bigbluebutton.web.serverURL}\/html5client\/join/g' /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
 
-  if [ ! -f /etc/systemd/system/bbb-transcode-akka.service.d/override.conf ]; then
-    mkdir -p /etc/systemd/system/bbb-transcode-akka.service.d
-    cat > /etc/systemd/system/bbb-transcode-akka.service.d/override.conf <<HERE
-[Unit]
-Wants=redis-server.service
-After=redis-server.service
-HERE
+    sed -i 's/^defaultGuestWaitURL=${bigbluebutton.web.serverURL}\/html5client\/%%INSTANCEID%%\/guestWait/defaultGuestWaitURL=${bigbluebutton.web.serverURL}\/html5client\/guestWait/g' /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
   fi
 
   if [ ! -z "$HOST" ]; then
