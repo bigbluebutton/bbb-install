@@ -93,11 +93,11 @@ Sample options for setup a BigBlueButton server
     -v xenial-22
     -v xenial-22 -s bbb.example.com -e info@example.com
     -v xenial-22 -s bbb.example.com -e info@example.com -g
-    -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324:443
+    -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:443:1234324
 
 Sample options for setup of a coturn server (on a different server)
 
-    -c turn.example.com:1234324:443 -e info@example.com
+    -c turn.example.com:443:1234324 -e info@example.com
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
