@@ -60,7 +60,7 @@ OPTIONS (install BigBlueButton):
 
   -a                     Install BBB API demos
   -g                     Install Greenlight
-  -c <hostname>:<secret>:<port> Configure with coturn server at <hostname> listen on <port> using <secret>
+  -c <hostname>:<port>:<secret> Configure with coturn server at <hostname> listen on <port> using <secret>
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
@@ -75,7 +75,7 @@ OPTIONS (install BigBlueButton):
 
 OPTIONS (install coturn only):
 
-  -c <hostname>:<secret>:<port> Setup a coturn server with <hostname> listen on <port> using <secret> (required)
+  -c <hostname>:<port>:<secret> Setup a coturn server with <hostname> listen on <port> using <secret> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
 
 OPTIONS (install Let's Encrypt certificate only):
@@ -579,18 +579,25 @@ check_coturn() {
   if ! echo $1 | grep -q ':'; then err "Option for coturn must be <hostname>:<secret>"; fi
 
   COTURN_HOST=$(echo $OPTARG | cut -d':' -f1)
-  COTURN_SECRET=$(echo $OPTARG | cut -d':' -f2)
-  COTURN_PORT=$(echo $OPTARG | cut -d':' -f3)
-
+  COTURN_PORT=$(echo $OPTARG | cut -d':' -f2)
+  COTURN_SECRET=$(echo $OPTARG | cut -d':' -f3)
+  
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
-  if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
-  if [ -z "$COTURN_PORT" ]; then COTURN_PORT=443; fi
 
+  if [ -z "$COTURN_SECRET" ]; then
+    COTURN_SECRET="$COTURN_PORT"
+    COTURN_PORT=443
+  fi
+  if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
+  
   if [ "$COTURN_HOST" == "turn.example.com" ]; then 
     err "You must specify a valid hostname (not the example given in the docs)"
   fi
   if [ "$COTURN_SECRET" == "1234324" ]; then
     err "You must specify a new password (not the example given in the docs)."
+  fi
+  if [ "$COTURN_SECRET" == "443" ]; then
+    err "You must specify a password. It looks like you have specify a port as secret."
   fi
 
   check_host $COTURN_HOST
