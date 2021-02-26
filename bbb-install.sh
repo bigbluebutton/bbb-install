@@ -530,7 +530,7 @@ need_pkg() {
 }
 
 need_ppa() {
-  need_pkg software-properties-common 
+  need_pkg software-properties-common wget
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
   fi
