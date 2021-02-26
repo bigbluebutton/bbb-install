@@ -339,7 +339,7 @@ The server should have the following additional ports available:
 | ------------- | ------------- | ----------- |
 | 3478          | TCP/UDP       | coturn listening port |
 | 443           | TCP/UDP       | TLS listening port |
-| 49152-65535   | UDP           | relay ports range |
+| 32769-65535   | UDP           | relay ports range |
 
 
 Before running `bbb-install.sh` to setup the TURN server (which installs and configures the `coturn` package), you need
