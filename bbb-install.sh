@@ -280,10 +280,7 @@ main() {
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
     fi
-    sudo tee "/etc/apt/sources.list.d/kurento.list" >/dev/null <<HERE
-# Kurento Media Server - Release packages
-deb [arch=amd64] http://ubuntu.openvidu.io/6.15.0 $DISTRO kms6
-HERE
+    rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
       curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
@@ -302,6 +299,8 @@ HERE
     install_docker		# needed for bbb-libreoffice-docker
     need_pkg ruby
     gem install bundler -v 2.1.4
+
+    BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
   fi
 
   apt-get update
@@ -530,7 +529,7 @@ need_pkg() {
 }
 
 need_ppa() {
-  need_pkg software-properties-common wget
+  need_pkg software-properties-common 
   if [ ! -f /etc/apt/sources.list.d/$1 ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
   fi
@@ -742,9 +741,9 @@ install_greenlight(){
     docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
   fi
 
-  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties   | grep -v '#' | grep securitySalt | cut -d= -f2)
-  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | sed 's/https\?:\/\///')
+  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | last -n 1 | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
+  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | last -n 1 | grep securitySalt | cut -d= -f2)
+  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | last -n 1 | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | sed 's/https\?:\/\///')
 
   # Update Greenlight configuration file in ~/greenlight/env
   sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                   ~/greenlight/.env
@@ -870,7 +869,7 @@ HERE
 
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
       if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 -w /var/www/bigbluebutton-default/ \
-           -d $HOST --deploy-hook "systemctl reload nginx" $LETS_ENCRYPT_OPTIONS certonly; then
+           -d $HOST --deploy-hook "systemctl restart nginx" $LETS_ENCRYPT_OPTIONS certonly; then
         cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
         systemctl restart nginx
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
@@ -947,6 +946,9 @@ HERE
   fi
 
   sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
+  if [ -f $BBB_WEB_ETC_CONFIG ]; then
+    sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $BBB_WEB_ETC_CONFIG
+  fi
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
@@ -962,7 +964,7 @@ HERE
   # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
     if ! grep ^BIGBLUEBUTTON_ENDPOINT ~/greenlight/.env | grep -q https; then
-      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
+      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | last -n 1 | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
       sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
       docker-compose -f ~/greenlight/docker-compose.yml down
       docker-compose -f ~/greenlight/docker-compose.yml up -d
