@@ -280,7 +280,15 @@ main() {
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
     fi
-    rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
+
+    if [ "$VERSION" == "bionic-230-dev" ]; then
+      cat > /etc/apt/sources.list.d/kurento.list <<HERE
+# Kurento Media Server - Release packages
+deb [arch=amd64] http://ubuntu.openvidu.io/6.16.0 bionic kms6
+HERE
+    else
+      rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
+    fi
 
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
       curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
