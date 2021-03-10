@@ -749,9 +749,9 @@ install_greenlight(){
     docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
   fi
 
-  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | last -n 1 | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | last -n 1 | grep securitySalt | cut -d= -f2)
-  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | last -n 1 | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | sed 's/https\?:\/\///')
+  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
+  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | grep securitySalt | tail -n 1  | cut -d= -f2)
+  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 | sed 's/https\?:\/\///')
 
   # Update Greenlight configuration file in ~/greenlight/env
   sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                   ~/greenlight/.env
@@ -972,7 +972,7 @@ HERE
   # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
     if ! grep ^BIGBLUEBUTTON_ENDPOINT ~/greenlight/.env | grep -q https; then
-      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | last -n 1 | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
+      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
       sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
       docker-compose -f ~/greenlight/docker-compose.yml down
       docker-compose -f ~/greenlight/docker-compose.yml up -d
