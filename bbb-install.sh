@@ -60,7 +60,7 @@ OPTIONS (install BigBlueButton):
 
   -a                     Install BBB API demos
   -g                     Install Greenlight
-  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
+  -c <hostname>:<port>:<secret> Configure with coturn server at <hostname> listen on <port> using <secret>
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
@@ -74,7 +74,7 @@ OPTIONS (install BigBlueButton):
 
 OPTIONS (install coturn only):
 
-  -c <hostname>:<secret> Setup a coturn server with <hostname> and <secret> (required)
+  -c <hostname>:<port>:<secret> Setup a coturn server with <hostname> listen on <port> using <secret> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
 
 OPTIONS (install Let's Encrypt certificate only):
@@ -92,11 +92,11 @@ Sample options for setup a BigBlueButton server
     -v xenial-22
     -v xenial-22 -s bbb.example.com -e info@example.com
     -v xenial-22 -s bbb.example.com -e info@example.com -g
-    -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:443:1234324
 
 Sample options for setup of a coturn server (on a different server)
 
-    -c turn.example.com:1234324 -e info@example.com
+    -c turn.example.com:443:1234324 -e info@example.com
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -589,16 +589,25 @@ check_coturn() {
   if ! echo $1 | grep -q ':'; then err "Option for coturn must be <hostname>:<secret>"; fi
 
   COTURN_HOST=$(echo $OPTARG | cut -d':' -f1)
-  COTURN_SECRET=$(echo $OPTARG | cut -d':' -f2)
-
+  COTURN_PORT=$(echo $OPTARG | cut -d':' -f2)
+  COTURN_SECRET=$(echo $OPTARG | cut -d':' -f3)
+  
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
-  if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
 
+  if [ -z "$COTURN_SECRET" ]; then
+    COTURN_SECRET="$COTURN_PORT"
+    COTURN_PORT=443
+  fi
+  if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
+  
   if [ "$COTURN_HOST" == "turn.example.com" ]; then 
     err "You must specify a valid hostname (not the example given in the docs)"
   fi
-  if [ "$COTURN_SECRET" == "1234abcd" ]; then 
+  if [ "$COTURN_SECRET" == "1234324" ]; then
     err "You must specify a new password (not the example given in the docs)."
+  fi
+  if [ "$COTURN_SECRET" == "443" ]; then
+    err "You must specify a password. It looks like you have specify a port as secret."
   fi
 
   check_host $COTURN_HOST
@@ -1026,13 +1035,13 @@ configure_coturn() {
 
     <bean id="turn0" class="org.bigbluebutton.web.services.turn.TurnServer">
         <constructor-arg index="0" value="$COTURN_SECRET"/>
-        <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
+        <constructor-arg index="1" value="turns:$COTURN_HOST:${COTURN_PORT}?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
     
     <bean id="turn1" class="org.bigbluebutton.web.services.turn.TurnServer">
         <constructor-arg index="0" value="$COTURN_SECRET"/>
-        <constructor-arg index="1" value="turn:$COTURN_HOST:443?transport=tcp"/>
+        <constructor-arg index="1" value="turn:$COTURN_HOST:${COTURN_PORT}?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
 
@@ -1088,7 +1097,7 @@ install_coturn() {
 
   cat <<HERE > /etc/turnserver.conf
 listening-port=3478
-tls-listening-port=443
+tls-listening-port=${COTURN_PORT}
 
 listening_ip=$IP
 relay_ip=$IP
@@ -1189,4 +1198,3 @@ HERE
 }
 
 main "$@" || exit 1
-
