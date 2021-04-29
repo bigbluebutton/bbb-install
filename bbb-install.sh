@@ -284,7 +284,7 @@ main() {
     if [ "$VERSION" == "bionic-230-dev" ]; then
       cat > /etc/apt/sources.list.d/kurento.list <<HERE
 # Kurento Media Server - Release packages
-deb [arch=amd64] http://ubuntu.openvidu.io/6.16.0 bionic kms6
+deb [arch=amd64] http://ubuntu.openvidu.io/6.15.0 bionic kms6
 HERE
     else
       rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
@@ -750,7 +750,7 @@ install_greenlight(){
   fi
 
   BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | grep securitySalt | tail -n 1  | cut -d= -f2)
+  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
   SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 | sed 's/https\?:\/\///')
 
   # Update Greenlight configuration file in ~/greenlight/env
@@ -868,7 +868,7 @@ server {
   #
   error_page   500 502 503 504  /50x.html;
   location = /50x.html {
-    root   /var/www/nginx-default;
+    root   /var/www/bigbluebutton-default;
   }
 }
 HERE
@@ -953,9 +953,9 @@ HERE
     xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
   fi
 
-  sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
+  sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
   if [ -f $BBB_WEB_ETC_CONFIG ]; then
-    sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $BBB_WEB_ETC_CONFIG
+    sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $BBB_WEB_ETC_CONFIG
   fi
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
