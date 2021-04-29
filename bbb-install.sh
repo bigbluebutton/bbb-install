@@ -237,8 +237,6 @@ main() {
 
   get_IP $HOST
 
-  echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
-
   need_pkg curl
 
   if [ "$DISTRO" == "xenial" ]; then 
