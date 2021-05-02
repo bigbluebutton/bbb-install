@@ -27,22 +27,22 @@
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v xenial-22 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-23 -s bbb.example.com -e info@example.com 
 #
 #  Same as above but also install the API examples for testing.
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v xenial-22 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-23-s bbb.example.com -e info@example.com 
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v xenial-22 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-23-s bbb.example.com -e info@example.com -g
 #
 
 usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 2.2 (or later) server in under 30 minutes.
+Script for installing a BigBlueButton 2.3 (or later) server in under 30 minutes.
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
@@ -51,7 +51,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-22') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'bionic-23') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -89,12 +89,11 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v xenial-22
-    -v xenial-22 -s bbb.example.com -e info@example.com
-    -v xenial-22 -s bbb.example.com -e info@example.com -g
-    -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v bionic-23 -s bbb.example.com -e info@example.com
+    -v bionic-23 -s bbb.example.com -e info@example.com -g
+    -v bionic-23 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
-Sample options for setup of a coturn server (on a different server)
+Sample options for setup of a coturn server (on a Ubuntu 20.04)
 
     -c turn.example.com:1234324 -e info@example.com
 
@@ -240,6 +239,7 @@ main() {
   need_pkg curl
 
   if [ "$DISTRO" == "xenial" ]; then 
+    echo "** Ubuntu 16.04 is now end of life.  Recommend installing BigBlueButton 2.3 on Ubuntu 18.04"
     rm -rf /etc/apt/sources.list.d/jonathonf-ubuntu-ffmpeg-4-xenial.list 
     need_ppa rmescandon-ubuntu-yq-xenial.list         ppa:rmescandon/yq         CC86BB64 # Edit yaml files with yq
     need_ppa libreoffice-ubuntu-ppa-xenial.list       ppa:libreoffice/ppa       1378B444 # Latest libreoffice
@@ -279,14 +279,7 @@ main() {
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
     fi
 
-    if [ "$VERSION" == "bionic-230-dev" ]; then
-      cat > /etc/apt/sources.list.d/kurento.list <<HERE
-# Kurento Media Server - Release packages
-deb [arch=amd64] http://ubuntu.openvidu.io/6.15.0 bionic kms6
-HERE
-    else
-      rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
-    fi
+    rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
       curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
@@ -548,7 +541,7 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo $1 | egrep -q "xenial|bionic"; then err "This script can only install BigBlueButton 2.0 (or later)"; fi
+  if ! echo $1 | egrep -q "xenial|bionic"; then err "This script can only install BigBlueButton 2.2 (or later)"; fi
   DISTRO=$(echo $1 | sed 's/-.*//g')
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."

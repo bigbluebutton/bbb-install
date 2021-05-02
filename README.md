@@ -3,19 +3,19 @@
 
 # bbb-install
 
-To help you set up a BigBlueButton server (or upgrade an existing one), `bbb-install.sh` is a shell script that automates the [step-by-step instructions for installing and configuring a BigBlueButton 2.2 server](http://docs.bigbluebutton.org/2.2/install.html).   In many cases, `bbb-install.sh` can fully install and configure your BigBlueButton server, making it ready to use in under 30 minutes (depending on your server's internet speed to download and install packages).
+To help you set up a BigBlueButton server 2.3 server (or upgrade from an earlier version of 2.3), `bbb-install.sh` is a shell script that automates the installation/upgrade steps  (view the [source](https://github.com/bigbluebutton/bbb-install/blob/master/bbb-install.sh) to see all the details).   Depending on your server's internet connection, `bbb-install.sh` can fully install and configure your BigBlueButton server for production in under 30 minutes.
 
-For example, to install the latest build of BigBlueButton 2.2 on a new 64-bit Ubuntu 16.04 server with a public IP address, a hostname (such as `bbb.example.com`) that resolves to the public IP address, and an email address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
+For example, to install the latest build of BigBlueButton 2.3 on a new 64-bit Ubuntu 18.04 server with a public IP address, a hostname (such as `bbb.example.com`) that resolves to the public IP address, and an email address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v xenial-22 -s bbb.example.com -e info@example.com
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-23 -s bbb.example.com -e info@example.com
 ~~~
 
 This command pulls down the latest version of `bbb-install.sh`, sends it to the Bash shell interpreter, and installs BigBlueButton using the parameters provided:
 
   * `-w` installs the uncomplicated firewall (UFW) to restrict access to TCP/IP ports 22, 80, and 443, and UDP ports in range 16384-32768,
   * `-a` installs the API demos (making it easy to do a few quick tests on the server), 
-  * `-v xenial-22` installs the latest build of BigBlueButton 2.2.x, 
+  * `-v bionic-23` installs the latest build of BigBlueButton 2.3.x, 
   * `-s` sets the server's hostname to be `bbb.example.com`, and
   * `-e` provides an email address for Let's Encrypt to generate a valid SSL certificate for the host.
 
@@ -51,6 +51,9 @@ Note the web pages are served via HTTPS.  The browsers now require this before a
 
 The hostname `bbb.example.com` and email address `info@example.com` are just sample parameters.  The following sections walk you through the details on using `bbb-install.sh` to setup/upgrade your BigBlueButton server.
 
+After testing, you can remove the api demos with the command `sudo apt-get purge bbb-demo`.  Later on, you can upgrade the server to the latest release of BigBlueButton 2.3 by re-running the same `bbb-install.sh` command, and omit the `-v` to install the API demos.
+
+The following sections go through in more detail setting up a new BigBlueButton 2.3 server.
 
 ## Getting ready
 
@@ -113,6 +116,8 @@ We make a distinction here between the firewall installed with `-w` and the exte
 
 ### Installation videos
 
+These videos are showing installation of BigBlueButton 2.2 (and will be updated now that 2.3 is released), but they still give a good overview of the steps.
+
 Using Digital Ocean as an example, we put together this video to get you going quickly: [Using bbb-install.sh to set up BigBlueButton on Digital Ocean](https://youtu.be/D1iYEwxzk0M).
 
 Using Amazon EC2, see [Install using bbb-install.sh on EC2](https://youtu.be/-E9WIrH_yTs).
@@ -122,7 +127,7 @@ Using Amazon EC2, see [Install using bbb-install.sh on EC2](https://youtu.be/-E9
 You can get help by passing the `-h` option.
 
 ~~~
-Script for installing a BigBlueButton 2.2 (or later) server in about 30 minutes.
+Script for installing a BigBlueButton 2.3 (or later) server in about 30 minutes.
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
@@ -131,7 +136,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-22') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'bionic-23') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -169,12 +174,11 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v xenial-22
-    -v xenial-22 -s bbb.example.com -e info@example.com -w
-    -v xenial-22 -s bbb.example.com -e info@example.com -w -g
-    -v xenial-22 -s bbb.example.com -e info@example.com -w -g -c turn.example.com:1234324
+    -v bionic-23 -s bbb.example.com -e info@example.com -w
+    -v bionic-23 -s bbb.example.com -e info@example.com -w -g
+    -v bionic-23 -s bbb.example.com -e info@example.com -w -g -c turn.example.com:1234324
 
-Sample options for setup of a coturn server (on a different server)
+Sample options for setup of a coturn server (on a Ubuntu 20.04 server)
 
     -c turn.example.com:1234324 -e info@example.com
 
@@ -195,10 +199,10 @@ dig bbb.example.com @8.8.8.8
 
 Note: we're using `bbb.example.com` as an example hostname and `info@example.com` as an example email address.  You need to substitute your real hostname and email.
 
-With just these two pieces of information -- FQDN and email address -- you can use `bbb-install.sh` to automate the configuration of the BigBlueButton server with a TLS/SSL certificate.  For example, to install BigBlueButton 2.2 with a TLS/SSL certificate from Let's Encrypt using `bbb.example.com` and `info@example.com`, enter the command
+With just these two pieces of information -- FQDN and email address -- you can use `bbb-install.sh` to automate the configuration of the BigBlueButton server with a TLS/SSL certificate.  For example, to install BigBlueButton 2.3 with a TLS/SSL certificate from Let's Encrypt using `bbb.example.com` and `info@example.com`, enter the command
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -w
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-23 -s bbb.example.com -e info@example.com -w
 ~~~
 
 The `bbb-install.sh` script will also install a cron job that automatically renews the Let's Encrypt certificate so it doesn't expire.  Cool.
@@ -211,7 +215,7 @@ The default installation is meant to be for servers that are publicly available.
 When installing BigBlueButton in a private network, it is possible to validate the FQDN manually, by adding the option `-x` to the command line. As in:
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -w -x
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-23 -s bbb.example.com -e info@example.com -w -x
 ~~~
 
 Confirm the use of the email account.
@@ -265,7 +269,7 @@ certbot --email info@example.com --agree-tos -d bbb.example.com --deploy-hook 's
 You can install the API demos by adding the `-a` option.
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -w -a
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-23 -s bbb.example.com -e info@example.com -w -a
 ~~~
 
 Warning: These API demos allow anyone to access your server without authentication to create/manage meetings and recordings. They are for testing purposes only.  Once you are finished testing, you can remove the API demos with `sudo apt-get purge bbb-demo`.
@@ -278,7 +282,7 @@ Warning: These API demos allow anyone to access your server without authenticati
 You can install [Greenlight](http://docs.bigbluebutton.org/install/green-light.html) by adding the `-g` option.
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -w -g
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-23 -s bbb.example.com -e info@example.com -w -g
 ~~~
 
 Once Greenlight is installed, it redirects the default home page to Greenlight.  You can also configure GreenLight to use [OAuth2 authentication](http://docs.bigbluebutton.org/greenlight/gl-customize.html).
@@ -309,17 +313,17 @@ You can now control who creates accounts on your BigBlueButton server.  For more
 The install script allows you to pass a path which will be used to create a symbolic link with `/var/bigbluebutton`:
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -w -m /mnt/test
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-23 -w -m /mnt/test
 ~~~
 
 This allows users to store the contents of /`var/bigbluebutton`, which can get quite large, in a separate volume.
 
 ### Doing everything with a single command
 
-If you want to set up BigBlueButton 2.2 with a TLS/SSL certificate and GreenLight, you can do this all with a single command:
+If you want to set up BigBlueButton 2.3 with a TLS/SSL certificate and GreenLight, you can do this all with a single command:
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -w -g
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-23 -s bbb.example.com -e info@example.com -w -g
 ~~~
 
 Furthermore, you can re-run the same command later to update your server to the latest version of BigBlueButton 2.2.  We announce BigBlueButton updates to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
@@ -377,7 +381,7 @@ With a SSL certificate in place, coturn can relay access to your BigBlueButton s
 After the TURN server is setup, you can configure your BigBlueButton server to use the TURN server by running the `bbb-install.sh` command again and add the parameter `-c <FQDN>:<SECRET>` (this tells `bbb-install.sh` to setup the configuration for the TURN server running at <FQDN> using the share secret <SECRET>.  For example,
 
 ~~~
-wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -c turn.example.com:1234abcd
+wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-23 -s bbb.example.com -e info@example.com -c turn.example.com:1234abcd
 ~~~
 
 You can re-use a single TURN server for multiple BigBlueButton installations.
@@ -438,4 +442,4 @@ If you encounter an error with the script (such as it not completing or throwing
 
 If you are running your BigBlueButton behind a firewall, such as on EC2, this script will not configure your firewall.  You'll need to [configure the firewall](#configuring-the-external-firewall) manually.
 
-If you are upgrading from a very old version of 2.2.x (such as 2.2.3) and `sudo bbb-conf --check` still shows the older version `bbb-install.sh` finishes, try running `dpkg --configure -a` and then run `bbb-install.sh` again.
+If you are upgrading from a very old version of 2.2.x (such as 2.2.3) to the most recent version of 2.2 (using `-v xenial-22`) then `sudo bbb-conf --check` will still show the older version when `bbb-install.sh finishes.  To resolve, run `dpkg --configure -a` and then run `bbb-install.sh` again.
