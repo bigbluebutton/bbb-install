@@ -326,7 +326,7 @@ If you want to set up BigBlueButton 2.3 with a TLS/SSL certificate and GreenLigh
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-23 -s bbb.example.com -e info@example.com -w -g
 ~~~
 
-Furthermore, you can re-run the same command later to update your server to the latest version of BigBlueButton 2.2.  We announce BigBlueButton updates to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
+Furthermore, you can re-run the same command later to update your server to the latest version of BigBlueButton 2.3.  We announce BigBlueButton updates to the [bigbluebutton-dev](https://groups.google.com/forum/#!forum/bigbluebutton-dev) mailing list.
 
 
 ### Install a TURN server
