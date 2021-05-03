@@ -51,7 +51,7 @@ Note the web pages are served via HTTPS.  The browsers now require this before a
 
 The hostname `bbb.example.com` and email address `info@example.com` are just sample parameters.  The following sections walk you through the details on using `bbb-install.sh` to setup/upgrade your BigBlueButton server.
 
-After testing, you can remove the api demos with the command `sudo apt-get purge bbb-demo`.  Later on, you can upgrade the server to the latest release of BigBlueButton 2.3 by re-running the same `bbb-install.sh` command, and omit the `-v` to install the API demos.
+After testing, you can remove the api demos with the command `sudo apt-get purge bbb-demo`.  Later on, you can upgrade the server to the latest release of BigBlueButton 2.3 by re-running the same `bbb-install.sh` command, and omit the `-a` to install the API demos.
 
 The following sections go through in more detail setting up a new BigBlueButton 2.3 server.
 
