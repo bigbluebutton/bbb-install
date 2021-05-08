@@ -342,6 +342,7 @@ The server should have the following additional ports available:
 | Ports         | Protocol      | Description |
 | ------------- | ------------- | ----------- |
 | 3478          | TCP/UDP       | coturn listening port |
+| 80            | TCP           | HTTP required for Certbot |
 | 443           | TCP/UDP       | TLS listening port |
 | 32769-65535   | UDP           | relay ports range |
 
