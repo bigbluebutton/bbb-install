@@ -107,7 +107,7 @@ HERE
 main() {
   export DEBIAN_FRONTEND=noninteractive
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
-  LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
+  LETS_ENCRYPT_OPTIONS="--non-interactive --preferred-challenges http"
   SOURCES_FETCHED=false
 
   need_x64
@@ -837,7 +837,7 @@ install_ssl() {
   if [ ! -f /etc/letsencrypt/live/$HOST/fullchain.pem ]; then
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
       systemctl stop nginx
-      if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
+      if ! certbot certonly --standalone $LETS_ENCRYPT_OPTIONS \
            --deploy-hook "systemctl restart nginx" --rsa-key-size 4096 \
            -d $HOST --email $EMAIL --agree-tos -n; then
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
@@ -1023,7 +1023,7 @@ install_certificate() {
   need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
   apt-get -y install certbot
 
-  certbot certonly --standalone --non-interactive --preferred-challenges http \
+  certbot certonly --standalone $LETS_ENCRYPT_OPTIONS \
     --deploy-hook "systemctl restart coturn" \
     -d $HOST --email $EMAIL --agree-tos -n
 }
@@ -1035,7 +1035,7 @@ install_coturn() {
 
   need_pkg software-properties-common certbot
 
-  if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
+  if ! certbot certonly --standalone $LETS_ENCRYPT_OPTIONS \
          -d $COTURN_HOST --email $EMAIL --agree-tos -n ; then
      err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
   fi
