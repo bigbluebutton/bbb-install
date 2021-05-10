@@ -842,6 +842,10 @@ install_ssl() {
            -d $HOST --email $EMAIL --agree-tos -n; then
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
+    else
+      mkdir -p /etc/letsencrypt/live/$HOST/
+      ln -s /local/certs/fullchain.pem /etc/letsencrypt/live/$HOST/fullchain.pem
+      ln -s /local/certs/privkey.pem /etc/letsencrypt/live/$HOST/privkey.pem
     fi
   fi
 
