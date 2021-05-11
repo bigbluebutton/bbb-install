@@ -835,11 +835,41 @@ install_ssl() {
   fi
 
   if [ ! -f /etc/letsencrypt/live/$HOST/fullchain.pem ]; then
+    rm -f /tmp/bigbluebutton.bak
+    if ! grep -q $HOST /etc/nginx/sites-available/bigbluebutton; then  # make sure we can do the challenge
+      cp /etc/nginx/sites-available/bigbluebutton /tmp/bigbluebutton.bak
+      cat <<HERE > /etc/nginx/sites-available/bigbluebutton
+server_tokens off;
+server {
+  listen 80;
+  listen [::]:80;
+  server_name $HOST;
+
+  access_log  /var/log/nginx/bigbluebutton.access.log;
+
+  # BigBlueButton landing page.
+  location / {
+    root   /var/www/bigbluebutton-default;
+    index  index.html index.htm;
+    expires 1m;
+  }
+
+  # Redirect server error pages to the static page /50x.html
+  #
+  error_page   500 502 503 504  /50x.html;
+  location = /50x.html {
+    root   /var/www/bigbluebutton-default;
+  }
+}
+HERE
+      systemctl restart nginx
+    fi
+
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
-      systemctl stop nginx
-      if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
-           --deploy-hook "systemctl restart nginx" --rsa-key-size 4096 \
-           -d $HOST --email $EMAIL --agree-tos -n; then
+      if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 -w /var/www/bigbluebutton-default/ \
+           -d $HOST --deploy-hook "systemctl restart nginx" $LETS_ENCRYPT_OPTIONS certonly; then
+        cp /tmp/bigbluebutton.bak /etc/nginx/sites-available/bigbluebutton
+        systemctl restart nginx
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
     else
