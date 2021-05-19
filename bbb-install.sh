@@ -336,6 +336,8 @@ main() {
     ln -s "$LINK_PATH" "/var/bigbluebutton"
   fi
 
+  install_home
+
   if [ ! -z "$PROVIDED_CERTIFICATE" ] ; then
     install_ssl
   elif [ ! -z "$HOST" ] && [ ! -z "$EMAIL" ] ; then
