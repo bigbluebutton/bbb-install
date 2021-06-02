@@ -67,7 +67,7 @@ OPTIONS (install BigBlueButton):
   -p <host>              Use apt-get proxy at <host>
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
-  -d                     Skip SSL certificates request (use provided certificates from mounted volume)
+  -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
 
   -h                     Print help
@@ -874,6 +874,7 @@ HERE
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
     else
+      #place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install.sh will deal with the rest.
       mkdir -p /etc/letsencrypt/live/$HOST/
       ln -s /local/certs/fullchain.pem /etc/letsencrypt/live/$HOST/fullchain.pem
       ln -s /local/certs/privkey.pem /etc/letsencrypt/live/$HOST/privkey.pem
