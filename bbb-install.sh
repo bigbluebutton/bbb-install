@@ -455,12 +455,18 @@ get_IP() {
   if [ -n "$IP" ]; then return 0; fi
 
   # Determine local IP
-  need_pkg net-tools
-  if LANG=c ifconfig | grep -q 'venet0:0'; then
-    IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
-  else
-    IP=$(ifconfig "$(route | grep ^default | head -1 | sed "s/.* //")" | awk '/inet /{ print $2}' | cut -d: -f2)
-  fi
+  need_pkg iproute2
+  local route=$(ip route show | grep -w -e "^default" | tail -1)
+  case $route in
+  *\ src\ *)
+    IP=$(sed -e "s/.* src //" -e "s/\([^ ]*\)\(.*\)/\1/" <<<$route)
+    ;;
+  *\ dev\ *)
+    local device=$(sed -e "s/.* dev //" -e "s/\([^ ]*\)\(.*\)/\1/" <<<$route)
+    IP=$(ip address show $device | grep -w -e "inet" | \
+      grep " $device$" | sed -e "s/\(.*inet \)\([^ /]*\)\(.*\)/\2/")
+    ;;
+  esac
 
   # Determine external IP 
   if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ "$(head -c 3 /sys/devices/virtual/dmi/id/product_uuid)" == "EC2" ]; then
