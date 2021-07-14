@@ -763,7 +763,7 @@ HERE
   fi
 
   # change the default passwords
-  PGPASSWORD=$(openssl rand -base64 24)
+  PGPASSWORD=$(openssl rand -base64 24 | sed 's/[\/\+]//g')
   sed -i "s/POSTGRES_PASSWORD=password/POSTGRES_PASSWORD=$PGPASSWORD/g" ~/greenlight/docker-compose.yml
   sed -i "s/DB_PASSWORD=password/DB_PASSWORD=$PGPASSWORD/g" ~/greenlight/.env
 
