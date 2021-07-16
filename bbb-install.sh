@@ -764,7 +764,7 @@ HERE
 
   # change the default passwords
   PGPASSWORD=$(openssl rand -base64 24)
-  sed -i "s/POSTGRES_PASSWORD=password/POSTGRES_PASSWORD=$PGPASSWORD/g" ~/greenlight/docker-compose.yml
+  sed -i "s,^\([ \t-]*POSTGRES_PASSWORD\)\(=password\),\1=$PGPASSWORD,g" ~/greenlight/docker-compose.yml
   sed -i "s,^\([ \t]*DB_PASSWORD\)\(=password\),\1=$PGPASSWORD,g" ~/greenlight/.env
 
   # Remove old containers
