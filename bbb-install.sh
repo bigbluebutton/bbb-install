@@ -199,15 +199,6 @@ main() {
   check_apache2
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
-  if [ -z "$VERSION" ] && [ ! -z "$LETS_ENCRYPT_ONLY" ]; then
-    if [ -z "$EMAIL" ]; then err "Installing certificate needs an e-mail address for Let's Encrypt"; fi
-    check_ubuntu 18.04
-
-    install_certificate
-    exit 0
-  fi
-
-  # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ ! -z "$COTURN" ]; then
     if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
     check_ubuntu 20.04
@@ -234,9 +225,10 @@ main() {
   fi
   check_mem
 
-  get_IP $HOST
+  sudo add-apt-repository universe
+  need_pkg wget curl gpg-agent dirmngr
 
-  need_pkg curl
+  get_IP $HOST
 
   if [ "$DISTRO" == "xenial" ]; then 
     echo "** Ubuntu 16.04 is now end of life.  Recommend installing BigBlueButton 2.3 on Ubuntu 18.04"
@@ -771,7 +763,7 @@ HERE
   fi
 
   # change the default passwords
-  PGPASSWORD=$(openssl rand -base64 24)
+  PGPASSWORD=$(openssl rand -base64 24 | sed 's/[\/\+]//g')
   sed -i "s/POSTGRES_PASSWORD=password/POSTGRES_PASSWORD=$PGPASSWORD/g" ~/greenlight/docker-compose.yml
   sed -i "s/DB_PASSWORD=password/DB_PASSWORD=$PGPASSWORD/g" ~/greenlight/.env
 
@@ -1044,20 +1036,6 @@ configure_coturn() {
     </bean>
 </beans>
 HERE
-}
-
-install_certificate() {
-  apt-get update
-  apt-get -y -o DPkg::options::="--force-confdef" -o DPkg::options::="--force-confold" install grub-pc update-notifier-common
-  apt-get dist-upgrade -yq
-
-  need_pkg software-properties-common
-  need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
-  apt-get -y install certbot
-
-  certbot certonly --standalone --non-interactive --preferred-challenges http \
-    --deploy-hook "systemctl restart coturn" \
-    -d $HOST --email $EMAIL --agree-tos -n
 }
 
 
