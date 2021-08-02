@@ -225,6 +225,7 @@ main() {
   fi
   check_mem
 
+  need_pkg software-properties-common  # needed for add-apt-repository
   sudo add-apt-repository universe
   need_pkg wget curl gpg-agent dirmngr
 
