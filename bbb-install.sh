@@ -848,13 +848,6 @@ server {
     index  index.html index.htm;
     expires 1m;
   }
-
-  # Redirect server error pages to the static page /50x.html
-  #
-  error_page   500 502 503 504  /50x.html;
-  location = /50x.html {
-    root   /var/www/bigbluebutton-default;
-  }
 }
 HERE
       systemctl restart nginx
@@ -912,15 +905,6 @@ server {
 
   # Include specific rules for record and playback
   include /etc/bigbluebutton/nginx/*.nginx;
-
-  #error_page  404  /404.html;
-
-  # Redirect server error pages to the static page /50x.html
-  #
-  error_page   500 502 503 504  /50x.html;
-  location = /50x.html {
-    root   /var/www/nginx-default;
-  }
 }
 HERE
 
