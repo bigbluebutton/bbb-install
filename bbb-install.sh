@@ -298,7 +298,7 @@ main() {
   fi
 
   apt-get update
-  apt-get dist-upgrade -yq
+  apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
   need_pkg nodejs $MONGODB apt-transport-https haveged build-essential yq
   need_pkg bigbluebutton
@@ -1027,7 +1027,7 @@ HERE
 
 install_coturn() {
   apt-get update
-  apt-get dist-upgrade -yq
+  apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
   need_pkg software-properties-common certbot
 
