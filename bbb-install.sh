@@ -331,6 +331,8 @@ main() {
     ln -s "$LINK_PATH" "/var/bigbluebutton"
   fi
 
+  install_home
+
   if [ ! -z "$PROVIDED_CERTIFICATE" ] ; then
     install_ssl
   elif [ ! -z "$HOST" ] && [ ! -z "$EMAIL" ] ; then
@@ -709,6 +711,20 @@ configure_HTML5() {
   sed -i 's/^moderatorsJoinViaHTML5Client=.*/moderatorsJoinViaHTML5Client=true/' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 
   sed -i 's/swfSlidesRequired=true/swfSlidesRequired=false/g'                    $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
+}
+
+install_home(){
+  # Create home directory structure if it does not exist yet and user
+  # bigbluebutton is available
+  if [ ! -d ~bigbluebutton ]; then
+    if getent passwd bigbluebutton >/dev/null; then
+      mkdir -m 750 \
+        ~bigbluebutton \
+        ~bigbluebutton/.cache \
+        ~bigbluebutton/.cache/dconf
+      chown -R bigbluebutton:bigbluebutton ~bigbluebutton
+    fi
+  fi
 }
 
 install_greenlight(){
