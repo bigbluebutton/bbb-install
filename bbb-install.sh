@@ -880,8 +880,8 @@ server {
 
 }
 server {
-  listen 443 ssl;
-  listen [::]:443 ssl;
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
   server_name $HOST;
 
     ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
