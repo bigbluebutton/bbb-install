@@ -1,0 +1,20 @@
+---
+name: shellcheck
+'on':
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 1 * * *'
+
+jobs:
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+
+      - name: Shellcheck!
+        run: shellcheck bbb-install.sh
