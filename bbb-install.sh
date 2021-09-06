@@ -517,8 +517,8 @@ need_pkg() {
     SOURCES_FETCHED=true
   fi
 
-  if ! dpkg -s ${@:1} >/dev/null 2>&1; then
-    LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
+  if ! dpkg -s "${@:1}" >/dev/null 2>&1; then
+    LC_CTYPE=C.UTF-8 apt-get install -yq "${@:1}"
   fi
 }
 
