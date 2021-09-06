@@ -857,7 +857,7 @@ HERE
 
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
       if ! certbot --email "$EMAIL" --agree-tos --rsa-key-size 4096 -w /var/www/bigbluebutton-default/ \
-           -d "$HOST" --deploy-hook "systemctl reload nginx" "$LETS_ENCRYPT_OPTIONS" certonly; then
+           -d "$HOST" --deploy-hook "systemctl reload nginx" $LETS_ENCRYPT_OPTIONS certonly; then
         systemctl restart nginx
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
