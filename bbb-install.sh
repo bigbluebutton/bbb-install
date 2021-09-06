@@ -423,7 +423,7 @@ check_root() {
 check_mem() {
   MEM=`grep MemTotal /proc/meminfo | awk '{print $2}'`
   MEM=$((MEM/1000))
-  if (( $MEM < 3940 )); then err "Your server needs to have (at least) 4G of memory."; fi
+  if (( MEM < 3940 )); then err "Your server needs to have (at least) 4G of memory."; fi
 }
 
 check_ubuntu(){
