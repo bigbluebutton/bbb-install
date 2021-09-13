@@ -148,7 +148,7 @@ main() {
 
       p)
         PROXY=$OPTARG
-        if [ ! -z "$PROXY" ]; then
+        if [ -n "$PROXY" ]; then
           echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
         fi
         ;;
@@ -170,7 +170,7 @@ main() {
         ;;
       w)
         SSH_PORT=$(grep Port /etc/ssh/ssh_config | grep -v \# | sed 's/[^0-9]*//g')
-        if [[ ! -z "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
+        if [[ -n "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
           err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules.  See http://docs.bigbluebutton.org/2.2/customize.html#secure-your-system--restrict-access-to-specific-ports"
         fi
         UFW=true
@@ -188,18 +188,18 @@ main() {
     esac
   done
 
-  if [ ! -z "$HOST" ]; then
+  if [ -n "$HOST" ]; then
     check_host "$HOST"
   fi
 
-  if [ ! -z "$VERSION" ]; then
+  if [ -n "$VERSION" ]; then
     check_version "$VERSION"
   fi
 
   check_apache2
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
-  if [ -z "$VERSION" ] && [ ! -z "$COTURN" ]; then
+  if [ -z "$VERSION" ] && [ -n "$COTURN" ]; then
     if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
     check_ubuntu 20.04
 
@@ -322,26 +322,26 @@ main() {
 
   configure_HTML5 
 
-  if [ ! -z "$API_DEMOS" ]; then
+  if [ -n "$API_DEMOS" ]; then
     need_pkg bbb-demo
     while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
   fi
 
-  if [ ! -z "$LINK_PATH" ]; then
+  if [ -n "$LINK_PATH" ]; then
     ln -s "$LINK_PATH" "/var/bigbluebutton"
   fi
 
-  if [ ! -z "$PROVIDED_CERTIFICATE" ] ; then
+  if [ -n "$PROVIDED_CERTIFICATE" ] ; then
     install_ssl
-  elif [ ! -z "$HOST" ] && [ ! -z "$EMAIL" ] ; then
+  elif [ -n "$HOST" ] && [ -n "$EMAIL" ] ; then
     install_ssl
   fi
 
-  if [ ! -z "$GREENLIGHT" ]; then
+  if [ -n "$GREENLIGHT" ]; then
     install_greenlight
   fi
 
-  if [ ! -z "$COTURN" ]; then
+  if [ -n "$COTURN" ]; then
     configure_coturn
   fi
 
@@ -352,7 +352,7 @@ main() {
     systemctl daemon-reload
   fi
 
-  if [ ! -z "$UFW" ]; then
+  if [ -n "$UFW" ]; then
     setup_ufw 
   fi
 
@@ -394,7 +394,7 @@ HERE
     sed -i 's/^defaultGuestWaitURL=${bigbluebutton.web.serverURL}\/html5client\/%%INSTANCEID%%\/guestWait/defaultGuestWaitURL=${bigbluebutton.web.serverURL}\/html5client\/guestWait/g' /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
   fi
 
-  if [ ! -z "$HOST" ]; then
+  if [ -n "$HOST" ]; then
     bbb-conf --setip "$HOST"
   else
     bbb-conf --setip "$IP"
@@ -444,7 +444,7 @@ wait_443() {
 }
 
 get_IP() {
-  if [ ! -z "$IP" ]; then return 0; fi
+  if [ -n "$IP" ]; then return 0; fi
 
   # Determine local IP
   need_pkg net-tools
@@ -467,14 +467,14 @@ get_IP() {
   elif which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
     local external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
-  elif [ ! -z "$1" ]; then
+  elif [ -n "$1" ]; then
     # Try and determine the external IP from the given hostname
     need_pkg dnsutils
     local external_ip=$(dig +short "$1" @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
   fi
 
   # Check if the external IP reaches the internal IP
-  if [ ! -z "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
+  if [ -n "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
     if which nginx; then
       systemctl stop nginx
     fi
@@ -640,7 +640,7 @@ check_nat() {
   xmlstarlet edit --inplace --update '//X-PRE-PROCESS[@cmd="set" and starts-with(@data, "external_rtp_ip=")]/@data' --value "external_rtp_ip=$IP" /opt/freeswitch/conf/vars.xml
   xmlstarlet edit --inplace --update '//X-PRE-PROCESS[@cmd="set" and starts-with(@data, "external_sip_ip=")]/@data' --value "external_sip_ip=$IP" /opt/freeswitch/conf/vars.xml
 
-  if [ ! -z "$INTERNAL_IP" ]; then
+  if [ -n "$INTERNAL_IP" ]; then
     xmlstarlet edit --inplace --update '//param[@name="ext-rtp-ip"]/@value' --value "\$\${external_rtp_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
     xmlstarlet edit --inplace --update '//param[@name="ext-sip-ip"]/@value' --value "\$\${external_sip_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
 
@@ -695,7 +695,7 @@ HERE
 
 configure_HTML5() {
   # Use Google's default STUN server
-  if [ ! -z "$INTERNAL_IP" ]; then
+  if [ -n "$INTERNAL_IP" ]; then
    sed -i 's/;stunServerAddress.*/stunServerAddress=172.217.212.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
    sed -i 's/;stunServerPort.*/stunServerPort=19302/g'                 /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
 
@@ -914,7 +914,7 @@ HERE
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
  
   source /etc/bigbluebutton/bigbluebutton-release
-  if [ ! -z "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+  if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
     sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
@@ -965,8 +965,8 @@ HERE
       yq w -i $TARGET kurento[0].ip "$IP"
       yq w -i $TARGET freeswitch.ip "$IP"
 
-      if [ ! -z "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
-        if [ ! -z "$INTERNAL_IP" ]; then
+      if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+        if [ -n "$INTERNAL_IP" ]; then
           yq w -i $TARGET freeswitch.sip_ip "$INTERNAL_IP"
         else
           yq w -i $TARGET freeswitch.sip_ip "$IP"
@@ -1038,7 +1038,7 @@ install_coturn() {
 
   need_pkg coturn
 
-  if [ ! -z "$INTERNAL_IP" ]; then
+  if [ -n "$INTERNAL_IP" ]; then
     EXTERNAL_IP="external-ip=$IP/$INTERNAL_IP"
   fi
 
