@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with BigBlueButton; if not, see <http://www.gnu.org/licenses/>.
 
-# BigBlueButton is an open source conferencing system.  For more information see
+# BigBlueButton is an open source conferencing system. For more information see
 #    http://www.bigbluebutton.org/.
 #
 # This bbb-install.sh script automates many of the installation and configuration
@@ -31,11 +31,11 @@
 #
 #  Same as above but also install the API examples for testing.
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-23-s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-23 -s bbb.example.com -e info@example.com 
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-23-s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-23 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -112,7 +112,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgtadwX" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgadw" opt "${@}"; do
 
     case $opt in
       h)
@@ -140,7 +140,7 @@ main() {
         ;;
       c)
         COTURN=$OPTARG
-        check_coturn $COTURN
+        check_coturn "$COTURN"
         ;;
       v)
         VERSION=$OPTARG
@@ -148,7 +148,7 @@ main() {
 
       p)
         PROXY=$OPTARG
-        if [ ! -z "$PROXY" ]; then
+        if [ -n "$PROXY" ]; then
           echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
         fi
         ;;
@@ -170,7 +170,7 @@ main() {
         ;;
       w)
         SSH_PORT=$(grep Port /etc/ssh/ssh_config | grep -v \# | sed 's/[^0-9]*//g')
-        if [[ ! -z "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
+        if [[ -n "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
           err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules.  See http://docs.bigbluebutton.org/2.2/customize.html#secure-your-system--restrict-access-to-specific-ports"
         fi
         UFW=true
@@ -188,18 +188,18 @@ main() {
     esac
   done
 
-  if [ ! -z "$HOST" ]; then
-    check_host $HOST
+  if [ -n "$HOST" ]; then
+    check_host "$HOST"
   fi
 
-  if [ ! -z "$VERSION" ]; then
-    check_version $VERSION
+  if [ -n "$VERSION" ]; then
+    check_version "$VERSION"
   fi
 
   check_apache2
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
-  if [ -z "$VERSION" ] && [ ! -z "$COTURN" ]; then
+  if [ -z "$VERSION" ] && [ -n "$COTURN" ]; then
     if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
     check_ubuntu 20.04
 
@@ -225,10 +225,11 @@ main() {
   fi
   check_mem
 
+  need_pkg software-properties-common  # needed for add-apt-repository
   sudo add-apt-repository universe
   need_pkg wget curl gpg-agent dirmngr
 
-  get_IP $HOST
+  get_IP "$HOST"
 
   if [ "$DISTRO" == "xenial" ]; then 
     echo "** Ubuntu 16.04 is now end of life.  Recommend installing BigBlueButton 2.3 on Ubuntu 18.04"
@@ -287,7 +288,9 @@ main() {
 
     touch /root/.rnd
     MONGODB=mongodb-org
-    install_docker		# needed for bbb-libreoffice-docker
+    install_docker		                     # needed for bbb-libreoffice-docker
+    docker pull openjdk:11-jre-buster      # fix issue 413
+    docker tag openjdk:11-jre-buster openjdk:11-jre
     need_pkg ruby
     gem install bundler -v 2.1.4
 
@@ -295,7 +298,7 @@ main() {
   fi
 
   apt-get update
-  apt-get dist-upgrade -yq
+  apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
   need_pkg nodejs $MONGODB apt-transport-https haveged build-essential yq
   need_pkg bigbluebutton
@@ -319,26 +322,26 @@ main() {
 
   configure_HTML5 
 
-  if [ ! -z "$API_DEMOS" ]; then
+  if [ -n "$API_DEMOS" ]; then
     need_pkg bbb-demo
     while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
   fi
 
-  if [ ! -z "$LINK_PATH" ]; then
+  if [ -n "$LINK_PATH" ]; then
     ln -s "$LINK_PATH" "/var/bigbluebutton"
   fi
 
-  if [ ! -z "$PROVIDED_CERTIFICATE" ] ; then
+  if [ -n "$PROVIDED_CERTIFICATE" ] ; then
     install_ssl
-  elif [ ! -z "$HOST" ] && [ ! -z "$EMAIL" ] ; then
+  elif [ -n "$HOST" ] && [ -n "$EMAIL" ] ; then
     install_ssl
   fi
 
-  if [ ! -z "$GREENLIGHT" ]; then
+  if [ -n "$GREENLIGHT" ]; then
     install_greenlight
   fi
 
-  if [ ! -z "$COTURN" ]; then
+  if [ -n "$COTURN" ]; then
     configure_coturn
   fi
 
@@ -349,7 +352,7 @@ main() {
     systemctl daemon-reload
   fi
 
-  if [ ! -z "$UFW" ]; then
+  if [ -n "$UFW" ]; then
     setup_ufw 
   fi
 
@@ -391,10 +394,10 @@ HERE
     sed -i 's/^defaultGuestWaitURL=${bigbluebutton.web.serverURL}\/html5client\/%%INSTANCEID%%\/guestWait/defaultGuestWaitURL=${bigbluebutton.web.serverURL}\/html5client\/guestWait/g' /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
   fi
 
-  if [ ! -z "$HOST" ]; then
-    bbb-conf --setip $HOST
+  if [ -n "$HOST" ]; then
+    bbb-conf --setip "$HOST"
   else
-    bbb-conf --setip $IP
+    bbb-conf --setip "$IP"
   fi
 
   if ! systemctl show-environment | grep LANG= | grep -q UTF-8; then
@@ -425,7 +428,7 @@ check_mem() {
 
 check_ubuntu(){
   RELEASE=$(lsb_release -r | sed 's/^[^0-9]*//g')
-  if [ "$RELEASE" != $1 ]; then err "You must run this command on Ubuntu $1 server."; fi
+  if [ "$RELEASE" != "$1" ]; then err "You must run this command on Ubuntu $1 server."; fi
 }
 
 need_x64() {
@@ -441,18 +444,18 @@ wait_443() {
 }
 
 get_IP() {
-  if [ ! -z "$IP" ]; then return 0; fi
+  if [ -n "$IP" ]; then return 0; fi
 
   # Determine local IP
   need_pkg net-tools
   if LANG=c ifconfig | grep -q 'venet0:0'; then
     IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
   else
-    IP=$(ifconfig $(route | grep ^default | head -1 | sed "s/.* //") | awk '/inet /{ print $2}' | cut -d: -f2)
+    IP=$(ifconfig "$(route | grep ^default | head -1 | sed "s/.* //")" | awk '/inet /{ print $2}' | cut -d: -f2)
   fi
 
   # Determine external IP 
-  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
+  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ "$(head -c 3 /sys/devices/virtual/dmi/id/product_uuid)" == "EC2" ]; then
     # EC2
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -f /var/lib/dhcp/dhclient.eth0.leases ] && grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases; then
@@ -464,14 +467,14 @@ get_IP() {
   elif which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
     local external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
-  elif [ ! -z "$1" ]; then
+  elif [ -n "$1" ]; then
     # Try and determine the external IP from the given hostname
     need_pkg dnsutils
-    local external_ip=$(dig +short $1 @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
+    local external_ip=$(dig +short "$1" @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
   fi
 
   # Check if the external IP reaches the internal IP
-  if [ ! -z "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
+  if [ -n "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
     if which nginx; then
       systemctl stop nginx
     fi
@@ -485,7 +488,7 @@ get_IP() {
     sleep 1
     
      # Check if we can reach the server through it's external IP address
-     if nc -zvw3 $external_ip 443  > /dev/null 2>&1; then
+     if nc -zvw3 "$external_ip" 443  > /dev/null 2>&1; then
        INTERNAL_IP=$IP
        IP=$external_ip
        echo 
@@ -521,33 +524,33 @@ need_pkg() {
 
 need_ppa() {
   need_pkg software-properties-common 
-  if [ ! -f /etc/apt/sources.list.d/$1 ]; then
-    LC_CTYPE=C.UTF-8 add-apt-repository -y $2 
+  if [ ! -f "/etc/apt/sources.list.d/$1" ]; then
+    LC_CTYPE=C.UTF-8 add-apt-repository -y "$2"
   fi
-  if ! apt-key list $3 | grep -q -E "1024|4096"; then  # Let's try it a second time
-    LC_CTYPE=C.UTF-8 add-apt-repository $2 -y
-    if ! apt-key list $3 | grep -q -E "1024|4096"; then
+  if ! apt-key list "$3" | grep -q -E "1024|4096"; then  # Let's try it a second time
+    LC_CTYPE=C.UTF-8 add-apt-repository "$2" -y
+    if ! apt-key list "$3" | grep -q -E "1024|4096"; then
       err "Unable to setup PPA for $2"
     fi
   fi
 }
 
 check_version() {
-  if ! echo $1 | egrep -q "xenial|bionic"; then err "This script can only install BigBlueButton 2.2 (or later)"; fi
-  DISTRO=$(echo $1 | sed 's/-.*//g')
+  if ! echo "$1" | grep -Eq "xenial|bionic"; then err "This script can only install BigBlueButton 2.2 (or later)"; fi
+  DISTRO=$(echo "$1" | sed 's/-.*//g')
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
   fi
   check_root
   need_pkg apt-transport-https
   if ! apt-key list | grep -q "BigBlueButton apt-get"; then
-    wget https://$PACKAGE_REPOSITORY/repo/bigbluebutton.asc -O- | apt-key add -
+    wget "https://$PACKAGE_REPOSITORY/repo/bigbluebutton.asc" -O- | apt-key add -
   fi
 
   # Check if were upgrading from 2.0 (the ownership of /etc/bigbluebutton/nginx/web has changed from bbb-client to bbb-web)
   if [ -f /etc/apt/sources.list.d/bigbluebutton.list ]; then
     if grep -q xenial-200 /etc/apt/sources.list.d/bigbluebutton.list; then
-      if echo $VERSION | grep -q xenial-22; then
+      if echo "$VERSION" | grep -q xenial-22; then
         if dpkg -l | grep -q bbb-client; then
           apt-get purge -y bbb-client
         fi
@@ -561,18 +564,18 @@ check_version() {
 check_host() {
   if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ]; then
     need_pkg dnsutils apt-transport-https net-tools
-    DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
+    DIG_IP=$(dig +short "$1" | grep '^[.0-9]*$' | tail -n1)
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
-    get_IP $1
+    get_IP "$1"
     if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
   fi
 }
 
 check_coturn() {
-  if ! echo $1 | grep -q ':'; then err "Option for coturn must be <hostname>:<secret>"; fi
+  if ! echo "$1" | grep -q ':'; then err "Option for coturn must be <hostname>:<secret>"; fi
 
-  COTURN_HOST=$(echo $OPTARG | cut -d':' -f1)
-  COTURN_SECRET=$(echo $OPTARG | cut -d':' -f2)
+  COTURN_HOST=$(echo "$OPTARG" | cut -d':' -f1)
+  COTURN_SECRET=$(echo "$OPTARG" | cut -d':' -f2)
 
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
   if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
@@ -584,7 +587,7 @@ check_coturn() {
     err "You must specify a new password (not the example given in the docs)."
   fi
 
-  check_host $COTURN_HOST
+  check_host "$COTURN_HOST"
 }
 
 check_apache2() {
@@ -637,15 +640,15 @@ check_nat() {
   xmlstarlet edit --inplace --update '//X-PRE-PROCESS[@cmd="set" and starts-with(@data, "external_rtp_ip=")]/@data' --value "external_rtp_ip=$IP" /opt/freeswitch/conf/vars.xml
   xmlstarlet edit --inplace --update '//X-PRE-PROCESS[@cmd="set" and starts-with(@data, "external_sip_ip=")]/@data' --value "external_sip_ip=$IP" /opt/freeswitch/conf/vars.xml
 
-  if [ ! -z "$INTERNAL_IP" ]; then
+  if [ -n "$INTERNAL_IP" ]; then
     xmlstarlet edit --inplace --update '//param[@name="ext-rtp-ip"]/@value' --value "\$\${external_rtp_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
     xmlstarlet edit --inplace --update '//param[@name="ext-sip-ip"]/@value' --value "\$\${external_sip_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
 
     sed -i "s/$INTERNAL_IP:/$IP:/g" /etc/bigbluebutton/nginx/sip.nginx
-    ip addr add $IP dev lo
+    ip addr add "$IP" dev lo
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
-    if ! grep -q $IP /lib/systemd/system/dummy-nic.service > /dev/null 2>&1; then
+    if ! grep -q "$IP" /lib/systemd/system/dummy-nic.service > /dev/null 2>&1; then
       if [ -f /lib/systemd/system/dummy-nic.service ]; then 
         DAEMON_RELOAD=true; 
       fi
@@ -692,7 +695,7 @@ HERE
 
 configure_HTML5() {
   # Use Google's default STUN server
-  if [ ! -z "$INTERNAL_IP" ]; then
+  if [ -n "$INTERNAL_IP" ]; then
    sed -i 's/;stunServerAddress.*/stunServerAddress=172.217.212.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
    sed -i 's/;stunServerPort.*/stunServerPort=19302/g'                 /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
 
@@ -809,8 +812,8 @@ install_docker() {
 
 
 install_ssl() {
-  if ! grep -q $HOST /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
-    bbb-conf --setip $HOST
+  if ! grep -q "$HOST" /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
+    bbb-conf --setip "$HOST"
   fi
 
   mkdir -p /etc/nginx/ssl
@@ -826,9 +829,9 @@ install_ssl() {
     openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
   fi
 
-  if [ ! -f /etc/letsencrypt/live/$HOST/fullchain.pem ]; then
+  if [ ! -f "/etc/letsencrypt/live/$HOST/fullchain.pem" ]; then
     rm -f /tmp/bigbluebutton.bak
-    if ! grep -q $HOST /etc/nginx/sites-available/bigbluebutton; then  # make sure we can do the challenge
+    if ! grep -q "$HOST" /etc/nginx/sites-available/bigbluebutton; then  # make sure we can do the challenge
       if [ -f /etc/nginx/sites-available/bigbluebutton ]; then
         cp /etc/nginx/sites-available/bigbluebutton /tmp/bigbluebutton.bak
       fi
@@ -847,29 +850,22 @@ server {
     index  index.html index.htm;
     expires 1m;
   }
-
-  # Redirect server error pages to the static page /50x.html
-  #
-  error_page   500 502 503 504  /50x.html;
-  location = /50x.html {
-    root   /var/www/bigbluebutton-default;
-  }
 }
 HERE
       systemctl restart nginx
     fi
 
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
-      if ! certbot --email $EMAIL --agree-tos --rsa-key-size 4096 -w /var/www/bigbluebutton-default/ \
-           -d $HOST --deploy-hook "systemctl restart nginx" $LETS_ENCRYPT_OPTIONS certonly; then
+      if ! certbot --email "$EMAIL" --agree-tos --rsa-key-size 4096 -w /var/www/bigbluebutton-default/ \
+           -d "$HOST" --deploy-hook "systemctl reload nginx" $LETS_ENCRYPT_OPTIONS certonly; then
         systemctl restart nginx
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
     else
-      #place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install.sh will deal with the rest.
-      mkdir -p /etc/letsencrypt/live/$HOST/
-      ln -s /local/certs/fullchain.pem /etc/letsencrypt/live/$HOST/fullchain.pem
-      ln -s /local/certs/privkey.pem /etc/letsencrypt/live/$HOST/privkey.pem
+      # Place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install.sh will deal with the rest.
+      mkdir -p "/etc/letsencrypt/live/$HOST/"
+      ln -s /local/certs/fullchain.pem "/etc/letsencrypt/live/$HOST/fullchain.pem"
+      ln -s /local/certs/privkey.pem "/etc/letsencrypt/live/$HOST/privkey.pem"
     fi
   fi
 
@@ -885,8 +881,8 @@ server {
 
 }
 server {
-  listen 443 ssl;
-  listen [::]:443 ssl;
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
   server_name $HOST;
 
     ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
@@ -912,15 +908,6 @@ server {
 
   # Include specific rules for record and playback
   include /etc/bigbluebutton/nginx/*.nginx;
-
-  #error_page  404  /404.html;
-
-  # Redirect server error pages to the static page /50x.html
-  #
-  error_page   500 502 503 504  /50x.html;
-  location = /50x.html {
-    root   /var/www/nginx-default;
-  }
 }
 HERE
 
@@ -928,7 +915,7 @@ HERE
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
  
   source /etc/bigbluebutton/bigbluebutton-release
-  if [ ! -z "$(echo $BIGBLUEBUTTON_RELEASE | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+  if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
     sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
@@ -950,7 +937,7 @@ HERE
   fi
 
   if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
-    yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url https://$HOST/pad
+    yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url "https://$HOST/pad"
   fi
 
   # Update Greenlight (if installed) to use SSL
@@ -979,8 +966,8 @@ HERE
       yq w -i $TARGET kurento[0].ip "$IP"
       yq w -i $TARGET freeswitch.ip "$IP"
 
-      if [ ! -z "$(echo $BIGBLUEBUTTON_RELEASE | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
-        if [ ! -z "$INTERNAL_IP" ]; then
+      if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+        if [ -n "$INTERNAL_IP" ]; then
           yq w -i $TARGET freeswitch.sip_ip "$INTERNAL_IP"
         else
           yq w -i $TARGET freeswitch.sip_ip "$IP"
@@ -1041,18 +1028,18 @@ HERE
 
 install_coturn() {
   apt-get update
-  apt-get dist-upgrade -yq
+  apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
   need_pkg software-properties-common certbot
 
   if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
-         -d $COTURN_HOST --email $EMAIL --agree-tos -n ; then
+         -d "$COTURN_HOST" --email "$EMAIL" --agree-tos -n ; then
      err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
   fi
 
   need_pkg coturn
 
-  if [ ! -z $INTERNAL_IP ]; then
+  if [ -n "$INTERNAL_IP" ]; then
     EXTERNAL_IP="external-ip=$IP/$INTERNAL_IP"
   fi
 
@@ -1072,7 +1059,7 @@ fingerprint
 lt-cred-mech
 use-auth-secret
 static-auth-secret=$COTURN_SECRET
-realm=$(echo $COTURN_HOST | cut -d'.' -f2-)
+realm=$(echo "$COTURN_HOST" | cut -d'.' -f2-)
 
 cert=/etc/turnserver/fullchain.pem
 pkey=/etc/turnserver/privkey.pem
