@@ -451,11 +451,11 @@ get_IP() {
   if LANG=c ifconfig | grep -q 'venet0:0'; then
     IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
   else
-    IP=$(ifconfig $(route | grep ^default | head -1 | sed "s/.* //") | awk '/inet /{ print $2}' | cut -d: -f2)
+    IP=$(ifconfig "$(route | grep ^default | head -1 | sed "s/.* //")" | awk '/inet /{ print $2}' | cut -d: -f2)
   fi
 
   # Determine external IP 
-  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
+  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ "$(head -c 3 /sys/devices/virtual/dmi/id/product_uuid)" == "EC2" ]; then
     # EC2
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -f /var/lib/dhcp/dhclient.eth0.leases ] && grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases; then
