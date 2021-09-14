@@ -421,7 +421,7 @@ check_root() {
 }
 
 check_mem() {
-  if awk '$1~/MemTotal/ {exit !($2<39400000)}' /proc/meminfo; then
+  if awk '$1~/MemTotal/ {exit !($2<3940000)}' /proc/meminfo; then
     err "Your server needs to have (at least) 4G of memory."
   fi
 }
