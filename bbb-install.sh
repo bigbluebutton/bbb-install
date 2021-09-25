@@ -67,7 +67,7 @@ OPTIONS (install BigBlueButton):
   -p <host>              Use apt-get proxy at <host>
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
-  -d                     Skip SSL certificates request (use provided certificates from mounted volume)
+  -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
 
   -h                     Print help
@@ -451,11 +451,11 @@ get_IP() {
   if LANG=c ifconfig | grep -q 'venet0:0'; then
     IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
   else
-    IP=$(ifconfig $(route | grep ^default | head -1 | sed "s/.* //") | awk '/inet /{ print $2}' | cut -d: -f2)
+    IP=$(ifconfig "$(route | grep ^default | head -1 | sed "s/.* //")" | awk '/inet /{ print $2}' | cut -d: -f2)
   fi
 
   # Determine external IP 
-  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
+  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ "$(head -c 3 /sys/devices/virtual/dmi/id/product_uuid)" == "EC2" ]; then
     # EC2
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -f /var/lib/dhcp/dhclient.eth0.leases ] && grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases; then
@@ -766,9 +766,9 @@ HERE
   fi
 
   # change the default passwords
-  PGPASSWORD=$(openssl rand -base64 24 | sed 's/[\/\+]//g')
-  sed -i "s/POSTGRES_PASSWORD=password/POSTGRES_PASSWORD=$PGPASSWORD/g" ~/greenlight/docker-compose.yml
-  sed -i "s/DB_PASSWORD=password/DB_PASSWORD=$PGPASSWORD/g" ~/greenlight/.env
+  PGPASSWORD=$(openssl rand -base64 24)
+  sed -i "s,^\([ \t-]*POSTGRES_PASSWORD\)\(=password\),\1=$PGPASSWORD,g" ~/greenlight/docker-compose.yml
+  sed -i "s,^\([ \t]*DB_PASSWORD\)\(=password\),\1=$PGPASSWORD,g" ~/greenlight/.env
 
   # Remove old containers
   if docker ps | grep -q greenlight_db_1; then
@@ -862,6 +862,7 @@ HERE
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
     else
+      # Place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install.sh will deal with the rest.
       mkdir -p "/etc/letsencrypt/live/$HOST/"
       ln -s /local/certs/fullchain.pem "/etc/letsencrypt/live/$HOST/fullchain.pem"
       ln -s /local/certs/privkey.pem "/etc/letsencrypt/live/$HOST/privkey.pem"
