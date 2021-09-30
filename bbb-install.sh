@@ -295,6 +295,9 @@ main() {
     gem install bundler -v 2.1.4
 
     BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
+
+    need_pkg openjdk-8-jre
+    update-java-alternatives -s java-1.8.0-openjdk-amd64
   fi
 
   apt-get update
