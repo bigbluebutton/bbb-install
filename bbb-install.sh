@@ -288,8 +288,10 @@ main() {
 
     touch /root/.rnd
     MONGODB=mongodb-org
-    install_docker		                     # needed for bbb-libreoffice-docker
-    docker pull openjdk:11-jre-buster      # fix issue 413
+    install_docker                           # needed for bbb-libreoffice-docker
+    docker pull bigbluebutton/greenlight:v2  # Make sure the current version of
+                                             # greenlight is pulled
+    docker pull openjdk:11-jre-buster        # fix issue 413
     docker tag openjdk:11-jre-buster openjdk:11-jre
     need_pkg ruby
     gem install bundler -v 2.1.4
