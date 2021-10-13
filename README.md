@@ -80,7 +80,7 @@ The full source code for `bbb-install.sh` is [here](https://github.com/bigbluebu
 
 There are many hosting companies that can provide you with dedicated virtual and bare-metal servers to run BigBlueButton.  We list a few popular choices below (we are not making any recommendation here, just listing some of the more popular choices).
 
-For quick setup, [Digital Ocean](https://www.digitalocean.com/) offers both virtual servers with Ubuntu 16.04 64-bit and a single public IP address (no firewall).  [Hetzner](https://hetzner.cloud/) offers dedicated servers with single IP address.
+For quick setup, [Digital Ocean](https://www.digitalocean.com/) offers both virtual servers with Ubuntu 18.04 64-bit and a single public IP address (no firewall).  [Hetzner](https://hetzner.cloud/) offers dedicated servers with single IP address.
 
 Other popular choices, such as [ScaleWay](https://www.scaleway.com/) (choose either Bare Metal or Pro servers) and [Google Compute Engine](https://cloud.google.com/compute/), offer servers that are set up behind network address translation (NAT).  That is, they have both an internal and external IP address.  When installing on these servers, the `bbb-install.sh` will detect the internal/external addresses and configure BigBlueButton accordingly.  
 
@@ -335,7 +335,7 @@ Running the BigBlueButton client requires a wide range of UDP ports to be availa
 
 If you have setup your BigBlueButton on the internet, and you have users accessing the BigBlueButton server behind a restrictive firewall that blocks UDP connections, then setting up a separate TURN server will allow users to have the TURN server (connected via port 443) proxy their UDP-based WebRTC media (audio, webcam, and screen share) to the BigBlueButton server.
 
-We recommend Ubuntu 20.04 as it has a newer version of [coturn](https://github.com/coturn/coturn) than Ubuntu 16.04.  The server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core server on Digital Ocean should be sufficient for a dozen BigBlueButton servers.  
+We recommend Ubuntu 20.04 as it has a newer version of [coturn](https://github.com/coturn/coturn) than Ubuntu 18.04.  The server does not need to be very powerful as it will only relay communications from the BigBlueButton client to the BigBlueButton server when necessary.  A dual core server on Digital Ocean should be sufficient for a dozen BigBlueButton servers.  
 
 The server should have the following additional ports available:
 
