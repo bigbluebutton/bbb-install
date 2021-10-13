@@ -60,7 +60,7 @@ The following sections go through in more detail setting up a new BigBlueButton 
 Before running `bbb-install.sh`, you need to
 
   * read through all the documentation in this page,
-  * ensure that your server meets the [minimal server requirements](http://docs.bigbluebutton.org/install/install.html#minimum-server-requirements), and
+  * ensure that your server meets the [minimal server requirements](https://docs.bigbluebutton.org/2.3/install.html#minimum-server-requirements), and
   * configure a fully qualified domain name (FQDN), such as `bbb.example.com`, that resolves to the external IP address of your server.
 
 To set up your FQDN, purchase a domain name from a domain name registrar and web hosting provider, such as [GoDaddy](https://godaddy.com) or [Network Solutions](https://networksolutions.com).  Once purchased, follow the steps indicated by your provider to create an `A Record` for your FQDN that resolves to the public IP address of your server.  (Check the provider's documentation for details on how to set up the `A Record`.)
