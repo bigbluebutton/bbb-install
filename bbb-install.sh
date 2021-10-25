@@ -265,6 +265,9 @@ main() {
   fi
 
   if [ "$DISTRO" == "bionic" ]; then
+    apt-get update
+    apt-get install ca-certificates -y
+  
     need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
     need_ppa libreoffice-ubuntu-ppa-bionic.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
     need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Latest version of ffmpeg
