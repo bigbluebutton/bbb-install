@@ -1,5 +1,5 @@
+<img width="1012" alt="bbb-install-banner" src="https://user-images.githubusercontent.com/1273169/141152865-f497c883-6c96-41c6-9040-613b0858878a.png">
 
-![bbb-install.sh](images/bbb-install.png?raw=true "bbb-install.sh")
 
 # bbb-install
 
