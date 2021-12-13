@@ -797,7 +797,10 @@ install_docker() {
   fi
 
   if ! dpkg -l | grep -q docker-ce; then
-    add-apt-repository \
+    echo "deb [ arch=amd64 ] https://download.docker.com/linux/ubuntu \
+     $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
+    
+    add-apt-repository --remove\
      "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
      $(lsb_release -cs) \
      stable"
