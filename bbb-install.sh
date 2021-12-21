@@ -27,15 +27,15 @@
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-230 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-240 -s bbb.example.com -e info@example.com 
 #
 #  Same as above but also install the API examples for testing.
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-230 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-240 -s bbb.example.com -e info@example.com 
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-230 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-240 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -51,7 +51,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'bionic-230') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'bionic-240') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -89,9 +89,9 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v bionic-230 -s bbb.example.com -e info@example.com
-    -v bionic-230 -s bbb.example.com -e info@example.com -g
-    -v bionic-230 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v bionic-240 -s bbb.example.com -e info@example.com
+    -v bionic-240 -s bbb.example.com -e info@example.com -g
+    -v bionic-240 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Sample options for setup of a coturn server (on a Ubuntu 20.04)
 
