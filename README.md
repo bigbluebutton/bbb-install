@@ -86,7 +86,7 @@ Other popular choices, such as [ScaleWay](https://www.scaleway.com/) (choose eit
 
 Another popular choice is [Amazon Elastic Compute Cloud](https://aws.amazon.com/ec2).  We recommend a `c5.2xlarge` or `c5a.2xlarge` (or larger) instance.  All EC2 servers are, by default, behind a firewall (which Amazon calls a `security group`).  You will need to manually configure the security group before installing BigBlueButton on EC2 and, in a similar manner, on Azure and Google Compute Engine (GCE).  (See screen shots in next section.)
 
-Finally, if `bbb-install.sh` is unable to configure your server behind NAT, we recommend going through the [step-by-step instructions for installing BigBlueButton](http://docs.bigbluebutton.org/2.2/install.html) (going through the steps is also a good way to understand more about how BigBlueButton works).
+Finally, if `bbb-install.sh` is unable to configure your server behind NAT, we recommend going through docs on [Configure Firewall](https://docs.bigbluebutton.org/admin/configure-firewall.html).
 
 
 ### Configuring the external firewall
@@ -387,7 +387,7 @@ If you intend to use this server for production you should uninstall the API dem
 apt-get purge bbb-demo
 ~~~
 
-You can also do a number of [customizations](http://docs.bigbluebutton.org/2.2/customize.html) to your server as well.
+You can also do a number of [customizations](https://docs.bigbluebutton.org/admin/customize.html) to your server as well.
 
 ## Troubleshooting
 
