@@ -27,22 +27,22 @@
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-23 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-24 -s bbb.example.com -e info@example.com 
 #
 #  Same as above but also install the API examples for testing.
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-23 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-24 -s bbb.example.com -e info@example.com 
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-23 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-24 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 2.3 (or later) server in under 30 minutes.
+Script for installing a BigBlueButton 2.4 (or later) server in under 30 minutes.
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
@@ -51,7 +51,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'bionic-23') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'bionic-24') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -89,9 +89,9 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v bionic-23 -s bbb.example.com -e info@example.com
-    -v bionic-23 -s bbb.example.com -e info@example.com -g
-    -v bionic-23 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v bionic-24 -s bbb.example.com -e info@example.com
+    -v bionic-24 -s bbb.example.com -e info@example.com -g
+    -v bionic-24 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Sample options for setup of a coturn server (on a Ubuntu 20.04)
 
@@ -265,6 +265,8 @@ main() {
   fi
 
   if [ "$DISTRO" == "bionic" ]; then
+    need_pkg ca-certificates
+
     need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
     need_ppa libreoffice-ubuntu-ppa-bionic.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
     need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Latest version of ffmpeg
