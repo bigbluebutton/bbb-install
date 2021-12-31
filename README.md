@@ -3,7 +3,7 @@
 
 # bbb-install
 
-To help you set up a BigBlueButton server 2.4 server (or upgrade from an earlier version of 2.3 or 24), `bbb-install.sh` is a shell script that automates the installation/upgrade steps  (view the [source](https://github.com/bigbluebutton/bbb-install/blob/master/bbb-install.sh) to see all the details).   Depending on your server's internet connection, `bbb-install.sh` can fully install and configure BigBlueButton on a server meets the [miminum requirements](https://docs.bigbluebutton.org/2.4/install.html#minimum-server-requirements) for production use in under 30 minutes.
+To help you set up a BigBlueButton server 2.4 server (or upgrade from an earlier version of 2.3 or 2.4), `bbb-install.sh` is a shell script that automates the installation/upgrade steps  (view the [source](https://github.com/bigbluebutton/bbb-install/blob/master/bbb-install.sh) to see all the details).   Depending on your server's internet connection, `bbb-install.sh` can fully install and configure BigBlueButton on a server meets the [miminum requirements](https://docs.bigbluebutton.org/2.4/install.html#minimum-server-requirements) for production use in under 30 minutes.
 
 For example, to install the latest build of BigBlueButton 2.4 on a new 64-bit Ubuntu 18.04 server with a public IP address, a hostname (such as `bbb.example.com`) that resolves to the public IP address, and an email address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
 
