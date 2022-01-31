@@ -706,7 +706,7 @@ configure_HTML5() {
    sed -i 's/;stunServerPort.*/stunServerPort=19302/g'                 /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
 
    sed -i "s/[;]*externalIPv4=.*/externalIPv4=$IP/g"                   /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
-   # sed -i "s/[;]*niceAgentIceTcp=.*/niceAgentIceTcp=0/g"               /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
+   sed -i "s/[;]*iceTcp=.*/iceTcp=0/g"                                 /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
   fi
 
 
