@@ -1,6 +1,5 @@
 <img width="1012" alt="bbb-install-banner" src="https://user-images.githubusercontent.com/1273169/141152865-f497c883-6c96-41c6-9040-613b0858878a.png">
 
-
 # bbb-install
 
 To help you set up a BigBlueButton server 2.4 server (or upgrade from an earlier version of 2.3 or 2.4), `bbb-install.sh` is a shell script that automates the installation/upgrade steps  (view the [source](https://github.com/bigbluebutton/bbb-install/blob/master/bbb-install.sh) to see all the details).   Depending on your server's internet connection, `bbb-install.sh` can fully install and configure BigBlueButton on a server meets the [miminum requirements](https://docs.bigbluebutton.org/2.4/install.html#minimum-server-requirements) for production use in under 30 minutes.
@@ -379,6 +378,7 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic
 
 You can re-use a single TURN server for multiple BigBlueButton installations.
 
+
 ## Next steps
 
 If you intend to use this server for production you should uninstall the API demos using the command
@@ -389,7 +389,9 @@ apt-get purge bbb-demo
 
 You can also do a number of [customizations](https://docs.bigbluebutton.org/admin/customize.html) to your server as well.
 
+
 ## Troubleshooting
+
 
 ### Packaging server is blocked
 
