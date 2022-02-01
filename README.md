@@ -1,6 +1,5 @@
 <img width="1012" alt="bbb-install-banner" src="https://user-images.githubusercontent.com/1273169/141152865-f497c883-6c96-41c6-9040-613b0858878a.png">
 
-
 # bbb-install
 
 To help you set up a BigBlueButton server 2.4 server (or upgrade from an earlier version of 2.3 or 2.4), `bbb-install.sh` is a shell script that automates the installation/upgrade steps  (view the [source](https://github.com/bigbluebutton/bbb-install/blob/master/bbb-install.sh) to see all the details).   Depending on your server's internet connection, `bbb-install.sh` can fully install and configure BigBlueButton on a server meets the [miminum requirements](https://docs.bigbluebutton.org/2.4/install.html#minimum-server-requirements) for production use in under 30 minutes.
@@ -69,9 +68,9 @@ With your FQDN in place, you can then pass a few additional parameters to `bbb-i
 
   * request and install a 4096-bit TLS/SSL certificate from Let's Encrypt (we love Let's Encrypt),
   * install a firewall to restrict access to only the needed ports (recommended),
-  * install and configure [Greenlight](http://docs.bigbluebutton.org/greenlight/gl-overview.html) to provide a simple front-end for users to enable them to set up rooms, hold online sessions, and manage recordings (optional).  
+  * install and configure [Greenlight](https://docs.bigbluebutton.org/greenlight/gl-overview.html) to provide a simple front-end for users to enable them to set up rooms, hold online sessions, and manage recordings (optional).  
 
-If you install Greenlight, you'll have the ability to be the [Greenlight administrator](http://docs.bigbluebutton.org/greenlight/gl-admin.html), giving you the ability manage user accounts.
+If you install Greenlight, you'll have the ability to be the [Greenlight administrator](https://docs.bigbluebutton.org/greenlight/gl-admin.html), giving you the ability manage user accounts.
 
 The full source code for `bbb-install.sh` is [here](https://github.com/bigbluebutton/bbb-install).  To make it easy for anyone to run the script with a single command, we host the latest version of the script at [https://ubuntu.bigbluebutton.org/bbb-install.sh](https://ubuntu.bigbluebutton.org/bbb-install.sh).
 
@@ -271,13 +270,13 @@ Warning: These API demos allow anyone to access your server without authenticati
 
 [Greenlight](https://docs.bigbluebutton.org/greenlight/gl-overview.html) is a simple front-end for BigBlueButton written in Ruby on Rails.  It lets users create accounts, have permanent rooms, and manage their recordings.  It also lets you, as the administrator, manage the user accounts (such as approve or deny users).
 
-You can install [Greenlight](http://docs.bigbluebutton.org/install/green-light.html) by adding the `-g` option.
+You can install [Greenlight](https://docs.bigbluebutton.org/install/green-light.html) by adding the `-g` option.
 
 ~~~
 wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic-24 -s bbb.example.com -e info@example.com -w -g
 ~~~
 
-Once Greenlight is installed, it redirects the default home page to Greenlight.  You can also configure GreenLight to use [OAuth2 authentication](http://docs.bigbluebutton.org/greenlight/gl-customize.html).
+Once Greenlight is installed, it redirects the default home page to Greenlight.  You can also configure GreenLight to use [OAuth2 authentication](https://docs.bigbluebutton.org/greenlight/gl-customize.html).
 
 To launch Greenlight, simply open the URL of your server, such as `https://bbb.example.com/`.  You should see the Greenlight landing page.
 
@@ -298,7 +297,7 @@ You can then select 'Site Settings' on the left-hand side and change the Registr
 
 ![bbb-install.sh](images/gl-approve.png?raw=true "Approve/Decline")
 
-You can now control who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](http://docs.bigbluebutton.org/greenlight/gl-admin.html).
+You can now control who creates accounts on your BigBlueButton server.  For more information see [Greenlight administration](https://docs.bigbluebutton.org/greenlight/gl-admin.html).
 
 ### Linking `/var/bigbluebutton` to another directory
 
@@ -379,6 +378,7 @@ wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v bionic
 
 You can re-use a single TURN server for multiple BigBlueButton installations.
 
+
 ## Next steps
 
 If you intend to use this server for production you should uninstall the API demos using the command
@@ -389,7 +389,9 @@ apt-get purge bbb-demo
 
 You can also do a number of [customizations](https://docs.bigbluebutton.org/admin/customize.html) to your server as well.
 
+
 ## Troubleshooting
+
 
 ### Packaging server is blocked
 
@@ -410,7 +412,7 @@ https://packages-eu.bigbluebutton.org/bbb-install.sh
 
 ### Greenlight not running
 
-If on first install Greenlight gives you a `500 error` when accessing it, you can [restart Greenlight](http://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
+If on first install Greenlight gives you a `500 error` when accessing it, you can [restart Greenlight](https://docs.bigbluebutton.org/install/greenlight-v2.html#if-you-ran-greenlight-using-docker-run).
 
 
 ### Tomcat7 not running
