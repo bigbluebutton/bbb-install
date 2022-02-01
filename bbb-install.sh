@@ -19,7 +19,7 @@
 #
 # This bbb-install.sh script automates many of the installation and configuration
 # steps at
-#    http://docs.bigbluebutton.org/install/install.html
+#    https://docs.bigbluebutton.org/install/install.html
 #
 #
 #  Examples
@@ -171,7 +171,7 @@ main() {
       w)
         SSH_PORT=$(grep Port /etc/ssh/ssh_config | grep -v \# | sed 's/[^0-9]*//g')
         if [[ -n "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
-          err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules.  See http://docs.bigbluebutton.org/2.2/customize.html#secure-your-system--restrict-access-to-specific-ports"
+          err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules.  See https://docs.bigbluebutton.org/2.2/customize.html#secure-your-system--restrict-access-to-specific-ports"
         fi
         UFW=true
         ;;
