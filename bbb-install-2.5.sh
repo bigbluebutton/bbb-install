@@ -240,10 +240,10 @@ main() {
     rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
-      curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+      curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
     fi
-    if ! apt-cache madison nodejs | grep -q node_12; then
-      err "Did not detect nodejs 12.x candidate for installation"
+    if ! apt-cache madison nodejs | grep -q node_16; then
+      err "Did not detect nodejs 16.x candidate for installation"
     fi
     if ! apt-key list MongoDB | grep -q 4.2; then
       wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
