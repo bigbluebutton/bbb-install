@@ -17,25 +17,25 @@
 # BigBlueButton is an open source conferencing system. For more information see
 #    https://www.bigbluebutton.org/.
 #
-# This bbb-install.sh script automates many of the installation and configuration
+# This bbb-install-2.5.sh script automates many of the installation and configuration
 # steps at
-#    https://docs.bigbluebutton.org/install/install.html
+#    https://docs.bigbluebutton.org/2.5/install.html
 #
 #
 #  Examples
 #
-#  Install BigBlueButton with a SSL certificate from Let's Encrypt using hostname bbb.example.com
+#  Install BigBlueButton 2.5.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-250 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v bionic-250 -s bbb.example.com -e info@example.com 
 #
 #  Same as above but also install the API examples for testing.
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -a -v bionic-250 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -a -v bionic-250 -s bbb.example.com -e info@example.com 
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -w -v bionic-250 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v bionic-250 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -47,7 +47,7 @@ Script for installing a BigBlueButton 2.5 (or later) server in under 30 minutes.
 This script also supports installation of a coturn (TURN) server on a separate server.
 
 USAGE:
-    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- [OPTIONS]
+    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- [OPTIONS]
 
 OPTIONS (install BigBlueButton):
 
@@ -770,7 +770,7 @@ HERE
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
     else
-      # Place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install.sh will deal with the rest.
+      # Place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install-2.5.sh will deal with the rest.
       mkdir -p "/etc/letsencrypt/live/$HOST/"
       ln -s /local/certs/fullchain.pem "/etc/letsencrypt/live/$HOST/fullchain.pem"
       ln -s /local/certs/privkey.pem "/etc/letsencrypt/live/$HOST/privkey.pem"
