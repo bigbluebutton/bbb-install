@@ -245,11 +245,11 @@ main() {
     if ! apt-cache madison nodejs | grep -q node_16; then
       err "Did not detect nodejs 16.x candidate for installation"
     fi
-    if ! apt-key list MongoDB | grep -q 4.2; then
-      wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
+    if ! apt-key list MongoDB | grep -q 4.4; then
+      wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
     fi
-    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list
-    rm -f /etc/apt/sources.list.d/mongodb-org-4.0.list
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+    rm -f /etc/apt/sources.list.d/mongodb-org-4.2.list
 
     touch /root/.rnd
     MONGODB=mongodb-org
