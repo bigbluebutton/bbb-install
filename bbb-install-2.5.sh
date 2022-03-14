@@ -27,15 +27,15 @@
 #  Install BigBlueButton 2.5.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v bionic-250 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v focal-250 -s bbb.example.com -e info@example.com 
 #
 #  Same as above but also install the API examples for testing.
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -a -v bionic-250 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -a -v focal-250 -s bbb.example.com -e info@example.com 
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v bionic-250 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v focal-250 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -51,7 +51,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'bionic-250') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'focal-250') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -89,9 +89,9 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v bionic-250 -s bbb.example.com -e info@example.com
-    -v bionic-250 -s bbb.example.com -e info@example.com -g
-    -v bionic-250 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v focal-250 -s bbb.example.com -e info@example.com
+    -v focal-250 -s bbb.example.com -e info@example.com -g
+    -v focal-250 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Sample options for setup of a coturn server (on a Ubuntu 20.04)
 
@@ -215,9 +215,9 @@ main() {
   # We're installing BigBlueButton
   env
 
-  if [ "$DISTRO" == "bionic" ]; then 
-    check_ubuntu 18.04
-    TOMCAT_USER=tomcat8
+  if [ "$DISTRO" == "focal" ]; then 
+    check_ubuntu 20.04
+    TOMCAT_USER=tomcat9
   fi
   check_mem
 
@@ -225,14 +225,18 @@ main() {
   sudo add-apt-repository universe
   need_pkg wget curl gpg-agent dirmngr
 
+  # need_pkg xmlstarlet
   get_IP "$HOST"
 
-  if [ "$DISTRO" == "bionic" ]; then
+  if [ "$DISTRO" == "focal" ]; then
     need_pkg ca-certificates
 
-    need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
-    need_ppa libreoffice-ubuntu-ppa-bionic.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
-    need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Latest version of ffmpeg
+    wget https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+    yq -V
+    #need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
+
+    #need_ppa libreoffice-ubuntu-ppa-focal.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
+    #need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Latest version of ffmpeg
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
     fi
@@ -466,7 +470,7 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "bionic"; then err "This script can only install BigBlueButton 2.3 (or later)"; fi
+  if ! echo "$1" | grep -Eq "focal"; then err "This script can only install BigBlueButton 2.5 (or later)"; fi
   DISTRO=$(echo "$1" | sed 's/-.*//g')
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
@@ -732,11 +736,13 @@ install_ssl() {
 
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
     add-apt-repository universe
-    need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694
-    apt-get update
-    need_pkg certbot
+    #need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694
+    #apt-get update
+    #need_pkg certbot
+    snap install --classic certbot
   fi
 
+  snap install --classic certbot
   if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
     openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
   fi
@@ -935,7 +941,8 @@ install_coturn() {
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg software-properties-common certbot
+  snap install --classic certbot
+  need_pkg software-properties-common
 
   if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
          -d "$COTURN_HOST" --email "$EMAIL" --agree-tos -n ; then
