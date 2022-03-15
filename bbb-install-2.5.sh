@@ -243,7 +243,7 @@ main() {
 
     rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
-    if [ grep -q 12 /etc/apt/sources.list.d/nodesource.list ]; then # Node 12 might be installed, previously used in BigBlueButton
+    if grep -q 12 /etc/apt/sources.list.d/nodesource.list ; then # Node 12 might be installed, previously used in BigBlueButton
       sudo apt-get purge nodejs
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
@@ -736,13 +736,11 @@ install_ssl() {
 
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
     add-apt-repository universe
-    #need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694
-    #apt-get update
-    #need_pkg certbot
-    snap install --classic certbot
+    need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694
+    apt-get update
+    need_pkg certbot
   fi
 
-  snap install --classic certbot
   if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
     openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
   fi
@@ -942,7 +940,6 @@ install_coturn() {
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  snap install --classic certbot
   need_pkg software-properties-common
 
   if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
