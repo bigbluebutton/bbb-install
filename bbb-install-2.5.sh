@@ -567,7 +567,7 @@ check_nat() {
     xmlstarlet edit --inplace --update '//param[@name="ext-rtp-ip"]/@value' --value "\$\${external_rtp_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
     xmlstarlet edit --inplace --update '//param[@name="ext-sip-ip"]/@value' --value "\$\${external_sip_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
 
-    sed -i "s/$INTERNAL_IP:/$IP:/g" /etc/bigbluebutton/nginx/sip.nginx
+    sed -i "s/$INTERNAL_IP:/$IP:/g" /usr/share/bigbluebutton/nginx/sip.nginx
     ip addr add "$IP" dev lo
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
@@ -663,9 +663,9 @@ install_greenlight(){
 
   # need_pkg bbb-webhooks
 
-  if [ ! -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx
-    cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
+  if [ ! -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
+    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx
+    cat > /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
   return 307 /b;
 }
@@ -824,7 +824,8 @@ server {
   }
 
   # Include specific rules for record and playback
-  include /etc/bigbluebutton/nginx/*.nginx;
+  include /usr/share/bigbluebutton/nginx/*.nginx;
+  include /etc/bigbluebutton/nginx/*.nginx; # possible overrides
 }
 HERE
 
@@ -833,11 +834,11 @@ HERE
  
   source /etc/bigbluebutton/bigbluebutton-release
   if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
-    sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
+    sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /usr/share/bigbluebutton/nginx/sip.nginx
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
     yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.media.sipjsHackViaWs true
-    sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /etc/bigbluebutton/nginx/sip.nginx
+    sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /usr/share/bigbluebutton/nginx/sip.nginx
     xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
   fi
 
