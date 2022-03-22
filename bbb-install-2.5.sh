@@ -736,7 +736,6 @@ install_ssl() {
 
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
     add-apt-repository universe
-    need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694
     apt-get update
     need_pkg certbot
   fi
