@@ -27,15 +27,15 @@
 #  Install BigBlueButton 2.5.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v bionic-250 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v focal-250 -s bbb.example.com -e info@example.com 
 #
 #  Same as above but also install the API examples for testing.
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -a -v bionic-250 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -a -v focal-250 -s bbb.example.com -e info@example.com 
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v bionic-250 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.5.sh | bash -s -- -w -v focal-250 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -51,7 +51,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'bionic-250') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'focal-250') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -89,9 +89,9 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v bionic-250 -s bbb.example.com -e info@example.com
-    -v bionic-250 -s bbb.example.com -e info@example.com -g
-    -v bionic-250 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v focal-250 -s bbb.example.com -e info@example.com
+    -v focal-250 -s bbb.example.com -e info@example.com -g
+    -v focal-250 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Sample options for setup of a coturn server (on a Ubuntu 20.04)
 
@@ -215,9 +215,9 @@ main() {
   # We're installing BigBlueButton
   env
 
-  if [ "$DISTRO" == "bionic" ]; then 
-    check_ubuntu 18.04
-    TOMCAT_USER=tomcat8
+  if [ "$DISTRO" == "focal" ]; then 
+    check_ubuntu 20.04
+    TOMCAT_USER=tomcat9
   fi
   check_mem
 
@@ -225,21 +225,25 @@ main() {
   sudo add-apt-repository universe
   need_pkg wget curl gpg-agent dirmngr
 
+  # need_pkg xmlstarlet
   get_IP "$HOST"
 
-  if [ "$DISTRO" == "bionic" ]; then
+  if [ "$DISTRO" == "focal" ]; then
     need_pkg ca-certificates
 
-    need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
-    need_ppa libreoffice-ubuntu-ppa-bionic.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
-    need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Latest version of ffmpeg
+    wget https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+    yq -V
+    #need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
+
+    #need_ppa libreoffice-ubuntu-ppa-focal.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
+    need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Needed for libopusenc0
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
     fi
 
     rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
-    if [ grep -q 12 /etc/apt/sources.list.d/nodesource.list ]; then # Node 12 might be installed, previously used in BigBlueButton
+    if grep -q 12 /etc/apt/sources.list.d/nodesource.list ; then # Node 12 might be installed, previously used in BigBlueButton
       sudo apt-get purge nodejs
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
@@ -265,8 +269,8 @@ main() {
 
     BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
 
-    need_pkg openjdk-8-jre
-    update-java-alternatives -s java-1.8.0-openjdk-amd64
+    need_pkg openjdk-11-jre
+    update-java-alternatives -s java-1.11.0-openjdk-amd64
   fi
 
   apt-get update
@@ -474,7 +478,7 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "bionic"; then err "This script can only install BigBlueButton 2.3 (or later)"; fi
+  if ! echo "$1" | grep -Eq "focal"; then err "This script can only install BigBlueButton 2.5 (or later)"; fi
   DISTRO=$(echo "$1" | sed 's/-.*//g')
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
@@ -490,7 +494,7 @@ check_version() {
 
 check_host() {
   if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ]; then
-    need_pkg dnsutils apt-transport-https net-tools
+    need_pkg dnsutils apt-transport-https
     DIG_IP=$(dig +short "$1" | grep '^[.0-9]*$' | tail -n1)
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
     get_IP "$1"
@@ -571,7 +575,7 @@ check_nat() {
     xmlstarlet edit --inplace --update '//param[@name="ext-rtp-ip"]/@value' --value "\$\${external_rtp_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
     xmlstarlet edit --inplace --update '//param[@name="ext-sip-ip"]/@value' --value "\$\${external_sip_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
 
-    sed -i "s/$INTERNAL_IP:/$IP:/g" /etc/bigbluebutton/nginx/sip.nginx
+    sed -i "s/$INTERNAL_IP:/$IP:/g" /usr/share/bigbluebutton/nginx/sip.nginx
     ip addr add "$IP" dev lo
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
@@ -667,9 +671,9 @@ install_greenlight(){
 
   # need_pkg bbb-webhooks
 
-  if [ ! -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx
-    cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
+  if [ ! -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
+    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx
+    cat > /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
   return 307 /b;
 }
@@ -740,7 +744,6 @@ install_ssl() {
 
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
     add-apt-repository universe
-    need_ppa certbot-ubuntu-certbot-xenial.list ppa:certbot/certbot 75BCA694
     apt-get update
     need_pkg certbot
   fi
@@ -826,7 +829,8 @@ server {
   }
 
   # Include specific rules for record and playback
-  include /etc/bigbluebutton/nginx/*.nginx;
+  include /usr/share/bigbluebutton/nginx/*.nginx;
+  include /etc/bigbluebutton/nginx/*.nginx; # possible overrides
 }
 HERE
 
@@ -835,11 +839,11 @@ HERE
  
   source /etc/bigbluebutton/bigbluebutton-release
   if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
-    sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
+    sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /usr/share/bigbluebutton/nginx/sip.nginx
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
     yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.media.sipjsHackViaWs true
-    sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /etc/bigbluebutton/nginx/sip.nginx
+    sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /usr/share/bigbluebutton/nginx/sip.nginx
     xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
   fi
 
@@ -943,7 +947,7 @@ install_coturn() {
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg software-properties-common certbot
+  need_pkg software-properties-common
 
   if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
          -d "$COTURN_HOST" --email "$EMAIL" --agree-tos -n ; then
