@@ -236,7 +236,7 @@ main() {
     #need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
 
     #need_ppa libreoffice-ubuntu-ppa-focal.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
-    need_ppa bigbluebutton-ubuntu-support-bionic.list ppa:bigbluebutton/support  E95B94BC # Needed for libopusenc0
+    need_ppa bigbluebutton-ubuntu-support-focal.list ppa:bigbluebutton/support  E95B94BC # Needed for libopusenc0
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
     fi
@@ -256,7 +256,7 @@ main() {
     if ! apt-key list MongoDB | grep -q 4.4; then
       wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
     fi
-    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
     rm -f /etc/apt/sources.list.d/mongodb-org-4.2.list
 
     touch /root/.rnd
