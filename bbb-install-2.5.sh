@@ -323,6 +323,8 @@ main() {
     systemctl daemon-reload
   fi
 
+  systemctl restart systemd-journald
+
   if [ -n "$UFW" ]; then
     setup_ufw 
   fi
