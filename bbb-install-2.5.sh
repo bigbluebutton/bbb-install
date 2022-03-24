@@ -480,7 +480,7 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "focal"; then err "This script can only install BigBlueButton 2.5 (or later)"; fi
+  if ! echo "$1" | grep -Eq "focal"; then err "This script can only install BigBlueButton 2.5 (or later) and is meant to be run on Ubuntu 20.04 (focal) server."; fi
   DISTRO=$(echo "$1" | sed 's/-.*//g')
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
