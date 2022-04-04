@@ -828,8 +828,7 @@ server {
   }
 
   # Include specific rules for record and playback
-  include /usr/share/bigbluebutton/nginx/*.nginx;
-  include /etc/bigbluebutton/nginx/*.nginx; # possible overrides
+  include /etc/bigbluebutton/nginx/*.nginx;
 }
 HERE
 
