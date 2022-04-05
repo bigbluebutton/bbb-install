@@ -265,7 +265,6 @@ main() {
     docker pull openjdk:11-jre-buster      # fix issue 413
     docker tag openjdk:11-jre-buster openjdk:11-jre
     need_pkg ruby
-    gem install bundler -v 2.1.4
 
     BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
 
