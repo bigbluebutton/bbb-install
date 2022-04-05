@@ -896,6 +896,26 @@ HERE
     chown bigbluebutton:bigbluebutton $TARGET
     chmod 644 $TARGET
   fi
+
+  # Override file for bbb-webrtc-sfu configs
+  BBB_WEBRTC_SFU_OVERRIDE_DIR=/etc/bigbluebutton/bbb-webrtc-sfu
+  BBB_WEBRTC_SFU_OVERRIDE_F=${BBB_WEBRTC_SFU_OVERRIDE_DIR}/production.yml
+
+  # Create SFU's override dir and file if they're not present yet
+  if [ ! -f "$BBB_WEBRTC_SFU_OVERRIDE_F" ]; then
+    mkdir -p "$BBB_WEBRTC_SFU_OVERRIDE_DIR"
+    touch "$BBB_WEBRTC_SFU_OVERRIDE_F"
+    chmod 600 "$BBB_WEBRTC_SFU_OVERRIDE_F"
+    chown bigbluebutton:root "$BBB_WEBRTC_SFU_OVERRIDE_F"
+  fi
+
+  # Configure mediasoup IPs, reference: https://raw.githubusercontent.com/bigbluebutton/bbb-webrtc-sfu/v2.7.2/docs/mediasoup.md
+  # mediasoup IPs: WebRTC
+  yq w -i "$BBB_WEBRTC_SFU_OVERRIDE_F" mediasoup.webrtc.listenIps[0].ip "0.0.0.0"
+  yq w -i "$BBB_WEBRTC_SFU_OVERRIDE_F" mediasoup.webrtc.listenIps[0].announcedIp "$IP"
+  # mediasoup IPs: plain RTP (internal comms, FS <-> mediasoup)
+  yq w -i "$BBB_WEBRTC_SFU_OVERRIDE_F" mediasoup.plainRtp.listenIp.ip "0.0.0.0"
+  yq w -i "$BBB_WEBRTC_SFU_OVERRIDE_F" mediasoup.plainRtp.listenIp.announcedIp "$IP"
 }
 
 configure_coturn() {
