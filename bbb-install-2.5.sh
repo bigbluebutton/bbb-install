@@ -904,9 +904,12 @@ HERE
   if [ ! -f "$BBB_WEBRTC_SFU_OVERRIDE_F" ]; then
     mkdir -p "$BBB_WEBRTC_SFU_OVERRIDE_DIR"
     touch "$BBB_WEBRTC_SFU_OVERRIDE_F"
-    chmod 600 "$BBB_WEBRTC_SFU_OVERRIDE_F"
-    chown bigbluebutton:root "$BBB_WEBRTC_SFU_OVERRIDE_F"
   fi
+  # fix permissions
+  chmod 755 "$BBB_WEBRTC_SFU_OVERRIDE_DIR"
+  chown bigbluebotton:root "$BBB_WEBRTC_SFU_OVERRIDE_DIR"
+  chmod 600 "$BBB_WEBRTC_SFU_OVERRIDE_F"
+  chown bigbluebutton:root "$BBB_WEBRTC_SFU_OVERRIDE_F"
 
   # Configure mediasoup IPs, reference: https://raw.githubusercontent.com/bigbluebutton/bbb-webrtc-sfu/v2.7.2/docs/mediasoup.md
   # mediasoup IPs: WebRTC
