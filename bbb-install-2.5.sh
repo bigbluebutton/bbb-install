@@ -907,7 +907,7 @@ HERE
   fi
   # fix permissions
   chmod 755 "$BBB_WEBRTC_SFU_OVERRIDE_DIR"
-  chown bigbluebotton:root "$BBB_WEBRTC_SFU_OVERRIDE_DIR"
+  chown bigbluebutton:root "$BBB_WEBRTC_SFU_OVERRIDE_DIR"
   chmod 600 "$BBB_WEBRTC_SFU_OVERRIDE_F"
   chown bigbluebutton:root "$BBB_WEBRTC_SFU_OVERRIDE_F"
 
