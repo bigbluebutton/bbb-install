@@ -231,8 +231,8 @@ main() {
   if [ "$DISTRO" == "focal" ]; then
     need_pkg ca-certificates
 
-    wget https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
-    yq -V
+    # yq version 3 is provided by ppa:bigbluebutton/support
+    # Uncomment the following to enable yq 4 after bigbluebutton/bigbluebutton#14511 is resolved
     #need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
 
     #need_ppa libreoffice-ubuntu-ppa-focal.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
@@ -275,7 +275,7 @@ main() {
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg nodejs $MONGODB apt-transport-https haveged build-essential yq
+  need_pkg nodejs $MONGODB apt-transport-https haveged build-essential
   need_pkg bigbluebutton
   need_pkg bbb-html5
 
