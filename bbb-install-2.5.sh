@@ -275,7 +275,7 @@ main() {
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg nodejs $MONGODB apt-transport-https haveged build-essential
+  need_pkg nodejs $MONGODB apt-transport-https haveged
   need_pkg bigbluebutton
   need_pkg bbb-html5
 
