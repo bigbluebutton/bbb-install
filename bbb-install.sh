@@ -702,9 +702,6 @@ HERE
 configure_HTML5() {
   # Use Google's default STUN server
   if [ -n "$INTERNAL_IP" ]; then
-   sed -i 's/;stunServerAddress.*/stunServerAddress=172.217.212.127/g' /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
-   sed -i 's/;stunServerPort.*/stunServerPort=19302/g'                 /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
-
    sed -i "s/[;]*externalIPv4=.*/externalIPv4=$IP/g"                   /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
    sed -i "s/[;]*iceTcp=.*/iceTcp=0/g"                                 /etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini
   fi
