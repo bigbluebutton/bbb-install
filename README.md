@@ -1,5 +1,17 @@
 <img width="1012" alt="bbb-install-banner" src="https://user-images.githubusercontent.com/1273169/141152865-f497c883-6c96-41c6-9040-613b0858878a.png">
 
+### Note:
+
+
+Naming convention:
+
+Please use `bbb-install-2.5.sh` to install BigBlueButton 2.5 or upgrade to that release.
+
+Please use `bbb-install-2.6.sh` to install BigBlueButton 2.6 or upgrade to that release.
+
+There are checks within the scripts that will inform you if the upgrade is not possible (i.e. operating system changed between the releases, or some really significant changes were made that prevent us from supporting an upgrade).
+etc.
+
 # bbb-install
 
 To help you set up a new BigBlueButton server server (or upgrade from an earlier version of BigBlueButton where applicable), `bbb-install-2.5.sh` is a shell script that automates the installation/upgrade steps  (view the [source](https://github.com/bigbluebutton/bbb-install/blob/master/bbb-install-2.5.sh) to see all the details).   Depending on your server's internet connection, `bbb-install-2.5.sh` can fully install and configure BigBlueButton on a server that meets the [miminum production use requirements](https://docs.bigbluebutton.org/2.5/install.html#minimum-server-requirements) in under 30 minutes.
