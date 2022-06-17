@@ -5,9 +5,9 @@
 
 Naming convention:
 
-Please use `bbb-install-2.5.sh` to install BigBlueButton 2.5 or upgrade to that release.
+Please use `bbb-install-<X.Y>.sh` to install BigBlueButton X.Y or upgrade to that release.
 
-Please use `bbb-install-2.6.sh` to install BigBlueButton 2.6 or upgrade to that release.
+For example use `bbb-install-2.5.sh` to install BigBlueButton 2.5 or upgrade to that release. Check https://docs.bigbluebutton.org for the latest production ready release of BigBlueButton.
 
 There are checks within the scripts that will inform you if the upgrade is not possible (i.e. operating system changed between the releases, or some really significant changes were made that prevent us from supporting an upgrade).
 etc.
