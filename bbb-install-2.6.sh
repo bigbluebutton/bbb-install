@@ -155,9 +155,6 @@ main() {
       l)
         LETS_ENCRYPT_ONLY=true
         ;;
-      g)
-        GREENLIGHT=true
-        ;;
       a)
         API_DEMOS=true
         ;;
@@ -186,6 +183,7 @@ main() {
         ;;
     esac
   done
+  GREENLIGHT=true
 
   if [ -n "$HOST" ]; then
     check_host "$HOST"
@@ -290,11 +288,6 @@ main() {
   check_LimitNOFILE
 
   configure_HTML5 
-
-  if [ -n "$API_DEMOS" ]; then
-    need_pkg bbb-demo
-    while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
-  fi
 
   if [ -n "$LINK_PATH" ]; then
     ln -s "$LINK_PATH" "/var/bigbluebutton"
@@ -764,11 +757,16 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
-  # BigBlueButton landing page.
-  location / {
+  # BigBlueButton asstes and static content.
+  location /assets {
     root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
     expires 1m;
+  }
+
+  # BigBlueButton landing page (Greenlight).
+  location / {
+    return 307 /b
   }
 }
 HERE
@@ -818,11 +816,16 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
-  # BigBlueButton landing page.
-  location / {
+  # BigBlueButton asstes and static content.
+  location /assets {
     root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
     expires 1m;
+  }
+
+  # BigBlueButton landing page (Greenlight).
+  location / {
+    return 307 /b
   }
 
   # Include specific rules for record and playback
@@ -851,10 +854,6 @@ HERE
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
-
-  if [ -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; then
-    sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp
-  fi
 
   if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
     yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url "https://$HOST/pad"
