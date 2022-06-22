@@ -155,6 +155,9 @@ main() {
       l)
         LETS_ENCRYPT_ONLY=true
         ;;
+      g)
+        GREENLIGHT=true
+        ;;
       a)
         API_DEMOS=true
         ;;
@@ -183,7 +186,6 @@ main() {
         ;;
     esac
   done
-  GREENLIGHT=true
 
   if [ -n "$HOST" ]; then
     check_host "$HOST"
@@ -289,6 +291,10 @@ main() {
 
   configure_HTML5 
 
+  if [ -n "$API_DEMOS" ]; then
+    echo "Warning: Installing API-Demos is not possible anymore."
+  fi
+
   if [ -n "$LINK_PATH" ]; then
     ln -s "$LINK_PATH" "/var/bigbluebutton"
   fi
@@ -301,6 +307,9 @@ main() {
 
   if [ -n "$GREENLIGHT" ]; then
     install_greenlight
+    SET_GREENLIGHT_ROOT="location / {
+      return 307 /b;
+    }"
   fi
 
   if [ -n "$COTURN" ]; then
@@ -764,10 +773,7 @@ server {
     expires 1m;
   }
 
-  # BigBlueButton landing page (Greenlight).
-  location / {
-    return 307 /b
-  }
+  $SET_GREENLIGHT_ROOT
 }
 HERE
       systemctl restart nginx
@@ -823,10 +829,7 @@ server {
     expires 1m;
   }
 
-  # BigBlueButton landing page (Greenlight).
-  location / {
-    return 307 /b
-  }
+  $SET_GREENLIGHT_ROOT
 
   # Include specific rules for record and playback
   include /usr/share/bigbluebutton/nginx/*.nginx;
