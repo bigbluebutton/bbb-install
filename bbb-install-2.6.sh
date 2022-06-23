@@ -307,9 +307,6 @@ main() {
 
   if [ -n "$GREENLIGHT" ]; then
     install_greenlight
-    SET_GREENLIGHT_ROOT="location / {
-      return 307 /b;
-    }"
   fi
 
   if [ -n "$COTURN" ]; then
@@ -767,13 +764,11 @@ server {
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
   # BigBlueButton asstes and static content.
-  location /assets {
+  location / {
     root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
     expires 1m;
   }
-
-  $SET_GREENLIGHT_ROOT
 }
 HERE
       systemctl restart nginx
@@ -823,13 +818,11 @@ server {
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
   # BigBlueButton asstes and static content.
-  location /assets {
+  location / {
     root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
     expires 1m;
   }
-
-  $SET_GREENLIGHT_ROOT
 
   # Include specific rules for record and playback
   include /usr/share/bigbluebutton/nginx/*.nginx;
