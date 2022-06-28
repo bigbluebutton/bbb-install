@@ -28,10 +28,6 @@
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.6.sh | bash -s -- -w -v focal-260 -s bbb.example.com -e info@example.com 
 #
-#  Same as above but also install the API examples for testing.
-#
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.6.sh | bash -s -- -w -a -v focal-260 -s bbb.example.com -e info@example.com 
-#
 #  Install BigBlueButton with SSL + Greenlight
 #
 #    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.6.sh | bash -s -- -w -v focal-260 -s bbb.example.com -e info@example.com -g
@@ -57,7 +53,6 @@ OPTIONS (install BigBlueButton):
 
   -x                     Use Let's Encrypt certbot with manual dns challenges
 
-  -a                     Install BBB API demos
   -g                     Install Greenlight
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
@@ -292,8 +287,7 @@ main() {
   configure_HTML5 
 
   if [ -n "$API_DEMOS" ]; then
-    need_pkg bbb-demo
-    while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
+    err "Attention: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
   fi
 
   if [ -n "$LINK_PATH" ]; then
