@@ -758,7 +758,7 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
-  # BigBlueButton asstes and static content.
+  # BigBlueButton assets and static content.
   location / {
     root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
@@ -812,7 +812,7 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
-  # BigBlueButton asstes and static content.
+  # BigBlueButton assets and static content.
   location / {
     root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
