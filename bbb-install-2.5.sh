@@ -453,7 +453,7 @@ get_IP() {
 
 need_pkg() {
   check_root
-  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 1; done
+  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
 
   if [ ! "$SOURCES_FETCHED" = true ]; then
     apt-get update
@@ -463,6 +463,7 @@ need_pkg() {
   if ! dpkg -s ${@:1} >/dev/null 2>&1; then
     LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
   fi
+  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
 }
 
 need_ppa() {
