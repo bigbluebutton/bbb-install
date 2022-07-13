@@ -759,7 +759,7 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
-  # BigBlueButton landing page.
+  # BigBlueButton assets and static content.
   location / {
     root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
@@ -813,7 +813,7 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
-  # BigBlueButton landing page.
+  # BigBlueButton assets and static content.
   location / {
     root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
@@ -846,10 +846,6 @@ HERE
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
-
-  if [ -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; then
-    sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp
-  fi
 
   if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
     yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url "https://$HOST/pad"
