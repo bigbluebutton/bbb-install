@@ -761,7 +761,7 @@ server {
 
   # BigBlueButton assets and static content.
   location / {
-    root   /var/www/bigbluebutton-default/assets;
+    root   /var/www/bigbluebutton-default;
     index  index.html index.htm;
     expires 1m;
   }
