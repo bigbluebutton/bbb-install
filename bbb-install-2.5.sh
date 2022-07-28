@@ -220,6 +220,7 @@ main() {
     TOMCAT_USER=tomcat9
   fi
   check_mem
+  check_cpus
 
   need_pkg software-properties-common  # needed for add-apt-repository
   sudo add-apt-repository universe
@@ -357,6 +358,12 @@ check_root() {
 check_mem() {
   if awk '$1~/MemTotal/ {exit !($2<3940000)}' /proc/meminfo; then
     err "Your server needs to have (at least) 4G of memory."
+  fi
+}
+
+check_cpus() {
+  if [ "$(nproc --all)" -lt 4 ]; then
+    err "Your server needs to have (at least) 4 CPUs (8 recommended for production)."
   fi
 }
 
