@@ -70,6 +70,9 @@ OPTIONS (install BigBlueButton):
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
 
+  -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
+                         Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
+
   -h                     Print help
 
 OPTIONS (install coturn only):
@@ -112,7 +115,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadw" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgadwj" opt "${@}"; do
 
     case $opt in
       h)
@@ -176,6 +179,9 @@ main() {
         UFW=true
         ;;
 
+      j)
+        SKIP_MIN_SERVER_REQUIREMENTS_CHECK=true
+        ;;
       :)
         err "Missing option argument for -$OPTARG"
         exit 1
@@ -357,13 +363,19 @@ check_root() {
 
 check_mem() {
   if awk '$1~/MemTotal/ {exit !($2<3940000)}' /proc/meminfo; then
-    err "Your server needs to have (at least) 4G of memory."
+    echo "Your server needs to have (at least) 4G of memory."
+    if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
+      exit 1
+    fi
   fi
 }
 
 check_cpus() {
   if [ "$(nproc --all)" -lt 4 ]; then
-    err "Your server needs to have (at least) 4 CPUs (8 recommended for production)."
+    echo "Your server needs to have (at least) 4 CPUs (8 recommended for production)."
+    if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
+      exit 1
+    fi
   fi
 }
 
