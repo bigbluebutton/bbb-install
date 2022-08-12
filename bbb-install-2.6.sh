@@ -154,7 +154,7 @@ main() {
         GREENLIGHT=true
         ;;
       a)
-        API_DEMOS=true
+        err "Error: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
         ;;
       m)
         LINK_PATH=$OPTARG
@@ -286,10 +286,6 @@ main() {
   check_LimitNOFILE
 
   configure_HTML5 
-
-  if [ -n "$API_DEMOS" ]; then
-    err "Attention: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
-  fi
 
   if [ -n "$LINK_PATH" ]; then
     ln -s "$LINK_PATH" "/var/bigbluebutton"
