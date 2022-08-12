@@ -225,11 +225,8 @@ main() {
     check_ubuntu 20.04
     TOMCAT_USER=tomcat9
   fi
-
-  if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
-    check_mem
-    check_cpus
-  fi
+  check_mem
+  check_cpus
 
   need_pkg software-properties-common  # needed for add-apt-repository
   sudo add-apt-repository universe
@@ -366,13 +363,19 @@ check_root() {
 
 check_mem() {
   if awk '$1~/MemTotal/ {exit !($2<3940000)}' /proc/meminfo; then
-    err "Your server needs to have (at least) 4G of memory."
+    echo "Your server needs to have (at least) 4G of memory."
+    if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
+      exit 1
+    fi
   fi
 }
 
 check_cpus() {
   if [ "$(nproc --all)" -lt 4 ]; then
-    err "Your server needs to have (at least) 4 CPUs (8 recommended for production)."
+    echo "Your server needs to have (at least) 4 CPUs (8 recommended for production)."
+    if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
+      exit 1
+    fi
   fi
 }
 
