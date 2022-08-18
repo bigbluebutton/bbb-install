@@ -645,6 +645,8 @@ configure_HTML5() {
 install_greenlight(){
   install_docker
 
+  docker pull bigbluebutton/greenlight:v2  # Ensure the current version of greenlight is pulled
+
   # Purge older docker compose
   if dpkg -l | grep -q docker-compose; then
     apt-get purge -y docker-compose
