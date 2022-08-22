@@ -67,7 +67,7 @@ OPTIONS (install BigBlueButton):
   -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
                          Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
 
-  -a                     Allows the installation of BigBlueButton to proceed even if Apache webserver is installed.
+  -i                     Allows the installation of BigBlueButton to proceed even if Apache webserver is installed.
 
   -h                     Print help
 
