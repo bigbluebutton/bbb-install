@@ -114,7 +114,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadwi" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgadw" opt "${@}"; do
 
     case $opt in
       h)
@@ -177,10 +177,6 @@ main() {
         fi
         UFW=true
         ;;
-      d)
-        SKIP_APACHE_INSTALLED_CHECK=true
-        ;;
-
 
       :)
         err "Missing option argument for -$OPTARG"
@@ -202,9 +198,7 @@ main() {
     check_version "$VERSION"
   fi
 
-  if ["$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
-    check_apache2
-  fi
+  check_apache2
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ -n "$COTURN" ]; then
@@ -605,12 +599,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then 
-    echo "You must uninstall the Apache2 server first"; 
-    if ["$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
-       exit 1
-    fi
-  fi
+  if dpkg -l | grep -q apache2-bin; then err "You must uninstall the Apache2 server first"; fi
 }
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
