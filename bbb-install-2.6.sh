@@ -67,6 +67,8 @@ OPTIONS (install BigBlueButton):
   -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
                          Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
 
+  -i                     Allows the installation of BigBlueButton to proceed even if Apache webserver is installed.
+
   -h                     Print help
 
 OPTIONS (install coturn only):
@@ -109,7 +111,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadwj" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgadwji" opt "${@}"; do
 
     case $opt in
       h)
@@ -175,6 +177,9 @@ main() {
       j)
         SKIP_MIN_SERVER_REQUIREMENTS_CHECK=true
         ;;
+      i)
+        SKIP_APACHE_INSTALLED_CHECK=true
+        ;;
 
       :)
         err "Missing option argument for -$OPTARG"
@@ -196,7 +201,9 @@ main() {
     check_version "$VERSION"
   fi
 
-  check_apache2
+  if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
+    check_apache2
+  fi
 
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ -n "$COTURN" ]; then
@@ -532,7 +539,12 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then err "You must uninstall the Apache2 server first"; fi
+  if dpkg -l | grep -q apache2-bin; then 
+    echo "You must uninstall the Apache2 server first";
+    if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
+      exit 1;
+   fi 
+  fi
 }
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
