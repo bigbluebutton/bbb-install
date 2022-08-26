@@ -206,7 +206,7 @@ main() {
     check_version "$VERSION"
   fi
 
-  if ["$SKIP_APACHE_INSTALLED_CHECK" != true]; then
+  if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
     check_apache2
   fi
 
@@ -551,7 +551,7 @@ check_coturn() {
 check_apache2() {
   if dpkg -l | grep -q apache2-bin; then 
     echo "You must uninstall the Apache2 server first"; 
-    if ["$SKIP_APACHE_INSTALLED_CHECK" != true];then
+    if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
       exit 1
     fi
   fi
