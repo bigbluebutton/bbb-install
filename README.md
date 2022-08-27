@@ -130,7 +130,7 @@ We make a distinction here between the firewall installed with `-w` and the exte
 You can get help by passing the `-h` option.
 
 ~~~
-Script for installing a BigBlueButton 2.5 (or later) server in about 30 minutes.
+Script for installing a BigBlueButton 2.5 (or later) server in under 30 minutes.
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
@@ -150,13 +150,18 @@ OPTIONS (install BigBlueButton):
   -g                     Install Greenlight
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
-  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path>
+  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
   -p <host>              Use apt-get proxy at <host>
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
-  -d                     Skip SSL certificates request (use provided certificates from mounted volume)
-  -w                     Install UFW firewall
+  -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
+  -w                     Install UFW firewall (recommended)
+
+  -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
+                         Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
+
+  -i                     Allows the installation of BigBlueButton to proceed even if Apache webserver is installed.
 
   -h                     Print help
 
@@ -169,19 +174,19 @@ OPTIONS (install Let's Encrypt certificate only):
 
   -s <hostname>          Configure server with <hostname> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
-  -l                     Install Let's Encrypt certificate (required)
-  -x                     Use Let's Encrypt certbot with manual DNS challenges (optional)
+  -l                     Only install Let's Encrypt certificate (not BigBlueButton)
+  -x                     Use Let's Encrypt certbot with manual dns challenges (optional)
 
 
 EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v focal-250 -s bbb.example.com -e info@example.com -w
-    -v focal-250 -s bbb.example.com -e info@example.com -w -g
-    -v focal-250 -s bbb.example.com -e info@example.com -w -g -c turn.example.com:1234324
+    -v focal-250 -s bbb.example.com -e info@example.com
+    -v focal-250 -s bbb.example.com -e info@example.com -g
+    -v focal-250 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
-Sample options for setup of a coturn server (on a Ubuntu 20.04 server)
+Sample options for setup of a coturn server (on a Ubuntu 20.04)
 
     -c turn.example.com:1234324 -e info@example.com
 
