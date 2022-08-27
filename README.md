@@ -157,7 +157,9 @@ OPTIONS (install BigBlueButton):
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume)
   -w                     Install UFW firewall
-
+  -j                     to skip min server requirements check
+  -i                     to skip checking whether Apache webserver is installed
+  
   -h                     Print help
 
 OPTIONS (install coturn only):
