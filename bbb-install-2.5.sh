@@ -277,8 +277,6 @@ main() {
     touch /root/.rnd
     MONGODB=mongodb-org
     install_docker		                     # needed for bbb-libreoffice-docker
-    docker pull openjdk:11-jre-buster      # fix issue 413
-    docker tag openjdk:11-jre-buster openjdk:11-jre
     need_pkg ruby
 
     BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
