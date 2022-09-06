@@ -108,6 +108,8 @@ main() {
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
   SOURCES_FETCHED=false
+  CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
+  echo "\n" > $CR_TMPFILE
 
   need_x64
 
@@ -538,7 +540,7 @@ check_coturn() {
 
 check_apache2() {
   if dpkg -l | grep -q apache2-bin; then 
-    echo "You must uninstall the Apache2 server first";
+    echo "You must uninstall the Apache2 server first"
     if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
       exit 1;
    fi 
@@ -678,9 +680,9 @@ install_greenlight(){
     docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
   fi
 
-  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
-  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 | sed 's/https\?:\/\///')
+  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
+  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 | sed 's/https\?:\/\///')
 
   # Update Greenlight configuration file in ~/greenlight/env
   sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                   ~/greenlight/.env
@@ -883,7 +885,7 @@ HERE
   # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
     if ! grep ^BIGBLUEBUTTON_ENDPOINT ~/greenlight/.env | grep -q https; then
-      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
+      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
       sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
       docker-compose -f ~/greenlight/docker-compose.yml down
       docker-compose -f ~/greenlight/docker-compose.yml up -d
