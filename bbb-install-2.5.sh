@@ -895,7 +895,7 @@ HERE
   fi
 
   if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
-    yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url "https://$HOST/pad"
+    yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.pads.url "https://$HOST/pad"
   fi
 
   # Update Greenlight (if installed) to use SSL
