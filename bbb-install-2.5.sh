@@ -894,10 +894,6 @@ HERE
     sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp
   fi
 
-  if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
-    yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url "https://$HOST/pad"
-  fi
-
   # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
     if ! grep ^BIGBLUEBUTTON_ENDPOINT ~/greenlight/.env | grep -q https; then
