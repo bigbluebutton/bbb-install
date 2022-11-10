@@ -460,7 +460,7 @@ get_IP() {
   fi
 
   # Determine external IP 
-  if [ -r /sys/devices/virtual/dmi/id/product_uuid ] && [ "$(head -c 3 /sys/devices/virtual/dmi/id/product_uuid)" == "EC2" ]; then
+  if grep -sqi ^ec2 /sys/devices/virtual/dmi/id/product_uuid; then
     # EC2
     local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -f /var/lib/dhcp/dhclient.eth0.leases ] && grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases; then
