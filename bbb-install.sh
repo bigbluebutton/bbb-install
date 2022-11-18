@@ -64,7 +64,7 @@ OPTIONS (install BigBlueButton):
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
-  -p <host>              Use apt-get proxy at <host>
+  -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
@@ -149,7 +149,11 @@ main() {
       p)
         PROXY=$OPTARG
         if [ -n "$PROXY" ]; then
-          echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
+          if [[ "$PROXY" =~ : ]]; then
+            echo "Acquire::http::Proxy \"http://$PROXY\";"  > /etc/apt/apt.conf.d/01proxy
+          else
+            echo "Acquire::http::Proxy \"http://$PROXY:3142\";"  > /etc/apt/apt.conf.d/01proxy
+          fi
         fi
         ;;
 
