@@ -650,6 +650,7 @@ install_haproxy() {
   need_pkg haproxy
   HAPROXY_CFG=/etc/haproxy/haproxy.cfg
   cat > "$HAPROXY_CFG" <<END
+global
 	log /dev/log	local0
 	log /dev/log	local1 notice
 	chroot /var/lib/haproxy
@@ -690,12 +691,21 @@ defaults
 
 
 frontend nginx_or_turn
-bind *:443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2
+  bind *:443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1
   mode tcp
   option tcplog
   tcp-request content capture req.payload(0,1) len 1
   log-format "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq captured_user:%{+X}[capture.req.hdr(0)]"
   tcp-request inspect-delay 30s
+  # We terminate SSL on haproxy. HTTP2 is a binary protocol. haproxy has to
+  # decide which protocol is spoken. This is negotiated by ALPN.
+  #
+  # Depending on the ALPN value traffic is redirected to either port 82 (HTTP2,
+  # ALPN value h2) or 81 (HTTP 1.0 or HTTP 1.1, ALPN value http/1.1 or no value)
+  # If no ALPN value is set, the first byte is inspected and depending on the
+  # value traffic is sent to either port 81 or coturn.
+  use_backend nginx-http2 if { ssl_fc_alpn h2 }
+  use_backend nginx if { ssl_fc_alpn http/1.1 }
   use_backend %[capture.req.hdr(0),map_str(/etc/haproxy/protocolmap,turn)]
   default_backend turn
 
@@ -706,6 +716,10 @@ backend turn
 backend nginx
   mode tcp
   server localhost 127.0.0.1:81
+
+backend nginx-http2
+  mode tcp
+  server localhost 127.0.0.1:82
 END
   chown haproxy:haproxy "$HAPROXY_CFG"
   for l in {a..z} {A..Z}; do echo "$l" nginx ; done > /etc/haproxy/protocolmap
@@ -893,8 +907,17 @@ server {
 
 }
 server {
-  listen 127.0.0.1:81 http2;
-  listen [::1]:81 http2;
+  # this double listenting is intended. We terminate SSL on haproxy. HTTP2 is a
+  # binary protocol. haproxy has to decide which protocol is spoken. This is
+  # negotiated by ALPN.
+  #
+  # Depending on the ALPN value traffic is redirected to either port 82 (HTTP2,
+  # ALPN value h2) or 81 (HTTP 1.0 or HTTP 1.1, ALPN value http/1.1 or no value)
+
+  listen 127.0.0.1:82 http2;
+  listen [::1]:82 http2;
+  listen 127.0.0.1:81;
+  listen [::1]:81;
   server_name $HOST;
 
     
