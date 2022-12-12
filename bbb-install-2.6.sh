@@ -1027,6 +1027,11 @@ configure_coturn() {
 
     <bean id="turn0" class="org.bigbluebutton.web.services.turn.TurnServer">
         <constructor-arg index="0" value="$COTURN_SECRET"/>
+        <constructor-arg index="1" value="turn:$HOST:3478"/>
+        <constructor-arg index="2" value="86400"/>
+    </bean>
+    <bean id="turn1" class="org.bigbluebutton.web.services.turn.TurnServer">
+        <constructor-arg index="0" value="$COTURN_SECRET"/>
         <constructor-arg index="1" value="turns:$HOST:443?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
@@ -1040,6 +1045,7 @@ configure_coturn() {
         <property name="turnServers">
             <set>
                 <ref bean="turn0"/>
+                <ref bean="turn1"/>
             </set>
         </property>
     </bean>
@@ -1097,6 +1103,8 @@ denied-peer-ip=::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
 allowed-peer-ip=$IP
 
 HERE
+    chown root:turnserver /etc/turnserver.conf
+    chmod 640 /etc/turnserver.conf
   else
     # fetch secret for later setting up in BBB turn config
     COTURN_SECRET="$(grep static-auth-secret= /etc/turnserver.conf |cut -d = -f 2-)"
