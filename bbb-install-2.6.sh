@@ -778,10 +778,10 @@ install_greenlight(){
 
   # need_pkg bbb-webhooks
 
-  if [ ! -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx
-    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight.nginx
-    cat > /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
+  if [ ! -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
+    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx//greenlight.nginx
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /etc/bigbluebutton/nginx/greenlight.nginx
+    cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
   return 307 https://\$server_name/b/;
 }
