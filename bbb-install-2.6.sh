@@ -721,7 +721,8 @@ backend nginx-http2
   mode tcp
   server localhost 127.0.0.1:82
 END
-  chown haproxy:haproxy "$HAPROXY_CFG"
+  chown root:haproxy "$HAPROXY_CFG"
+  chmod 640 "$HAPROXY_CFG"
   for l in {a..z} {A..Z}; do echo "$l" nginx ; done > /etc/haproxy/protocolmap
   chmod 0644 /etc/haproxy/protocolmap
 
@@ -731,7 +732,9 @@ END
 #!/bin/bash -e
 
 cat "/etc/letsencrypt/live/${HOST}"/{fullchain,privkey}.pem > /etc/haproxy/certbundle.pem.new
-chown haproxy:haproxy /etc/haproxy/certbundle.pem.new
+chown root:haproxy /etc/haproxy/certbundle.pem.new
+chmod 0640 /etc/haproxy/certbundle.pem.new
+mv /etc/haproxy/certbundle.pem.new /etc/haproxy/certbundle.pem
 systemctl reload haproxy
 HERE
   chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/haproxy
@@ -777,9 +780,10 @@ install_greenlight(){
 
   if [ ! -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
     docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight.nginx
     cat > /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
-  return 307 /b/;
+  return 307 https://\$server_name/b/;
 }
 HERE
     systemctl restart nginx
@@ -1041,8 +1045,8 @@ configure_coturn() {
     </bean>
 </beans>
 HERE
-  chown bigbluebutton:root "$TURN_XML"
-  chmod 600 "$TURN_XML"
+  chown root:bigbluebutton "$TURN_XML"
+  chmod 640 "$TURN_XML"
 }
 
 
@@ -1095,7 +1099,7 @@ allowed-peer-ip=$IP
 HERE
   else
     # fetch secret for later setting up in BBB turn config
-    COTURN_SECRET="$(grep static-auth-secret= /etc/turnserver.conf |cut -d = -f 2)"
+    COTURN_SECRET="$(grep static-auth-secret= /etc/turnserver.conf |cut -d = -f 2-)"
   fi
 
   mkdir -p /var/log/turnserver
