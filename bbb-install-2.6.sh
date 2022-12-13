@@ -738,6 +738,7 @@ mv /etc/haproxy/certbundle.pem.new /etc/haproxy/certbundle.pem
 systemctl reload haproxy
 HERE
   chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/haproxy
+  /etc/letsencrypt/renewal-hooks/deploy/haproxy
 }
 
 install_greenlight(){
