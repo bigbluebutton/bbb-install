@@ -721,6 +721,7 @@ backend nginx-http2
   mode tcp
   server localhost 127.0.0.1:82
 END
+  cat /etc/letsencrypt/live/$HOST/{fullchain,privkey}.pem > /etc/haproxy/certbundle.pem
   chown root:haproxy "$HAPROXY_CFG"
   chmod 640 "$HAPROXY_CFG"
   for l in {a..z} {A..Z}; do echo "$l" nginx ; done > /etc/haproxy/protocolmap
