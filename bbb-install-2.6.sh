@@ -293,9 +293,6 @@ main() {
     ln -s "$LINK_PATH" "/var/bigbluebutton"
   fi
 
-  install_coturn
-  install_haproxy
-
   if [ -n "$PROVIDED_CERTIFICATE" ] ; then
     install_ssl
   elif [ -n "$HOST" ] && [ -n "$EMAIL" ] ; then
@@ -308,6 +305,9 @@ main() {
 
   if [ -n "$COTURN" ]; then
     configure_coturn
+  else
+    install_coturn
+    instal_haproxy
   fi
 
   apt-get auto-remove -y
