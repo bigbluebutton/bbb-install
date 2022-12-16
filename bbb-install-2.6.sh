@@ -307,7 +307,7 @@ main() {
     configure_coturn
   else
     install_coturn
-    instal_haproxy
+    install_haproxy
   fi
 
   apt-get auto-remove -y
