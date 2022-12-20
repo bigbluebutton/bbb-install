@@ -631,6 +631,7 @@ HERE
         systemctl start dummy-nic
       fi
     fi
+    systemctl restart freeswitch
   fi
 }
 
