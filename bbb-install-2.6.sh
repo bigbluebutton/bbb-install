@@ -696,7 +696,7 @@ defaults
 
 
 frontend nginx_or_turn
-  bind *:443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1
+  bind *:443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
   mode tcp
   option tcplog
   tcp-request content capture req.payload(0,1) len 1
@@ -711,6 +711,7 @@ frontend nginx_or_turn
   # value traffic is sent to either port 81 or coturn.
   use_backend nginx-http2 if { ssl_fc_alpn h2 }
   use_backend nginx if { ssl_fc_alpn http/1.1 }
+  use_backend turn if { ssl_fc_alpn stun.turn }
   use_backend %[capture.req.hdr(0),map_str(/etc/haproxy/protocolmap,turn)]
   default_backend turn
 
