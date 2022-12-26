@@ -721,11 +721,11 @@ backend turn
 
 backend nginx
   mode tcp
-  server localhost 127.0.0.1:81
+  server localhost 127.0.0.1:81 send-proxy check
 
 backend nginx-http2
   mode tcp
-  server localhost 127.0.0.1:82
+  server localhost 127.0.0.1:82 send-proxy check
 END
   chown root:haproxy "$HAPROXY_CFG"
   chmod 640 "$HAPROXY_CFG"
@@ -917,6 +917,9 @@ server {
   return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
 
 }
+set_real_ip_from 127.0.0.1;
+real_ip_header proxy_protocol;
+real_ip_recursive on;
 server {
   # this double listenting is intended. We terminate SSL on haproxy. HTTP2 is a
   # binary protocol. haproxy has to decide which protocol is spoken. This is
@@ -925,9 +928,9 @@ server {
   # Depending on the ALPN value traffic is redirected to either port 82 (HTTP2,
   # ALPN value h2) or 81 (HTTP 1.0 or HTTP 1.1, ALPN value http/1.1 or no value)
 
-  listen 127.0.0.1:82 http2;
+  listen 127.0.0.1:82 http2 proxy_protocol;
   listen [::1]:82 http2;
-  listen 127.0.0.1:81;
+  listen 127.0.0.1:81 proxy_protocol;
   listen [::1]:81;
   server_name $HOST;
 
