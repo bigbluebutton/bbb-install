@@ -308,6 +308,14 @@ main() {
   else
     install_coturn
     install_haproxy
+    # The turn server will always try to connect to the BBB server's public IP address,
+    # so if NAT is in use, add an iptables rule to adjust the destination IP address
+    # of UDP packets sent from the turn server to FreeSWITCH.
+    if [ -n "$INTERNAL_IP" ]; then
+      need_pkg iptables-persistent
+      iptables -t nat -A OUTPUT -p udp -s $INTERNAL_IP -d $IP -j DNAT --to-destination $INTERNAL_IP
+      netfilter-persistent save
+    fi
   fi
 
   apt-get auto-remove -y
