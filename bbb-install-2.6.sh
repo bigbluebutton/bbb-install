@@ -933,6 +933,8 @@ HERE
   # mediasoup IPs: plain RTP (internal comms, FS <-> mediasoup)
   yq w -i "$TARGET" mediasoup.plainRtp.listenIp.ip "0.0.0.0"
   yq w -i "$TARGET" mediasoup.plainRtp.listenIp.announcedIp "$IP"
+
+  systemctl reload nginx
 }
 
 configure_coturn() {
