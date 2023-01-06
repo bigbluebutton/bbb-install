@@ -996,7 +996,7 @@ install_coturn() {
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg software-properties-common
+  need_pkg software-properties-common certbot
 
   if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
          -d "$COTURN_HOST" --email "$EMAIL" --agree-tos -n ; then
