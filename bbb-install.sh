@@ -1053,8 +1053,8 @@ install_coturn() {
 listening-port=3478
 tls-listening-port=443
 
-listening-ip=$IP
-relay-ip=$IP
+listening-ip=${INTERNAL_IP:-$IP}
+relay-ip=${INTERNAL_IP:-$IP}
 $EXTERNAL_IP
 
 min-port=32769
