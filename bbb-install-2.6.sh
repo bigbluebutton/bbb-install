@@ -308,6 +308,14 @@ main() {
   else
     install_coturn
     install_haproxy
+    # The turn server will always try to connect to the BBB server's public IP address,
+    # so if NAT is in use, add an iptables rule to adjust the destination IP address
+    # of UDP packets sent from the turn server to FreeSWITCH.
+    if [ -n "$INTERNAL_IP" ]; then
+      need_pkg iptables-persistent
+      iptables -t nat -A OUTPUT -p udp -s $INTERNAL_IP -d $IP -j DNAT --to-destination $INTERNAL_IP
+      netfilter-persistent save
+    fi
   fi
 
   apt-get auto-remove -y
@@ -1024,6 +1032,8 @@ HERE
   # mediasoup IPs: plain RTP (internal comms, FS <-> mediasoup)
   yq w -i "$TARGET" mediasoup.plainRtp.listenIp.ip "0.0.0.0"
   yq w -i "$TARGET" mediasoup.plainRtp.listenIp.announcedIp "$IP"
+
+  systemctl reload nginx
 }
 
 configure_coturn() {
@@ -1075,7 +1085,7 @@ install_coturn() {
   need_pkg coturn
 
   if [ -n "$INTERNAL_IP" ]; then
-    EXTERNAL_IP="external-ip=$IP"
+    SECOND_ALLOWED_PEER_IP="allowed-peer-ip=$INTERNAL_IP"
   fi
   # check if this is still the default coturn config file. Replace it in this case.
   if grep "#static-auth-secret=north" /etc/turnserver.conf > /dev/null ; then
@@ -1085,7 +1095,6 @@ listening-port=3478
 
 listening-ip=${INTERNAL_IP:-$IP}
 relay-ip=${INTERNAL_IP:-$IP}
-$EXTERNAL_IP
 
 min-port=32769
 max-port=65535
@@ -1111,7 +1120,8 @@ no-multicast-peers
 # we only need to allow peer connections from the machine itself (from mediasoup or freeswitch).
 denied-peer-ip=0.0.0.0-255.255.255.255
 denied-peer-ip=::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
-allowed-peer-ip=${INTERNAL_IP:-$IP}
+allowed-peer-ip=$IP
+$SECOND_ALLOWED_PEER_IP
 
 HERE
     chown root:turnserver /etc/turnserver.conf
