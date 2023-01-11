@@ -117,6 +117,9 @@ main() {
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   echo "\n" > $CR_TMPFILE
 
+  # If grep'ing for a key in "apt-key list" is dangerous, should we find a better way to do it?
+  export APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=true
+
   need_x64
 
   while builtin getopts "hs:r:c:v:e:p:m:lxgadwji" opt "${@}"; do
@@ -275,7 +278,7 @@ main() {
     if ! apt-key list MongoDB | grep -q 4.4; then
       wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
     fi
-    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list > /dev/null
     rm -f /etc/apt/sources.list.d/mongodb-org-4.2.list
 
     touch /root/.rnd
@@ -447,8 +450,9 @@ get_IP() {
 
   # Check if the external IP reaches the internal IP
   if [ -n "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
-    if which nginx; then
+    if systemctl -q is-active nginx; then
       systemctl stop nginx
+      NGINX_WAS_RUNING=true
     fi
 
     need_pkg netcat-openbsd
@@ -473,12 +477,16 @@ get_IP() {
 
     kill $nc_PID  > /dev/null 2>&1;
 
-    if which nginx; then
+    if [ ! -z $NGINX_WAS_RUNING ]; then
       systemctl start nginx
     fi
   fi
 
   if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
+}
+
+is_pkg_installed() {
+  [[ $(dpkg-query -W -f '${db:status-status}' $1 2>/dev/null) == "installed" ]]
 }
 
 need_pkg() {
@@ -554,7 +562,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then 
+  if is_pkg_installed apache2-bin; then
     echo "You must uninstall the Apache2 server first"
     if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
       exit 1
@@ -675,7 +683,7 @@ install_greenlight(){
   docker pull bigbluebutton/greenlight:v2  # Ensure the current version of greenlight is pulled
 
   # Purge older docker compose
-  if dpkg -l | grep -q docker-compose; then
+  if is_pkg_installed docker-compose; then
     apt-get purge -y docker-compose
   fi
 
@@ -708,7 +716,7 @@ install_greenlight(){
   # need_pkg bbb-webhooks
 
   if [ ! -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx
+    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx >/dev/null
     cat > /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
   return 307 /b;
@@ -753,7 +761,7 @@ install_docker() {
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
   fi
 
-  if ! dpkg -l | grep -q docker-ce; then
+  if ! is_pkg_installed docker-ce; then
     add-apt-repository \
      "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
      $(lsb_release -cs) \
