@@ -289,7 +289,7 @@ main() {
     if ! apt-key list MongoDB | grep -q 4.2; then
       wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
     fi
-    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list > /dev/null
     rm -f /etc/apt/sources.list.d/mongodb-org-4.0.list
 
     touch /root/.rnd
@@ -484,8 +484,9 @@ get_IP() {
 
   # Check if the external IP reaches the internal IP
   if [ -n "$external_ip" ] && [ "$IP" != "$external_ip" ]; then
-    if which nginx; then
+    if systemctl -q is-active nginx; then
       systemctl stop nginx
+      NGINX_WAS_RUNING=true
     fi
 
     need_pkg netcat-openbsd
@@ -510,12 +511,16 @@ get_IP() {
 
     kill $nc_PID  > /dev/null 2>&1;
 
-    if which nginx; then
+    if [ ! -z $NGINX_WAS_RUNING ]; then
       systemctl start nginx
     fi
   fi
 
   if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
+}
+
+is_pkg_installed() {
+  [[ $(dpkg-query -W -f '${db:status-status}' $1 2>/dev/null) == "installed" ]]
 }
 
 need_pkg() {
@@ -601,7 +606,9 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then err "You must uninstall the Apache2 server first"; fi
+  if is_pkg_installed apache2-bin; then
+    err "You must uninstall the Apache2 server first"
+  fi
 }
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
@@ -722,7 +729,7 @@ install_greenlight(){
   install_docker
 
   # Purge older docker compose
-  if dpkg -l | grep -q docker-compose; then
+  if is_pkg_installed docker-compose; then
     apt-get purge -y docker-compose
   fi
 
@@ -755,7 +762,7 @@ install_greenlight(){
   # need_pkg bbb-webhooks
 
   if [ ! -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx
+    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx/greenlight.nginx >/dev/null
     cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
   return 307 /b;
@@ -800,7 +807,7 @@ install_docker() {
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
   fi
 
-  if ! dpkg -l | grep -q docker-ce; then
+  if ! is_pkg_installed docker-ce; then
     add-apt-repository \
      "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
      $(lsb_release -cs) \
