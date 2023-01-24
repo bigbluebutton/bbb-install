@@ -54,7 +54,6 @@ OPTIONS (install BigBlueButton):
   -x                     Use Let's Encrypt certbot with manual dns challenges
 
   -g                     Install Greenlight
-  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret>
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
@@ -71,11 +70,6 @@ OPTIONS (install BigBlueButton):
 
   -h                     Print help
 
-OPTIONS (install coturn only):
-
-  -c <hostname>:<secret> Setup a coturn server with <hostname> and <secret> (required)
-  -e <email>             Configure email for Let's Encrypt certbot (required)
-
 OPTIONS (install Let's Encrypt certificate only):
 
   -s <hostname>          Configure server with <hostname> (required)
@@ -90,11 +84,6 @@ Sample options for setup a BigBlueButton server
 
     -v focal-260 -s bbb.example.com -e info@example.com
     -v focal-260 -s bbb.example.com -e info@example.com -g
-    -v focal-260 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
-
-Sample options for setup of a coturn server (on a Ubuntu 20.04)
-
-    -c turn.example.com:1234324 -e info@example.com
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -138,10 +127,6 @@ main() {
         ;;
       x)
         LETS_ENCRYPT_OPTIONS="--manual --preferred-challenges dns"
-        ;;
-      c)
-        COTURN=$OPTARG
-        check_coturn "$COTURN"
         ;;
       v)
         VERSION=$OPTARG
@@ -320,6 +305,17 @@ main() {
 
   if [ -n "$COTURN" ]; then
     configure_coturn
+  else
+    install_coturn
+    install_haproxy
+    # The turn server will always try to connect to the BBB server's public IP address,
+    # so if NAT is in use, add an iptables rule to adjust the destination IP address
+    # of UDP packets sent from the turn server to FreeSWITCH.
+    if [ -n "$INTERNAL_IP" ]; then
+      need_pkg iptables-persistent
+      iptables -t nat -A OUTPUT -p udp -s $INTERNAL_IP -d $IP -j DNAT --to-destination $INTERNAL_IP
+      netfilter-persistent save
+    fi
   fi
 
   apt-get auto-remove -y
@@ -658,6 +654,107 @@ configure_HTML5() {
   fi
 }
 
+install_haproxy() {
+  need_pkg haproxy
+  if [ -n "$INTERNAL_IP" ]; then
+    TURN_IP="$INTERNAL_IP"
+  else
+    TURN_IP="$IP"
+  fi
+  HAPROXY_CFG=/etc/haproxy/haproxy.cfg
+  cat > "$HAPROXY_CFG" <<END
+global
+	log /dev/log	local0
+	log /dev/log	local1 notice
+	chroot /var/lib/haproxy
+	stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+	stats timeout 30s
+	user haproxy
+	group haproxy
+	daemon
+
+	# Default SSL material locations
+	ca-base /etc/ssl/certs
+	crt-base /etc/ssl/private
+
+	# Default ciphers to use on SSL-enabled listening sockets.
+	# For more information, see ciphers(1SSL). This list is from:
+	#  https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+	# An alternative list with additional directives can be obtained from
+	#  https://mozilla.github.io/server-side-tls/ssl-config-generator/?server=haproxy
+	ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS
+	ssl-default-bind-options ssl-min-ver TLSv1.2
+	tune.ssl.default-dh-param 2048
+
+defaults
+	log	global
+	mode	http
+	option	httplog
+	option	dontlognull
+        timeout connect 5000
+        timeout client  50000
+        timeout server  50000
+	errorfile 400 /etc/haproxy/errors/400.http
+	errorfile 403 /etc/haproxy/errors/403.http
+	errorfile 408 /etc/haproxy/errors/408.http
+	errorfile 500 /etc/haproxy/errors/500.http
+	errorfile 502 /etc/haproxy/errors/502.http
+	errorfile 503 /etc/haproxy/errors/503.http
+	errorfile 504 /etc/haproxy/errors/504.http
+
+
+frontend nginx_or_turn
+  bind *:443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
+  mode tcp
+  option tcplog
+  tcp-request content capture req.payload(0,1) len 1
+  log-format "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq captured_user:%{+X}[capture.req.hdr(0)]"
+  tcp-request inspect-delay 30s
+  # We terminate SSL on haproxy. HTTP2 is a binary protocol. haproxy has to
+  # decide which protocol is spoken. This is negotiated by ALPN.
+  #
+  # Depending on the ALPN value traffic is redirected to either port 82 (HTTP2,
+  # ALPN value h2) or 81 (HTTP 1.0 or HTTP 1.1, ALPN value http/1.1 or no value)
+  # If no ALPN value is set, the first byte is inspected and depending on the
+  # value traffic is sent to either port 81 or coturn.
+  use_backend nginx-http2 if { ssl_fc_alpn h2 }
+  use_backend nginx if { ssl_fc_alpn http/1.1 }
+  use_backend turn if { ssl_fc_alpn stun.turn }
+  use_backend %[capture.req.hdr(0),map_str(/etc/haproxy/protocolmap,turn)]
+  default_backend turn
+
+backend turn
+  mode tcp
+  server localhost $TURN_IP:3478
+
+backend nginx
+  mode tcp
+  server localhost 127.0.0.1:81 send-proxy check
+
+backend nginx-http2
+  mode tcp
+  server localhost 127.0.0.1:82 send-proxy check
+END
+  chown root:haproxy "$HAPROXY_CFG"
+  chmod 640 "$HAPROXY_CFG"
+  for l in {a..z} {A..Z}; do echo "$l" nginx ; done > /etc/haproxy/protocolmap
+  chmod 0644 /etc/haproxy/protocolmap
+
+  # cert renewal
+  mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+  cat > /etc/letsencrypt/renewal-hooks/deploy/haproxy <<HERE
+#!/bin/bash -e
+
+cat "/etc/letsencrypt/live/${HOST}"/{fullchain,privkey}.pem > /etc/haproxy/certbundle.pem.new
+chown root:haproxy /etc/haproxy/certbundle.pem.new
+chmod 0640 /etc/haproxy/certbundle.pem.new
+mv /etc/haproxy/certbundle.pem.new /etc/haproxy/certbundle.pem
+systemctl reload haproxy
+HERE
+  chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/haproxy
+  /etc/letsencrypt/renewal-hooks/deploy/haproxy
+}
+
 install_greenlight(){
   install_docker
 
@@ -696,11 +793,12 @@ install_greenlight(){
 
   # need_pkg bbb-webhooks
 
-  if [ ! -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx
-    cat > /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
+  if [ ! -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
+    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx//greenlight.nginx
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /etc/bigbluebutton/nginx/greenlight.nginx
+    cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
-  return 307 /b/;
+  return 307 https://\$server_name/b/;
 }
 HERE
     systemctl restart nginx
@@ -776,10 +874,6 @@ install_ssl() {
     need_pkg certbot
   fi
 
-  if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
-    openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
-  fi
-
   if [ ! -f "/etc/letsencrypt/live/$HOST/fullchain.pem" ]; then
     rm -f /tmp/bigbluebutton.bak
     if ! grep -q "$HOST" /etc/nginx/sites-available/bigbluebutton; then  # make sure we can do the challenge
@@ -831,18 +925,23 @@ server {
   return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
 
 }
+set_real_ip_from 127.0.0.1;
+real_ip_header proxy_protocol;
+real_ip_recursive on;
 server {
-  listen 443 ssl http2;
-  listen [::]:443 ssl http2;
+  # this double listenting is intended. We terminate SSL on haproxy. HTTP2 is a
+  # binary protocol. haproxy has to decide which protocol is spoken. This is
+  # negotiated by ALPN.
+  #
+  # Depending on the ALPN value traffic is redirected to either port 82 (HTTP2,
+  # ALPN value h2) or 81 (HTTP 1.0 or HTTP 1.1, ALPN value http/1.1 or no value)
+
+  listen 127.0.0.1:82 http2 proxy_protocol;
+  listen [::1]:82 http2;
+  listen 127.0.0.1:81 proxy_protocol;
+  listen [::1]:81;
   server_name $HOST;
 
-    ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$HOST/privkey.pem;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
-    ssl_dhparam /etc/nginx/ssl/dhp-4096.pem;
     
     # HSTS (comment out to enable)
     #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
@@ -938,6 +1037,7 @@ HERE
 }
 
 configure_coturn() {
+  TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
   cat <<HERE > $TURN_XML
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
@@ -945,28 +1045,21 @@ configure_coturn() {
         xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 
-    <bean id="stun0" class="org.bigbluebutton.web.services.turn.StunServer">
-        <constructor-arg index="0" value="stun:$COTURN_HOST"/>
-    </bean>
-
-
     <bean id="turn0" class="org.bigbluebutton.web.services.turn.TurnServer">
         <constructor-arg index="0" value="$COTURN_SECRET"/>
-        <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
+        <constructor-arg index="1" value="turn:$HOST:3478"/>
+        <constructor-arg index="2" value="86400"/>
+    </bean>
+    <bean id="turn1" class="org.bigbluebutton.web.services.turn.TurnServer">
+        <constructor-arg index="0" value="$COTURN_SECRET"/>
+        <constructor-arg index="1" value="turns:$HOST:443?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
     
-    <bean id="turn1" class="org.bigbluebutton.web.services.turn.TurnServer">
-        <constructor-arg index="0" value="$COTURN_SECRET"/>
-        <constructor-arg index="1" value="turn:$COTURN_HOST:443?transport=tcp"/>
-        <constructor-arg index="2" value="86400"/>
-    </bean>
-
     <bean id="stunTurnService"
             class="org.bigbluebutton.web.services.turn.StunTurnService">
         <property name="stunServers">
             <set>
-                <ref bean="stun0"/>
             </set>
         </property>
         <property name="turnServers">
@@ -978,6 +1071,8 @@ configure_coturn() {
     </bean>
 </beans>
 HERE
+  chown root:bigbluebutton "$TURN_XML"
+  chmod 640 "$TURN_XML"
 }
 
 
@@ -987,24 +1082,19 @@ install_coturn() {
 
   need_pkg software-properties-common certbot
 
-  if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
-         -d "$COTURN_HOST" --email "$EMAIL" --agree-tos -n ; then
-     err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
-  fi
-
   need_pkg coturn
 
   if [ -n "$INTERNAL_IP" ]; then
-    EXTERNAL_IP="external-ip=$IP/$INTERNAL_IP"
+    SECOND_ALLOWED_PEER_IP="allowed-peer-ip=$INTERNAL_IP"
   fi
-
-  cat <<HERE > /etc/turnserver.conf
+  # check if this is still the default coturn config file. Replace it in this case.
+  if grep "#static-auth-secret=north" /etc/turnserver.conf > /dev/null ; then
+    COTURN_SECRET="$(openssl rand -base64 32)"
+    cat <<HERE > /etc/turnserver.conf
 listening-port=3478
-tls-listening-port=443
 
-listening-ip=$IP
-relay-ip=$IP
-$EXTERNAL_IP
+listening-ip=${INTERNAL_IP:-$IP}
+relay-ip=${INTERNAL_IP:-$IP}
 
 min-port=32769
 max-port=65535
@@ -1014,24 +1104,31 @@ fingerprint
 lt-cred-mech
 use-auth-secret
 static-auth-secret=$COTURN_SECRET
-realm=$(echo "$COTURN_HOST" | cut -d'.' -f2-)
-
-cert=/etc/turnserver/fullchain.pem
-pkey=/etc/turnserver/privkey.pem
-# From https://ssl-config.mozilla.org/ Intermediate, openssl 1.1.0g, 2020-01
-cipher-list="ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
-dh-file=/etc/turnserver/dhp.pem
+realm=$HOST
 
 keep-address-family
 
 no-cli
 no-tlsv1
 no-tlsv1_1
-HERE
 
-  mkdir -p /etc/turnserver
-  if [ ! -f /etc/turnserver/dhp.pem ]; then
-    openssl dhparam -dsaparam  -out /etc/turnserver/dhp.pem 2048
+# Block connections to IP ranges which shouldn't be reachable
+no-loopback-peers
+no-multicast-peers
+
+
+# we only need to allow peer connections from the machine itself (from mediasoup or freeswitch).
+denied-peer-ip=0.0.0.0-255.255.255.255
+denied-peer-ip=::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+allowed-peer-ip=$IP
+$SECOND_ALLOWED_PEER_IP
+
+HERE
+    chown root:turnserver /etc/turnserver.conf
+    chmod 640 /etc/turnserver.conf
+  else
+    # fetch secret for later setting up in BBB turn config
+    COTURN_SECRET="$(grep static-auth-secret= /etc/turnserver.conf |cut -d = -f 2-)"
   fi
 
   mkdir -p /var/log/turnserver
@@ -1063,26 +1160,9 @@ ExecStart=/usr/bin/turnserver --daemon -c /etc/turnserver.conf --pidfile /run/tu
 Restart=always
 HERE
 
-  # Since coturn runs as user turnserver, copy certs so they can be read
-  mkdir -p /etc/letsencrypt/renewal-hooks/deploy
-  cat > /etc/letsencrypt/renewal-hooks/deploy/coturn <<HERE
-#!/bin/bash -e
-
-for certfile in fullchain.pem privkey.pem ; do
-	cp -L /etc/letsencrypt/live/$COTURN_HOST/"\${certfile}" /etc/turnserver/"\${certfile}".new
-	chown turnserver:turnserver /etc/turnserver/"\${certfile}".new
-	mv /etc/turnserver/"\${certfile}".new /etc/turnserver/"\${certfile}"
-done
-
-systemctl kill -sUSR2 coturn.service
-HERE
-  chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/coturn
-  /etc/letsencrypt/renewal-hooks/deploy/coturn
-
   systemctl daemon-reload
-  systemctl stop coturn
-  wait_443
-  systemctl start coturn
+  systemctl restart coturn
+  configure_coturn
 }
 
 
