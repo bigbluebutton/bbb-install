@@ -53,7 +53,7 @@ OPTIONS (install BigBlueButton):
 
   -x                     Use Let's Encrypt certbot with manual dns challenges
 
-  -g                     Install Greenlight
+  -g                     Install Greenlight version 3
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
@@ -769,12 +769,11 @@ HERE
   /etc/letsencrypt/renewal-hooks/deploy/haproxy
 }
 
-# This function will install or update to the latest official version of greenlight-v3 and set it as the hosting Bigbluebutton default frontend.
-# Greenlight is a simpe to use Bigbluebutton room manager that offers a set of features useful to online workloads especially virtual schooling.
+# This function will install the latest official version of greenlight-v3 and set it as the hosting Bigbluebutton default frontend or update greenlight-v3 if installed.
+# Greenlight is a simple to use Bigbluebutton room manager that offers a set of features useful to online workloads especially virtual schooling.
 # https://docs.bigbluebutton.org/greenlight/gl-overview.html
 install_greenlight_v3(){
-  # This function expected that this files exists on the expected location, otherwise this may indicate an issue.
-  # Greenlight-v3 installation depends on these files and their locations.
+  # This function depends on the following files existing on their expected location so an eager check is done asserting that.
   if [[ -z $SERVLET_DIR  || ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties || ! -f $CR_TMPFILE || ! -f $BBB_WEB_ETC_CONFIG ]]; then
     err "greenlight-v3 failed to install due to unmet requirements, have you followed the recommended steps to install Bigbluebutton?"
   fi
@@ -782,7 +781,7 @@ install_greenlight_v3(){
   check_root
   install_docker
 
-  # Purge older docker compose
+  # Purge older docker compose if exists.
   if dpkg -l | grep -q docker-compose; then
     apt-get purge -y docker-compose
   fi
@@ -796,24 +795,24 @@ install_greenlight_v3(){
   say "preparing and checking the enviroment to install/update greelight-v3..."
 
   if [ ! -d $GL3_DIR ]; then
-    mkdir -p $GL3_DIR
+    mkdir -p $GL3_DIR && say "created $GL3_DIR"
   fi
 
   local GL_IMG_REPO=bigbluebutton/greenlight:v3
 
-  docker pull $GL_IMG_REPO > /dev/null
-  say "pulled greenlight-v3 image."
+  say "pulling latest $GL_IMG_REPO image..."
+  docker pull $GL_IMG_REPO
 
   if [ ! -f $GL3_DIR/.env ]; then
-    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat sample.env' > $GL3_DIR/.env
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat sample.env' > $GL3_DIR/.env && say ".env file was created"
   fi
 
   if [ ! -f $GL3_DIR/docker-compose.yml ]; then
-    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml && say "docker-compose.yml file was created"
   fi
 
   # Configuring Greenlight v3.
-  say "checking configurations for greenlight-v3..."
+  say "checking the configuration of greenlight-v3..."
 
   local ROOT_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
   local BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
@@ -823,10 +822,11 @@ install_greenlight_v3(){
   local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
   local PGDBNAME=greenlight-v3-production
   local PGPASSWORD=$(openssl rand -hex 24) # Postgres user password.
+  local RSTXADDR=redis:6379
 
   # A note for future maintainers:
-  #   The next operations were made idompetent, meaning that playing these actions will have an outcome on the system (mutate its state) only once.
-  #   Replaying the steps are a safe and expected operation, this gurantees the seemless simple installation and upgrade of Greenlight v3.
+  #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
+  #   Replaying these steps are a safe and an expected operation, this gurantees the seemless simple installation and upgrade of Greenlight v3.
   #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
 
   # Configuring Greenlight v3 .env file (if already configured this will only update the BBB endpoint and secret).
@@ -834,37 +834,40 @@ install_greenlight_v3(){
   sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $GL3_DIR/.env
   sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $GL3_DIR/.env
   sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=postgres://$PGUSER:$PGPASSWORD@$PGTXADDR/$PGDBNAME|" $GL3_DIR/.env
-  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=redis://redis:6379/|" $GL3_DIR/.env
+  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=redis://$RSTXADDR/|" $GL3_DIR/.env
   # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
   sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
 
   # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your Bigbluebutton frontend (bbb-fe).
-  docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > /usr/share/bigbluebutton/nginx/greenlight-v3.nginx
+  docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > /usr/share/bigbluebutton/nginx/greenlight-v3.nginx && say "added greenlight-v3.nginx"
 
-  # For backward compatibility, any already installed greenlight-v2 application will remain but it will not become the default frontend for BigBluebutton.
+  # For backward compatibility, any already installed greenlight-v2 application will remain but it will not be the default frontend for BigBluebutton.
   # To access greelight-v2 an explicit /b relative root needs to be indicated, otherwise greelight-v3 will be served by default.
-  disable_nginx_site greenlight-redirect.nginx && say "found greelight-v2 redirection rule, disabled it!"
+
+  # Disabling the greenlight-v2 redirection rule.
+  disable_nginx_site greenlight-redirect.nginx && say "found greelight-v2 redirection rule and disabled it!"
 
   # Disabling the Bigbluebutton default Welcome page frontend.
-  disable_nginx_site default-fe.nginx && say "found default bbb-fe, disabled it!"
+  disable_nginx_site default-fe.nginx && say "found default bbb-fe 'Welcome' and disabled it!"
 
   nginx -t 2> /dev/null || err 'greenlight-v3 failed to install due to nginx tests failing to pass - if using the official image then please contact the maintainers.'
-  nginx -s reload
+  nginx -s reload && say 'greenlight-v3 was successfully configured'
 
   # Eager pulling images.
-  say "pulling greenlight-v3 services images..."
+  say "pulling latest greenlight-v3 services images..."
   docker-compose -f $GL3_DIR/docker-compose.yml pull
 
   if check_container_running greenlight-v3; then
     # Restarting Greenlight-v3 services after updates.
-    say "updated Greenlight-v3, restarting ..."
+    say "greenlight-v3 is updating..."
+    say "shutting down greenlight-v3..."
     docker-compose -f $GL3_DIR/docker-compose.yml down
   fi
 
   say "starting greenlight-v3..."
   docker-compose -f $GL3_DIR/docker-compose.yml up -d
-  say "greenlight-v3 is UP, You can VISIT: $ROOT_URL after BBB checks complete!"
   sleep 5
+  say "greenlight-v3 is ready, You can VISIT: $ROOT_URL after BBB checks complete!"
   return 0;
 }
 
