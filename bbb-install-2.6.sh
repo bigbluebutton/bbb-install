@@ -213,10 +213,6 @@ main() {
   # We're installing BigBlueButton
   env
 
-  if [ "$DISTRO" == "focal" ]; then 
-    check_ubuntu 20.04
-    TOMCAT_USER=tomcat9
-  fi
   check_mem
   check_cpus
 
@@ -267,6 +263,13 @@ main() {
 
     need_pkg openjdk-11-jre
     update-java-alternatives -s java-1.11.0-openjdk-amd64
+
+    # Remove old bbb-demo if installed
+    if dpkg -s bbb-demo > /dev/null &>2; then
+      apt purge -y bbb-demo
+      apt autoclean && apt autoremove -y
+      rm -rf /var/lib/tomcat9
+    fi
   fi
 
   apt-get update
@@ -791,18 +794,24 @@ install_greenlight(){
   sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  ~/greenlight/.env
   sed -i "s|SAFE_HOSTS=.*|SAFE_HOSTS=$SAFE_HOSTS|"                                  ~/greenlight/.env
 
-  # need_pkg bbb-webhooks
+  # Remove any files from GL 2.0
+  if [ -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
+     mv /etc/bigbluebutton/nginx/greenlight.nginx /etc/bigbluebutton/nginx/greenlight.nginx.old
+  fi
 
-  if [ ! -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /etc/bigbluebutton/nginx//greenlight.nginx
-    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /etc/bigbluebutton/nginx/greenlight.nginx
-    cat > /etc/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
+  if [ -f /etc/bigbluebutton/nginx/greenlight-redirect.nginx ]; then
+    mv /etc/bigbluebutton/nginx/greenlight-redirect.nginx /etc/bigbluebutton/nginx/greenlight-redirect.nginx.old
+  fi
+
+  # Update configuration files
+  docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx
+  sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight.nginx
+  cat > /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
 location = / {
   return 307 https://\$server_name/b/;
 }
 HERE
-    systemctl restart nginx
-  fi
+  systemctl restart nginx
 
   if ! gem list | grep -q java_properties; then
     gem install jwt java_properties
