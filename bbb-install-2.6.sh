@@ -54,6 +54,7 @@ OPTIONS (install BigBlueButton):
   -x                     Use Let's Encrypt certbot with manual dns challenges
 
   -g                     Install Greenlight
+  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
@@ -127,7 +128,12 @@ main() {
         ;;
       x)
         LETS_ENCRYPT_OPTIONS="--manual --preferred-challenges dns"
+      ;;
+      c)
+        COTURN=$OPTARG
+        check_coturn "$COTURN"
         ;;
+
       v)
         VERSION=$OPTARG
         ;;
@@ -196,7 +202,7 @@ main() {
     check_apache2
   fi
 
-  # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
+  # Check if we're installing coturn (need an e-mail address for Let's Encrypt) 
   if [ -z "$VERSION" ] && [ -n "$COTURN" ]; then
     if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
     check_ubuntu 20.04
@@ -264,10 +270,9 @@ main() {
     need_pkg openjdk-11-jre
     update-java-alternatives -s java-1.11.0-openjdk-amd64
 
-    # Remove old bbb-demo if installed
+    # Remove old bbb-demo if installed from a previous 2.5 setup
     if dpkg -s bbb-demo > /dev/null &>2; then
-      apt purge -y bbb-demo
-      apt autoclean && apt autoremove -y
+      apt purge -y bbb-demo tomcat9
       rm -rf /var/lib/tomcat9
     fi
   fi
@@ -281,7 +286,6 @@ main() {
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
     SERVLET_DIR=/usr/share/bbb-web
-    TURN_XML=$SERVLET_DIR/WEB-INF/classes/spring/turn-stun-servers.xml
   fi
 
   while [ ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; echo -n '.'; done
@@ -308,9 +312,15 @@ main() {
 
   if [ -n "$COTURN" ]; then
     configure_coturn
+
+    if systemctl is-active --quiet haproxy.service; then
+      systemctl disable --now haproxy.service
+    fi
   else
     install_coturn
     install_haproxy
+    systemctl enable --now haproxy.service  # In case we had previously disabled (see above)
+
     # The turn server will always try to connect to the BBB server's public IP address,
     # so if NAT is in use, add an iptables rule to adjust the destination IP address
     # of UDP packets sent from the turn server to FreeSWITCH.
@@ -923,6 +933,8 @@ HERE
     fi
   fi
 
+  if [ -z "$COTURN" ]; then
+    # No COTURN credentials provided, setup a local TURN server
   cat <<HERE > /etc/nginx/sites-available/bigbluebutton
 server_tokens off;
 
@@ -968,6 +980,53 @@ server {
   include /etc/bigbluebutton/nginx/*.nginx;
 }
 HERE
+  else
+    # We've been given COTURN credentials, so HAPROX is not installed for local TURN server
+  cat <<HERE > /etc/nginx/sites-available/bigbluebutton
+server_tokens off;
+
+server {
+  listen 80;
+  listen [::]:80;
+  server_name $HOST;
+  
+  return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
+
+}
+server {
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name $HOST;
+
+    ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$HOST/privkey.pem;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_dhparam /etc/nginx/ssl/dhp-4096.pem;
+    
+    # HSTS (comment out to enable)
+    #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+  access_log  /var/log/nginx/bigbluebutton.access.log;
+
+  # BigBlueButton landing page.
+  location / {
+    root   /var/www/bigbluebutton-default;
+    index  index.html index.htm;
+    expires 1m;
+  }
+
+  # Include specific rules for record and playback
+  include /etc/bigbluebutton/nginx/*.nginx;
+}
+HERE
+
+    if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
+      openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
+    fi 
+  fi
 
   # Configure rest of BigBlueButton Configuration for SSL
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
@@ -1047,6 +1106,12 @@ HERE
 
 configure_coturn() {
   TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
+
+  if [ -z "$COTURN" ]; then
+    # the user didn't pass '-c', so use the local TURN server's host
+    COTURN_HOST=$HOST
+  fi
+
   cat <<HERE > $TURN_XML
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
@@ -1054,14 +1119,24 @@ configure_coturn() {
         xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 
+    <!-- 
+         We need turn0 for FireFox to workaround its limited ICE implementation.
+         This is UDP connection.  Note that port 3478 must be open on this BigBlueButton
+         and reachble by the client.
+
+         Also, in 2.5, we previously defined turn:\$HOST:443?transport=tcp (not 'turns') 
+         to workaround a bug in Safari's handling of Let's Encrypt. This bug is now fixed
+         https://bugs.webkit.org/show_bug.cgi?id=219274, so we omit the 'turn' protocol over
+         port 443.
+     -->
     <bean id="turn0" class="org.bigbluebutton.web.services.turn.TurnServer">
         <constructor-arg index="0" value="$COTURN_SECRET"/>
-        <constructor-arg index="1" value="turn:$HOST:3478"/>
+        <constructor-arg index="1" value="turn:$COTURN_HOST:3478"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
     <bean id="turn1" class="org.bigbluebutton.web.services.turn.TurnServer">
         <constructor-arg index="0" value="$COTURN_SECRET"/>
-        <constructor-arg index="1" value="turns:$HOST:443?transport=tcp"/>
+        <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
     
@@ -1080,6 +1155,7 @@ configure_coturn() {
     </bean>
 </beans>
 HERE
+
   chown root:bigbluebutton "$TURN_XML"
   chmod 640 "$TURN_XML"
 }
