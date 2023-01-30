@@ -272,7 +272,7 @@ main() {
     update-java-alternatives -s java-1.11.0-openjdk-amd64
 
     # Remove old bbb-demo if installed from a previous 2.5 setup
-    if dpkg -s bbb-demo > /dev/null &>2; then
+    if dpkg -s bbb-demo > /dev/null 2>&1; then
       apt purge -y bbb-demo tomcat9
       rm -rf /var/lib/tomcat9
     fi
@@ -808,7 +808,7 @@ install_greenlight_v3(){
   fi
 
   if [ ! -f $GL3_DIR/docker-compose.yml ]; then
-    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml && say "docker-compose.yml file was created"
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml && say "docker compose file was created"
   fi
 
   # Configuring Greenlight v3.
@@ -839,7 +839,31 @@ install_greenlight_v3(){
   sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
 
   # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your Bigbluebutton frontend (bbb-fe).
-  docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > /usr/share/bigbluebutton/nginx/greenlight-v3.nginx && say "added greenlight-v3.nginx"
+  docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > /usr/share/bigbluebutton/nginx/greenlight-v3.nginx && say "added greenlight-v3 nginx file"
+
+  # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from COMMIT (583f868).
+  # Move any nginx files from greenlight-v2 to the expected location.
+  if [ -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
+    mv /etc/bigbluebutton/nginx/greenlight.nginx /usr/share/bigbluebutton/nginx/greenlight.nginx && say "found /etc/bigbluebutton/nginx/greenlight.nginx and moved to expected location."
+  fi
+
+  if [ -f /etc/bigbluebutton/nginx/greenlight-redirect.nginx ]; then
+    mv /etc/bigbluebutton/nginx/greenlight-redirect.nginx /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx && say "found /etc/bigbluebutton/nginx/greenlight-redirect.nginx and moved to expected location."
+  fi
+
+  if [ -z "$COTURN" ]; then
+    # When NGINX is the frontend reverse proxy, 'X-Forwarded-Proto' proxy header will dynamically match the $scheme of the received client request.
+    # In case a builtin turn server is installed, then HAPROXY is introduced and it becomes the frontend reverse proxy.
+    # NGINX will then act as a backend reverse proxy residing behind of it.
+    # HTTPS traffic from the client then is terminated at HAPROXY and plain HTTP traffic is proxied to NGINX.
+    # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight-v3.nginx
+
+    if [ -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
+      # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from PR (#579).
+      sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight.nginx
+    fi
+  fi
 
   # For backward compatibility, any already installed greenlight-v2 application will remain but it will not be the default frontend for BigBluebutton.
   # To access greelight-v2 an explicit /b relative root needs to be indicated, otherwise greelight-v3 will be served by default.
@@ -850,8 +874,8 @@ install_greenlight_v3(){
   # Disabling the Bigbluebutton default Welcome page frontend.
   disable_nginx_site default-fe.nginx && say "found default bbb-fe 'Welcome' and disabled it!"
 
-  nginx -t 2> /dev/null || err 'greenlight-v3 failed to install due to nginx tests failing to pass - if using the official image then please contact the maintainers.'
-  nginx -s reload && say 'greenlight-v3 was successfully configured'
+  nginx -qt || err 'greenlight-v3 failed to install due to nginx tests failing to pass - if using the official image then please contact the maintainers.'
+  nginx -qs reload && say 'greenlight-v3 was successfully configured'
 
   # Eager pulling images.
   say "pulling latest greenlight-v3 services images..."
@@ -1024,7 +1048,7 @@ server {
 }
 HERE
   else
-    # We've been given COTURN credentials, so HAPROX is not installed for local TURN server
+    # We've been given COTURN credentials, so HAPROXY is not installed for local TURN server
   cat <<HERE > /etc/nginx/sites-available/bigbluebutton
 server_tokens off;
 
