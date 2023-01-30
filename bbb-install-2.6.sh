@@ -1049,10 +1049,6 @@ HERE
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
 
-  if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
-    yq w -i /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml public.note.url "https://$HOST/pad"
-  fi
-
   # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
     if ! grep ^BIGBLUEBUTTON_ENDPOINT ~/greenlight/.env | grep -q https; then
