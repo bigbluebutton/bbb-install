@@ -1013,7 +1013,7 @@ server {
 
   # BigBlueButton landing page.
   location / {
-    root   /var/www/bigbluebutton-default;
+    root   /var/www/bigbluebutton-default/assets;
     index  index.html index.htm;
     expires 1m;
   }
