@@ -53,7 +53,7 @@ OPTIONS (install BigBlueButton):
 
   -x                     Use Let's Encrypt certbot with manual dns challenges
 
-  -g                     Install Greenlight
+  -g                     Install Greenlight version 3
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
@@ -98,6 +98,7 @@ main() {
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
   SOURCES_FETCHED=false
+  GL3_DIR=~/greenlight-v3
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   echo "\n" > $CR_TMPFILE
 
@@ -307,7 +308,7 @@ main() {
   fi
 
   if [ -n "$GREENLIGHT" ]; then
-    install_greenlight
+    install_greenlight_v3
   fi
 
   if [ -n "$COTURN" ]; then
@@ -768,12 +769,19 @@ HERE
   /etc/letsencrypt/renewal-hooks/deploy/haproxy
 }
 
-install_greenlight(){
+# This function will install the latest official version of greenlight-v3 and set it as the hosting Bigbluebutton default frontend or update greenlight-v3 if installed.
+# Greenlight is a simple to use Bigbluebutton room manager that offers a set of features useful to online workloads especially virtual schooling.
+# https://docs.bigbluebutton.org/greenlight/gl-overview.html
+install_greenlight_v3(){
+  # This function depends on the following files existing on their expected location so an eager check is done asserting that.
+  if [[ -z $SERVLET_DIR  || ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties || ! -f $CR_TMPFILE || ! -f $BBB_WEB_ETC_CONFIG ]]; then
+    err "greenlight-v3 failed to install due to unmet requirements, have you followed the recommended steps to install Bigbluebutton?"
+  fi
+
+  check_root
   install_docker
 
-  docker pull bigbluebutton/greenlight:v2  # Ensure the current version of greenlight is pulled
-
-  # Purge older docker compose
+  # Purge older docker compose if exists.
   if dpkg -l | grep -q docker-compose; then
     apt-get purge -y docker-compose
   fi
@@ -783,73 +791,134 @@ install_greenlight(){
     chmod +x /usr/local/bin/docker-compose
   fi
 
-  if [ ! -d ~/greenlight ]; then
-    mkdir -p ~/greenlight
+  # Preparing and checking the enviroment.
+  say "preparing and checking the enviroment to install/update greelight-v3..."
+
+  if [ ! -d $GL3_DIR ]; then
+    mkdir -p $GL3_DIR && say "created $GL3_DIR"
   fi
 
-  # This will trigger the download of Greenlight docker image (if needed)
-  SECRET_KEY_BASE=$(docker run --rm bigbluebutton/greenlight:v2 bundle exec rake secret)
+  local GL_IMG_REPO=bigbluebutton/greenlight:v3
 
-  if [ ! -f ~/greenlight/.env ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
+  say "pulling latest $GL_IMG_REPO image..."
+  docker pull $GL_IMG_REPO
+
+  if [ ! -f $GL3_DIR/.env ]; then
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat sample.env' > $GL3_DIR/.env && say ".env file was created"
   fi
 
-  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
-  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 | sed 's/https\?:\/\///')
+  if [ ! -f $GL3_DIR/docker-compose.yml ]; then
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml && say "docker compose file was created"
+  fi
 
-  # Update Greenlight configuration file in ~/greenlight/env
-  sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                   ~/greenlight/.env
-  sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
-  sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  ~/greenlight/.env
-  sed -i "s|SAFE_HOSTS=.*|SAFE_HOSTS=$SAFE_HOSTS|"                                  ~/greenlight/.env
+  # Configuring Greenlight v3.
+  say "checking the configuration of greenlight-v3..."
 
-  # Remove any files from GL 2.0
+  local ROOT_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
+  local BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
+  local BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rake secret)
+  local PGUSER=postgres # Postgres db user to be used by greenlight-v3.
+  local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
+  local PGDBNAME=greenlight-v3-production
+  local PGPASSWORD=$(openssl rand -hex 24) # Postgres user password.
+  local RSTXADDR=redis:6379
+
+  # A note for future maintainers:
+  #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
+  #   Replaying these steps are a safe and an expected operation, this gurantees the seemless simple installation and upgrade of Greenlight v3.
+  #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
+
+  # Configuring Greenlight v3 .env file (if already configured this will only update the BBB endpoint and secret).
+  sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" $GL3_DIR/.env
+  sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $GL3_DIR/.env
+  sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $GL3_DIR/.env
+  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=postgres://$PGUSER:$PGPASSWORD@$PGTXADDR/$PGDBNAME|" $GL3_DIR/.env
+  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=redis://$RSTXADDR/|" $GL3_DIR/.env
+  # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
+  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
+
+  # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your Bigbluebutton frontend (bbb-fe).
+  docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > /usr/share/bigbluebutton/nginx/greenlight-v3.nginx && say "added greenlight-v3 nginx file"
+
+  # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from COMMIT (583f868).
+  # Move any nginx files from greenlight-v2 to the expected location.
   if [ -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
-     mv /etc/bigbluebutton/nginx/greenlight.nginx /etc/bigbluebutton/nginx/greenlight.nginx.old
+    mv /etc/bigbluebutton/nginx/greenlight.nginx /usr/share/bigbluebutton/nginx/greenlight.nginx && say "found /etc/bigbluebutton/nginx/greenlight.nginx and moved to expected location."
   fi
 
   if [ -f /etc/bigbluebutton/nginx/greenlight-redirect.nginx ]; then
-    mv /etc/bigbluebutton/nginx/greenlight-redirect.nginx /etc/bigbluebutton/nginx/greenlight-redirect.nginx.old
+    mv /etc/bigbluebutton/nginx/greenlight-redirect.nginx /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx && say "found /etc/bigbluebutton/nginx/greenlight-redirect.nginx and moved to expected location."
   fi
 
-  # Update configuration files
-  docker run --rm bigbluebutton/greenlight:v2 cat ./greenlight.nginx | tee /usr/share/bigbluebutton/nginx/greenlight.nginx
-  sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight.nginx
-  cat > /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx << HERE
-location = / {
-  return 307 https://\$server_name/b/;
+  if [ -z "$COTURN" ]; then
+    # When NGINX is the frontend reverse proxy, 'X-Forwarded-Proto' proxy header will dynamically match the $scheme of the received client request.
+    # In case a builtin turn server is installed, then HAPROXY is introduced and it becomes the frontend reverse proxy.
+    # NGINX will then act as a backend reverse proxy residing behind of it.
+    # HTTPS traffic from the client then is terminated at HAPROXY and plain HTTP traffic is proxied to NGINX.
+    # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight-v3.nginx
+
+    if [ -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
+      # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from PR (#579).
+      sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight.nginx
+    fi
+  fi
+
+  # For backward compatibility, any already installed greenlight-v2 application will remain but it will not be the default frontend for BigBluebutton.
+  # To access greelight-v2 an explicit /b relative root needs to be indicated, otherwise greelight-v3 will be served by default.
+
+  # Disabling the greenlight-v2 redirection rule.
+  disable_nginx_site greenlight-redirect.nginx && say "found greelight-v2 redirection rule and disabled it!"
+
+  # Disabling the Bigbluebutton default Welcome page frontend.
+  disable_nginx_site default-fe.nginx && say "found default bbb-fe 'Welcome' and disabled it!"
+
+  nginx -qt || err 'greenlight-v3 failed to install due to nginx tests failing to pass - if using the official image then please contact the maintainers.'
+  nginx -qs reload && say 'greenlight-v3 was successfully configured'
+
+  # Eager pulling images.
+  say "pulling latest greenlight-v3 services images..."
+  docker-compose -f $GL3_DIR/docker-compose.yml pull
+
+  if check_container_running greenlight-v3; then
+    # Restarting Greenlight-v3 services after updates.
+    say "greenlight-v3 is updating..."
+    say "shutting down greenlight-v3..."
+    docker-compose -f $GL3_DIR/docker-compose.yml down
+  fi
+
+  say "starting greenlight-v3..."
+  docker-compose -f $GL3_DIR/docker-compose.yml up -d
+  sleep 5
+  say "greenlight-v3 is ready, You can VISIT: $ROOT_URL after BBB checks complete!"
+  return 0;
 }
-HERE
-  systemctl restart nginx
 
-  if ! gem list | grep -q java_properties; then
-    gem install jwt java_properties
-  fi
+# Given a container name as $1, this function will check if there's a match for that name in the list of running docker containers on the system.
+# The result will be binded to $?.
+check_container_running() {
+  docker ps | grep -q "$1" || return 1;
 
-  if [ ! -f ~/greenlight/docker-compose.yml ]; then
-    docker run --rm bigbluebutton/greenlight:v2 cat ./docker-compose.yml > ~/greenlight/docker-compose.yml
-  fi
-
-  # change the default passwords
-  PGPASSWORD=$(openssl rand -base64 24)
-  sed -i "s,^\([ \t-]*POSTGRES_PASSWORD\)\(=password\),\1=$PGPASSWORD,g" ~/greenlight/docker-compose.yml
-  sed -i "s,^\([ \t]*DB_PASSWORD\)\(=password\),\1=$PGPASSWORD,g" ~/greenlight/.env
-
-  # Remove old containers
-  if docker ps | grep -q greenlight_db_1; then
-    docker rm -f greenlight_db_1
-  fi
-  if docker ps | grep -q greenlight-v2; then
-    docker rm -f greenlight-v2
-  fi
-
-  if ! docker ps | grep -q greenlight; then
-    docker-compose -f ~/greenlight/docker-compose.yml up -d
-    sleep 5
-  fi
+  return 0;
 }
 
+# Given a filename as $1, if file exists under $sites_dir then the file will be suffixed with '.disabled'.
+# sites_dir points to Bigbluebutton nginx sites, when suffixed with '.disabled' nginx will not include the site on reload/restart thus disabling it.
+disable_nginx_site() {
+  local site_path="$1"
+  local sites_dir=/usr/share/bigbluebutton/nginx
+
+  if [ -z $site_path ]; then
+    return 1;
+  fi
+
+  if [ -f $sites_dir/$site_path ]; then
+    mv $sites_dir/$site_path $sites_dir/$site_path.disabled && return 0;
+  fi
+
+  return 1;
+}
 
 install_docker() {
   need_pkg apt-transport-https ca-certificates curl gnupg-agent software-properties-common openssl
@@ -908,11 +977,10 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
-  # BigBlueButton assets and static content.
+  # BigBlueButton landing page.
   location / {
     root   /var/www/bigbluebutton-default/assets;
-    index  index.html index.htm;
-    expires 1m;
+    try_files \$uri @bbb-fe;
   }
 }
 HERE
@@ -969,11 +1037,10 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
-  # BigBlueButton assets and static content.
+  # BigBlueButton landing page.
   location / {
     root   /var/www/bigbluebutton-default/assets;
-    index  index.html index.htm;
-    expires 1m;
+    try_files \$uri @bbb-fe;
   }
 
   # Include specific rules for record and playback
@@ -981,7 +1048,7 @@ server {
 }
 HERE
   else
-    # We've been given COTURN credentials, so HAPROX is not installed for local TURN server
+    # We've been given COTURN credentials, so HAPROXY is not installed for local TURN server
   cat <<HERE > /etc/nginx/sites-available/bigbluebutton
 server_tokens off;
 
@@ -1014,8 +1081,7 @@ server {
   # BigBlueButton landing page.
   location / {
     root   /var/www/bigbluebutton-default/assets;
-    index  index.html index.htm;
-    expires 1m;
+    try_files \$uri @bbb-fe;
   }
 
   # Include specific rules for record and playback
@@ -1027,6 +1093,18 @@ HERE
       openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
     fi 
   fi
+# Create the default Welcome page Bigbluebutton Frontend unless it exists.
+if [[ ! -f /usr/share/bigbluebutton/nginx/default-fe.nginx && ! -f /usr/share/bigbluebutton/nginx/default-fe.nginx.disabled ]]; then
+cat <<HERE > /usr/share/bigbluebutton/nginx/default-fe.nginx
+# Default Bigbluebutton Landing page.
+
+location @bbb-fe {
+  index  index.html index.htm;
+  expires 1m;
+}
+
+HERE
+fi
 
   # Configure rest of BigBlueButton Configuration for SSL
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
@@ -1050,14 +1128,19 @@ HERE
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
 
   # Update Greenlight (if installed) to use SSL
-  if [ -f ~/greenlight/.env ]; then
-    if ! grep ^BIGBLUEBUTTON_ENDPOINT ~/greenlight/.env | grep -q https; then
-      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
-      sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
-      docker-compose -f ~/greenlight/docker-compose.yml down
-      docker-compose -f ~/greenlight/docker-compose.yml up -d
+  for gl_dir in ~/greenlight $GL3_DIR;do
+    if [ -f $gl_dir/.env ]; then
+      if ! grep ^BIGBLUEBUTTON_ENDPOINT $gl_dir/.env | grep -q https; then
+        if [[ -z $BIGBLUEBUTTON_URL ]]; then
+          BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
+        fi
+
+        sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
+        docker-compose -f $gl_dir/docker-compose.yml down
+        docker-compose -f $gl_dir/docker-compose.yml up -d
+      fi
     fi
-  fi
+  done
 
   TARGET=/usr/local/bigbluebutton/bbb-webrtc-sfu/config/default.yml
   if [ -f $TARGET ]; then
