@@ -225,7 +225,7 @@ main() {
 
   need_pkg software-properties-common  # needed for add-apt-repository
   sudo add-apt-repository universe
-  need_pkg wget curl gpg-agent dirmngr
+  need_pkg wget curl gpg-agent dirmngr apparmor-utils
 
   # need_pkg xmlstarlet
   get_IP "$HOST"
