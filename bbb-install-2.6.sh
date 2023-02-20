@@ -786,11 +786,6 @@ install_greenlight_v3(){
     apt-get purge -y docker-compose
   fi
 
-  if [ ! -x /usr/local/bin/docker-compose ]; then
-    curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-  fi
-
   # Preparing and checking the enviroment.
   say "preparing and checking the enviroment to install/update greelight-v3..."
 
@@ -922,7 +917,12 @@ disable_nginx_site() {
 
 install_docker() {
   need_pkg apt-transport-https ca-certificates curl gnupg-agent software-properties-common openssl
-
+  
+  # Remove Docker Compose
+  if dpkg -l | grep -q docker-compose; then
+    apt-get purge -y docker-compose
+  fi
+  
   # Install Docker
   if ! apt-key list | grep -q Docker; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -938,14 +938,10 @@ install_docker() {
      stable"
 
     apt-get update
-    need_pkg docker-ce docker-ce-cli containerd.io
+    need_pkg docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   fi
   if ! which docker; then err "Docker did not install"; fi
 
-  # Remove Docker Compose
-  if dpkg -l | grep -q docker-compose; then
-    apt-get purge -y docker-compose
-  fi
 }
 
 
