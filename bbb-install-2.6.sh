@@ -54,6 +54,8 @@ OPTIONS (install BigBlueButton):
   -x                     Use Let's Encrypt certbot with manual dns challenges
 
   -g                     Install Greenlight version 3
+  -k                     Install Keycloak version 20
+
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
@@ -78,6 +80,10 @@ OPTIONS (install Let's Encrypt certificate only):
   -l                     Only install Let's Encrypt certificate (not BigBlueButton)
   -x                     Use Let's Encrypt certbot with manual dns challenges (optional)
 
+OPTIONS (install Greenlight only):
+
+  -g                     Install Greenlight version 3 (required)
+  -k                     Install Keycloak version 20 (optional)
 
 EXAMPLES:
 
@@ -99,12 +105,13 @@ main() {
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
   SOURCES_FETCHED=false
   GL3_DIR=~/greenlight-v3
+  NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   echo "\n" > $CR_TMPFILE
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadwji" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgadwjik" opt "${@}"; do
 
     case $opt in
       h)
@@ -155,6 +162,9 @@ main() {
         ;;
       g)
         GREENLIGHT=true
+        ;;
+      k)
+        INSTALL_KC=true
         ;;
       a)
         err "Error: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
@@ -215,6 +225,10 @@ main() {
   if [ -z "$VERSION" ]; then
     usage
     exit 0
+  fi
+
+  if [ -n "$INSTALL_KC" ] && [ -z "$GREENLIGHT" ]; then
+    err "Keycloak cannot be installed without Greenlight."
   fi
 
   # We're installing BigBlueButton
@@ -839,16 +853,16 @@ install_greenlight_v3(){
   sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
 
   # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your Bigbluebutton frontend (bbb-fe).
-  docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > /usr/share/bigbluebutton/nginx/greenlight-v3.nginx && say "added greenlight-v3 nginx file"
+  docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > $NGINX_FILES_DEST/greenlight-v3.nginx && say "added greenlight-v3 nginx file"
 
   # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from COMMIT (583f868).
   # Move any nginx files from greenlight-v2 to the expected location.
   if [ -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
-    mv /etc/bigbluebutton/nginx/greenlight.nginx /usr/share/bigbluebutton/nginx/greenlight.nginx && say "found /etc/bigbluebutton/nginx/greenlight.nginx and moved to expected location."
+    mv /etc/bigbluebutton/nginx/greenlight.nginx $NGINX_FILES_DEST/greenlight.nginx && say "found /etc/bigbluebutton/nginx/greenlight.nginx and moved to expected location."
   fi
 
   if [ -f /etc/bigbluebutton/nginx/greenlight-redirect.nginx ]; then
-    mv /etc/bigbluebutton/nginx/greenlight-redirect.nginx /usr/share/bigbluebutton/nginx/greenlight-redirect.nginx && say "found /etc/bigbluebutton/nginx/greenlight-redirect.nginx and moved to expected location."
+    mv /etc/bigbluebutton/nginx/greenlight-redirect.nginx $NGINX_FILES_DEST/greenlight-redirect.nginx && say "found /etc/bigbluebutton/nginx/greenlight-redirect.nginx and moved to expected location."
   fi
 
   if [ -z "$COTURN" ]; then
@@ -857,11 +871,11 @@ install_greenlight_v3(){
     # NGINX will then act as a backend reverse proxy residing behind of it.
     # HTTPS traffic from the client then is terminated at HAPROXY and plain HTTP traffic is proxied to NGINX.
     # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
-    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight-v3.nginx
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/greenlight-v3.nginx
 
-    if [ -f /usr/share/bigbluebutton/nginx/greenlight.nginx ]; then
+    if [ -f $NGINX_FILES_DEST/greenlight.nginx ]; then
       # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from PR (#579).
-      sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' /usr/share/bigbluebutton/nginx/greenlight.nginx
+      sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/greenlight.nginx
     fi
   fi
 
@@ -873,6 +887,38 @@ install_greenlight_v3(){
 
   # Disabling the Bigbluebutton default Welcome page frontend.
   disable_nginx_site default-fe.nginx && say "found default bbb-fe 'Welcome' and disabled it!"
+
+  # Adding Keycloak
+  if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
+    # Keycloak isn't installed
+    if [ -n "$INSTALL_KC" ]; then
+      # Add Keycloak
+      say "Adding Keycloak..."
+      docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
+      sleep 5
+      docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;' || err "unable to create Keycloak DB"
+
+      say "created Keycloak DB"
+      docker-compose -f $GL3_DIR/docker-compose.yml down
+      cp -v $GL3_DIR/docker-compose.yml $GL3_DIR/docker-compose.base.yml # Persist working base compose file for admins.
+      docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.kc.yml' >> $GL3_DIR/docker-compose.yml && say "added Keycloak to compose file"
+      KCPASSWORD=$(openssl rand -hex 12) # Keycloak admin password.
+      PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $GL3_DIR/docker-compose.yml)
+      sed -i "s|^\([ \t-]*KEYCLOAK_ADMIN_PASSWORD\)\(=[ \t]*\)$|\1=$KCPASSWORD|g" $GL3_DIR/docker-compose.yml
+      sed -i "s|^\([ \t-]*KC_DB_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
+
+      # Updating Keycloak nginx file.
+      docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat keycloak.nginx' > $NGINX_FILES_DEST/keycloak.nginx && say "added Keycloak nginx file"
+    fi
+
+  else
+    # Update Keycloak nginx file only.
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat keycloak.nginx' > $NGINX_FILES_DEST/keycloak.nginx && say "added Keycloak nginx file"
+  fi
+
+  if [ -z "$COTURN" ] && [ -f $NGINX_FILES_DEST/keycloak.nginx ]; then
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/keycloak.nginx
+  fi
 
   nginx -qt || err 'greenlight-v3 failed to install due to nginx tests failing to pass - if using the official image then please contact the maintainers.'
   nginx -qs reload && say 'greenlight-v3 was successfully configured'
@@ -892,6 +938,17 @@ install_greenlight_v3(){
   docker-compose -f $GL3_DIR/docker-compose.yml up -d
   sleep 5
   say "greenlight-v3 is ready, You can VISIT: $ROOT_URL after BBB checks complete!"
+
+  if grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
+    say "Keycloak is ready, You can VISIT: https://$HOST/keycloak after BBB checks complete!"
+  fi
+
+  if [ -n "$KCPASSWORD" ];then
+    say "Keycloak administrator account:"
+    say " admin"
+    say " $KCPASSWORD"
+  fi
+
   return 0;
 }
 
@@ -907,14 +964,13 @@ check_container_running() {
 # sites_dir points to Bigbluebutton nginx sites, when suffixed with '.disabled' nginx will not include the site on reload/restart thus disabling it.
 disable_nginx_site() {
   local site_path="$1"
-  local sites_dir=/usr/share/bigbluebutton/nginx
 
   if [ -z $site_path ]; then
     return 1;
   fi
 
-  if [ -f $sites_dir/$site_path ]; then
-    mv $sites_dir/$site_path $sites_dir/$site_path.disabled && return 0;
+  if [ -f $NGINX_FILES_DEST/$site_path ]; then
+    mv $NGINX_FILES_DEST/$site_path $NGINX_FILES_DEST/$site_path.disabled && return 0;
   fi
 
   return 1;
