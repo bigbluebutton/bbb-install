@@ -937,16 +937,19 @@ install_greenlight_v3(){
   say "starting greenlight-v3..."
   docker-compose -f $GL3_DIR/docker-compose.yml up -d
   sleep 5
-  say "greenlight-v3 is ready, You can VISIT: $ROOT_URL after BBB checks complete!"
+  say "greenlight-v3 is now installed and accessible on: https://$HOST/"
+  say "To create Greenlight administrator account, see: https://docs.bigbluebutton.org/greenlight_v3/gl3-install.html#creating-an-admin-account-1"
+
 
   if grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
-    say "Keycloak is ready, You can VISIT: https://$HOST/keycloak after BBB checks complete!"
-  fi
+    say "Keycloak is now installed and accessible for configuration on: https://$HOST/keycloak/"
+    if [ -n "$KCPASSWORD" ];then
+      say "Use the following credentials when accessing the admin console:"
+      say "   admin"
+      say "   $KCPASSWORD"
+    fi
 
-  if [ -n "$KCPASSWORD" ];then
-    say "Keycloak administrator account:"
-    say " admin"
-    say " $KCPASSWORD"
+    say "To complete the configuration of Keycloak, see: https://docs.bigbluebutton.org/greenlight_v3/gl3-external-authentication.html#configuring-keycloak"
   fi
 
   return 0;
