@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# Copyright (c) 2022 BigBlueButton Inc.
+# Copyright (c) 2023 BigBlueButton Inc.
 #
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU Lesser General Public License as published by the Free Software
@@ -17,36 +17,36 @@
 # BigBlueButton is an open source conferencing system. For more information see
 #    https://www.bigbluebutton.org/.
 #
-# This bbb-install-2.6.sh script automates many of the installation and configuration
-# steps at https://docs.bigbluebutton.org/2.6/install.html
+# This bbb-install-2.7.sh script automates many of the installation and configuration
+# steps at https://docs.bigbluebutton.org/2.7/install.html
 #
 #
 #  Examples
 #
-#  Install BigBlueButton 2.6.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
+#  Install BigBlueButton 2.7.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.6.sh | bash -s -- -w -v focal-260 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com 
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.6.sh | bash -s -- -w -v focal-260 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 2.6 server in under 30 minutes. It also supports upgrading a BigBlueButton server to version 2.6 (from version 2.5.0+ or an earlier 2.6.x version)
+Script for installing a BigBlueButton 2.7 server in under 30 minutes. It also supports upgrading a BigBlueButton server to version 2.7 (from version 2.6)
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
 USAGE:
-    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.6.sh | bash -s -- [OPTIONS]
+    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.7.sh | bash -s -- [OPTIONS]
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'focal-260') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'focal-270') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -89,8 +89,8 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v focal-260 -s bbb.example.com -e info@example.com
-    -v focal-260 -s bbb.example.com -e info@example.com -g
+    -v focal-270 -s bbb.example.com -e info@example.com
+    -v focal-270 -s bbb.example.com -e info@example.com -g
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -523,7 +523,7 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "focal"; then err "This script can only install BigBlueButton 2.6 and is meant to be run on Ubuntu 20.04 (focal) server."; fi
+  if ! echo "$1" | grep -Eq "focal"; then err "This script can only install BigBlueButton 2.7 and is meant to be run on Ubuntu 20.04 (focal) server."; fi
   DISTRO=$(echo "$1" | sed 's/-.*//g')
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
@@ -1053,7 +1053,7 @@ HERE
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
     else
-      # Place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install-2.6.sh will deal with the rest.
+      # Place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install-2.7.sh will deal with the rest.
       mkdir -p "/etc/letsencrypt/live/$HOST/"
       ln -s /local/certs/fullchain.pem "/etc/letsencrypt/live/$HOST/fullchain.pem"
       ln -s /local/certs/privkey.pem "/etc/letsencrypt/live/$HOST/privkey.pem"
