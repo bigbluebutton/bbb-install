@@ -56,6 +56,8 @@ OPTIONS (install BigBlueButton):
   -g                     Install Greenlight version 3
   -k                     Install Keycloak version 20
 
+  -t                     Install BigBlueButton LTI framework tools
+
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
@@ -85,6 +87,10 @@ OPTIONS (install Greenlight only):
   -g                     Install Greenlight version 3 (required)
   -k                     Install Keycloak version 20 (optional)
 
+OPTIONS (install BigBlueButton LTI framework only):
+
+  -t                     Install BigBlueButton LTI framework tools (required)
+
 EXAMPLES:
 
 Sample options for setup a BigBlueButton server
@@ -105,13 +111,14 @@ main() {
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
   SOURCES_FETCHED=false
   GL3_DIR=~/greenlight-v3
+  LTI_DIR=~/bbb-lti
   NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   echo "\n" > $CR_TMPFILE
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:lxgadwjikt" opt "${@}"; do
 
     case $opt in
       h)
@@ -165,6 +172,9 @@ main() {
         ;;
       k)
         INSTALL_KC=true
+        ;;
+      t)
+        INSTALL_LTI=true
         ;;
       a)
         err "Error: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
@@ -319,6 +329,10 @@ main() {
     install_ssl
   elif [ -n "$HOST" ] && [ -n "$EMAIL" ] ; then
     install_ssl
+  fi
+
+  if [ -n "$INSTALL_LTI" ]; then
+    install_lti
   fi
 
   if [ -n "$GREENLIGHT" ]; then
@@ -795,16 +809,6 @@ install_greenlight_v3(){
   check_root
   install_docker
 
-  # Purge older docker compose if exists.
-  if dpkg -l | grep -q docker-compose; then
-    apt-get purge -y docker-compose
-  fi
-
-  if [ ! -x /usr/local/bin/docker-compose ]; then
-    curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-  fi
-
   # Preparing and checking the enviroment.
   say "preparing and checking the enviroment to install/update greelight-v3..."
 
@@ -955,6 +959,157 @@ install_greenlight_v3(){
   return 0;
 }
 
+# This function will install the latest official version of BigBlueButton LTI tools.
+# BigBlueButton LTI tools framewrok provides a simple interface to integrate Bigbluebutton features into any LTI certified LMS.
+install_lti(){
+  # This function depends on the following files existing on their expected location so an eager check is done asserting that.
+  if [[ -z $SERVLET_DIR  || ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties || ! -f $CR_TMPFILE || ! -f $BBB_WEB_ETC_CONFIG ]]; then
+    err "BBB LTI framework failed to install due to unmet requirements, have you followed the recommended steps to install Bigbluebutton?"
+  fi
+
+  check_root
+  install_docker
+
+  # Preparing and checking the enviroment.
+  say "preparing and checking the enviroment to install/update BBB LTI framework..."
+
+  if [ ! -d $LTI_DIR ]; then
+    mkdir -p $LTI_DIR && say "created $LTI_DIR"
+  fi
+
+  BROKER_IMG_REPO=bigbluebutton/bbb-lti-broker
+
+  # Installing/Updating the LTI broker.
+  say "pulling latest $BROKER_IMG_REPO image..."
+  docker pull $BROKER_IMG_REPO
+
+  if [ ! -f $LTI_DIR/docker-compose.yml ]; then
+    docker run --rm --entrypoint sh $BROKER_IMG_REPO -c 'cat docker-compose.yml' > $LTI_DIR/docker-compose.yml && say "docker compose file was created"
+  fi
+
+  # Configuring BBB LTI.
+  say "prepping the configuration of BBB LTI framework..."
+
+  local ROOT_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
+  BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
+  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+
+  # Configuring BBB LTI docker-compose.yml (if configured no side effect will happen).
+  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $LTI_DIR/docker-compose.yml
+
+  say "installing/updating BBB LTI framework tools..."
+  local PGUSER=postgres # Postgres db user to be used by bbb-lti.
+  local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
+  local RSTXADDR=redis:6379 # Redis DB transport address (pair of (@ip:@port)).
+  local PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $LTI_DIR/docker-compose.yml) # Extract generated Postgres password.
+  DATABASE_URL_ROOT="postgres://$PGUSER:$PGPASSWORD@$PGTXADDR" # Must be global - expected by install_lti_tool.
+  REDIS_URL_ROOT="redis://$RSTXADDR" # Must be global - expected by install_lti_tool.
+  BROKER_RELATIVE_URL_ROOT=lti # Must be global - expected by install_lti_tools.
+  APPS_RELATIVE_URL_ROOT=apps # Must be global - expected by install_lti_tools.
+
+  install_lti_tools || err "BBB LTI framework failed to install tools!"
+
+  # Updating BBB LTI framework images.
+  say "pulling latest BBB LTI framework services images..."
+  docker-compose -f $LTI_DIR/docker-compose.yml pull
+
+  if check_container_running broker; then
+    # Restarting BBB LTI framework services after updates.
+    say "BBB LTI framework is updating..."
+    say "shutting down BBB LTI framework services..."
+    docker-compose -f $LTI_DIR/docker-compose.yml down
+  fi
+
+  say "starting BBB LTI framework services..."
+  docker-compose -f $LTI_DIR/docker-compose.yml up -d
+  sleep 5
+  say "BBB LTI framework is now installed, up to date and accessible on: https://$HOST/lti"
+
+  return 0;
+}
+
+install_lti_tools() {
+  # BBB LTI FRAMEWORK COMPONENTS
+  if [[ -z $BROKER_IMG_REPO || -z $DATABASE_URL_ROOT || -z $REDIS_URL_ROOT || -z $BROKER_RELATIVE_URL_ROOT || -z $APPS_RELATIVE_URL_ROOT ]]; then
+    err "BBB LTI tools installation failed due to unmet requirements!"
+  fi
+
+  # BBB LTI BROKER setup ↓
+  say "installing BBB LTI framework broker..."
+  LTI_APP_DIR=$LTI_DIR/broker APP_IMG_REPO=$BROKER_IMG_REPO APP_NAME='LTI Broker' RELATIVE_URL_ROOT=$BROKER_RELATIVE_URL_ROOT \
+  NGINX_NAME=bbb-lti-broker PGDBNAME=bbb_lti_broker install_lti_tool || return 1
+
+  # BBB LTI TOOLS setup ↓
+  say "installing BBB LTI framework apps..."
+  LTI_APP_DIR=$LTI_DIR/rooms APP_IMG_REPO=bigbluebutton/bbb-app-rooms APP_NAME='LTI Rooms' RELATIVE_URL_ROOT=$APPS_RELATIVE_URL_ROOT \
+  NGINX_NAME=bbb-app-rooms PGDBNAME=bbb_app_rooms install_lti_tool || return 1
+
+  return 0;
+}
+
+install_lti_tool() {
+ # Preparing and checking the enviroment.
+  if [[ -z $LTI_APP_DIR || -z $APP_IMG_REPO || -z $APP_NAME || -z $PGDBNAME || -z $RELATIVE_URL_ROOT ]]; then
+    err "$APP_NAME installation failed due to unmet requirements!"
+  fi
+
+  say "preparing and checking the enviroment to install/update $APP_NAME..."
+
+  if [ ! -d $LTI_APP_DIR ]; then
+    mkdir -p $LTI_APP_DIR && say "created $LTI_APP_DIR"
+  fi
+
+  # Installing/Updating the LTI broker.
+  say "pulling latest $APP_IMG_REPO image..."
+  docker pull $APP_IMG_REPO
+
+  if [ ! -f $LTI_APP_DIR/.env ]; then
+    docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat dotenv' > $LTI_APP_DIR/.env && say "$APP_NAME .env file was created"
+  fi
+
+  # Configuring BBB LTI.
+  say "checking the configuration of $APP_NAME..."
+
+  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $APP_IMG_REPO exec rake secret)
+
+  # A note for future maintainers:
+  #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
+  #   Replaying these steps are a safe and an expected operation, this gurantees the seemless simple installation and upgrade of BBB LTI.
+  #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
+
+  # Configuring BBB LTI .env file (if already configured this will only update the BBB endpoint and secret).
+  sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*URL_HOST=.*$|URL_HOST=$HOST|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*RELATIVE_URL_ROOT=.*$|RELATIVE_URL_ROOT=$RELATIVE_URL_ROOT|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*DATABASE_URL=.*myuser:mypass@localhost.*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*REDIS_URL=.*myuser:mypass@localhost.*$|REDIS_URL=$REDIS_URL_ROOT/|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SITE=.*|OMNIAUTH_BBBLTIBROKER_SITE=https://$HOST|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_ROOT=.*|OMNIAUTH_BBBLTIBROKER_ROOT=$BROKER_RELATIVE_URL_ROOT|" $LTI_APP_DIR/.env
+
+  # Placing application nginx file.
+  #cat lti/$NGINX_NAME.nginx > $NGINX_FILES_DEST/$NGINX_NAME.nginx && say "added $APP_NAME nginx file" # TMP
+  docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat config.nginx' > $NGINX_FILES_DEST/$NGINX_NAME.nginx && say "added $APP_NAME nginx file"
+
+  if [ -z "$COTURN" ]; then
+    # When NGINX is the frontend reverse proxy, 'X-Forwarded-Proto' proxy header will dynamically match the $scheme of the received client request.
+    # In case a builtin turn server is installed, then HAPROXY is introduced and it becomes the frontend reverse proxy.
+    # NGINX will then act as a backend reverse proxy residing behind of it.
+    # HTTPS traffic from the client then is terminated at HAPROXY and plain HTTP traffic is proxied to NGINX.
+    # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/$NGINX_NAME.nginx
+  fi
+
+  nginx -qt || return 1
+  nginx -qs reload && say "$APP_NAME was successfully configured"
+
+
+  return 0;
+}
+
 # Given a container name as $1, this function will check if there's a match for that name in the list of running docker containers on the system.
 # The result will be binded to $?.
 check_container_running() {
@@ -1001,9 +1156,14 @@ install_docker() {
   fi
   if ! which docker; then err "Docker did not install"; fi
 
-  # Remove Docker Compose
+  # Purge older docker compose if exists.
   if dpkg -l | grep -q docker-compose; then
     apt-get purge -y docker-compose
+  fi
+
+  if [ ! -x /usr/local/bin/docker-compose ]; then
+    curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
   fi
 }
 
