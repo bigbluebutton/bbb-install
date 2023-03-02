@@ -331,14 +331,6 @@ main() {
     install_ssl
   fi
 
-  if [ -n "$INSTALL_LTI" ]; then
-    install_lti
-  fi
-
-  if [ -n "$GREENLIGHT" ]; then
-    install_greenlight_v3
-  fi
-
   if [ -n "$COTURN" ]; then
     configure_coturn
 
@@ -381,6 +373,15 @@ main() {
 
   if ! systemctl show-environment | grep LANG= | grep -q UTF-8; then
     sudo systemctl set-environment LANG=C.UTF-8
+  fi
+
+  # BBB ecosystem apps:
+  if [ -n "$INSTALL_LTI" ]; then
+    install_lti
+  fi
+
+  if [ -n "$GREENLIGHT" ]; then
+    install_greenlight_v3
   fi
 
   bbb-conf --check
@@ -821,12 +822,14 @@ install_greenlight_v3(){
   say "pulling latest $GL_IMG_REPO image..."
   docker pull $GL_IMG_REPO
 
-  if [ ! -f $GL3_DIR/.env ]; then
-    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat sample.env' > $GL3_DIR/.env && say ".env file was created"
-  fi
+  if [ ! -s $GL3_DIR/docker-compose.yml ]; then
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml
 
-  if [ ! -f $GL3_DIR/docker-compose.yml ]; then
-    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml && say "docker compose file was created"
+    if [ ! -s $GL3_DIR/docker-compose.yml ]; then
+      err "failed to create docker compose file - is docker running?"
+    fi
+
+    say "greenlight-v3 docker compose file was created"
   fi
 
   # Configuring Greenlight v3.
@@ -835,12 +838,39 @@ install_greenlight_v3(){
   local ROOT_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
   local BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
   local BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
-  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rake secret)
+
+  # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
+  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $GL3_DIR/docker-compose.yml
+
+  
   local PGUSER=postgres # Postgres db user to be used by greenlight-v3.
   local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
-  local PGDBNAME=greenlight-v3-production
-  local PGPASSWORD=$(openssl rand -hex 24) # Postgres user password.
   local RSTXADDR=redis:6379
+  local PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $GL3_DIR/docker-compose.yml) # Extract generated Postgres password.
+
+  if [ -z "$PGPASSWORD" ]; then
+    err "failed to retrieve greenlight-v3 DB password - retry to resolve."
+  fi
+
+  local DATABASE_URL_ROOT="postgres://$PGUSER:$PGPASSWORD@$PGTXADDR" # Must be global - expected by install_lti_tool.
+  local REDIS_URL_ROOT="redis://$RSTXADDR" # Must be global - expected by install_lti_tool.
+
+  local PGDBNAME=greenlight-v3-production
+  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rake secret)
+
+  if [ -z "$SECRET_KEY_BASE" ]; then
+    err "failed to generate greenlight-v3 secret key base - is docker running?"
+  fi
+
+  if [ ! -s $GL3_DIR/.env ]; then
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat sample.env' > $GL3_DIR/.env
+
+    if [ ! -s $GL3_DIR/.env ]; then
+      err "failed to create greenlight-v3 .env file - is docker running?"
+    fi
+ 
+    say "greenlight-v3 .env file was created"
+  fi
 
   # A note for future maintainers:
   #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
@@ -851,21 +881,20 @@ install_greenlight_v3(){
   sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" $GL3_DIR/.env
   sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $GL3_DIR/.env
   sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $GL3_DIR/.env
-  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=postgres://$PGUSER:$PGPASSWORD@$PGTXADDR/$PGDBNAME|" $GL3_DIR/.env
-  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=redis://$RSTXADDR/|" $GL3_DIR/.env
-  # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
-  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
+  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $GL3_DIR/.env
+  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $GL3_DIR/.env
 
   # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your Bigbluebutton frontend (bbb-fe).
+  cp -v $NGINX_FILES_DEST/greenlight-v3.nginx $NGINX_FILES_DEST/greenlight-v3.nginx.old && say "old greenlight-v3 nginx config can be retrieved at $NGINX_FILES_DEST/greenlight-v3.nginx.old"
   docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > $NGINX_FILES_DEST/greenlight-v3.nginx && say "added greenlight-v3 nginx file"
 
   # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from COMMIT (583f868).
   # Move any nginx files from greenlight-v2 to the expected location.
-  if [ -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
+  if [ -s /etc/bigbluebutton/nginx/greenlight.nginx ]; then
     mv /etc/bigbluebutton/nginx/greenlight.nginx $NGINX_FILES_DEST/greenlight.nginx && say "found /etc/bigbluebutton/nginx/greenlight.nginx and moved to expected location."
   fi
 
-  if [ -f /etc/bigbluebutton/nginx/greenlight-redirect.nginx ]; then
+  if [ -s /etc/bigbluebutton/nginx/greenlight-redirect.nginx ]; then
     mv /etc/bigbluebutton/nginx/greenlight-redirect.nginx $NGINX_FILES_DEST/greenlight-redirect.nginx && say "found /etc/bigbluebutton/nginx/greenlight-redirect.nginx and moved to expected location."
   fi
 
@@ -877,7 +906,7 @@ install_greenlight_v3(){
     # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
     sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/greenlight-v3.nginx
 
-    if [ -f $NGINX_FILES_DEST/greenlight.nginx ]; then
+    if [ -s $NGINX_FILES_DEST/greenlight.nginx ]; then
       # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from PR (#579).
       sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/greenlight.nginx
     fi
@@ -893,34 +922,46 @@ install_greenlight_v3(){
   disable_nginx_site default-fe.nginx && say "found default bbb-fe 'Welcome' and disabled it!"
 
   # Adding Keycloak
+  if [ -n "$INSTALL_KC" ]; then
+      # When attepmting to install/update Keycloak let us attempt to create the database to resolve any issues caused by postgres false negatives.
+      docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
+      sleep 5 # Optimistic wait for postgres to start
+      docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;'
+  fi
+
   if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
     # Keycloak isn't installed
     if [ -n "$INSTALL_KC" ]; then
       # Add Keycloak
       say "Adding Keycloak..."
-      docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
-      sleep 5
-      docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;' || err "unable to create Keycloak DB"
 
       say "created Keycloak DB"
       docker-compose -f $GL3_DIR/docker-compose.yml down
       cp -v $GL3_DIR/docker-compose.yml $GL3_DIR/docker-compose.base.yml # Persist working base compose file for admins.
-      docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.kc.yml' >> $GL3_DIR/docker-compose.yml && say "added Keycloak to compose file"
+
+      docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.kc.yml' >> $GL3_DIR/docker-compose.yml
+
+      if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
+        err "failed to add Keycloak service to greenlight-v3 compose file - is docker running?"
+      fi
+      say "added Keycloak to compose file"
+
       KCPASSWORD=$(openssl rand -hex 12) # Keycloak admin password.
-      PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $GL3_DIR/docker-compose.yml)
       sed -i "s|^\([ \t-]*KEYCLOAK_ADMIN_PASSWORD\)\(=[ \t]*\)$|\1=$KCPASSWORD|g" $GL3_DIR/docker-compose.yml
       sed -i "s|^\([ \t-]*KC_DB_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
 
       # Updating Keycloak nginx file.
+      cp -v $NGINX_FILES_DEST/keycloak.nginx $NGINX_FILES_DEST/keycloak.nginx.old && say "old Keycloak nginx config can be retrieved at $NGINX_FILES_DEST/keycloak.nginx.old"
       docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat keycloak.nginx' > $NGINX_FILES_DEST/keycloak.nginx && say "added Keycloak nginx file"
     fi
 
   else
     # Update Keycloak nginx file only.
+    cp -v $NGINX_FILES_DEST/keycloak.nginx $NGINX_FILES_DEST/keycloak.nginx.old && say "old Keycloak nginx config can be retrieved at $NGINX_FILES_DEST/keycloak.nginx.old"
     docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat keycloak.nginx' > $NGINX_FILES_DEST/keycloak.nginx && say "added Keycloak nginx file"
   fi
 
-  if [ -z "$COTURN" ] && [ -f $NGINX_FILES_DEST/keycloak.nginx ]; then
+  if [ -z "$COTURN" ] && [ -s $NGINX_FILES_DEST/keycloak.nginx ]; then
     sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/keycloak.nginx
   fi
 
@@ -941,12 +982,12 @@ install_greenlight_v3(){
   say "starting greenlight-v3..."
   docker-compose -f $GL3_DIR/docker-compose.yml up -d
   sleep 5
-  say "greenlight-v3 is now installed and accessible on: https://$HOST/"
+  say "greenlight-v3 is installed, up to date and accessible on: https://$HOST/"
   say "To create Greenlight administrator account, see: https://docs.bigbluebutton.org/greenlight_v3/gl3-install.html#creating-an-admin-account-1"
 
 
   if grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
-    say "Keycloak is now installed and accessible for configuration on: https://$HOST/keycloak/"
+    say "Keycloak is installed, up to date and accessible for configuration on: https://$HOST/keycloak/"
     if [ -n "$KCPASSWORD" ];then
       say "Use the following credentials when accessing the admin console:"
       say "   admin"
@@ -983,8 +1024,14 @@ install_lti(){
   say "pulling latest $BROKER_IMG_REPO image..."
   docker pull $BROKER_IMG_REPO
 
-  if [ ! -f $LTI_DIR/docker-compose.yml ]; then
-    docker run --rm --entrypoint sh $BROKER_IMG_REPO -c 'cat docker-compose.yml' > $LTI_DIR/docker-compose.yml && say "docker compose file was created"
+  if [ ! -s $LTI_DIR/docker-compose.yml ]; then
+    docker run --rm --entrypoint sh $BROKER_IMG_REPO -c 'cat docker-compose.yml' > $LTI_DIR/docker-compose.yml
+
+    if [ ! -s $LTI_DIR/docker-compose.yml ]; then
+      err "failed to create docker compose file - is docker running?"
+    fi
+
+    say "LTI framework docker compose file was created"
   fi
 
   # Configuring BBB LTI.
@@ -995,13 +1042,18 @@ install_lti(){
   BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
 
   # Configuring BBB LTI docker-compose.yml (if configured no side effect will happen).
-  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $LTI_DIR/docker-compose.yml
+  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $LTI_DIR/docker-compose.yml && say "LTI framework DB password was generated!"
 
   say "installing/updating BBB LTI framework tools..."
   local PGUSER=postgres # Postgres db user to be used by bbb-lti.
   local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
   local RSTXADDR=redis:6379 # Redis DB transport address (pair of (@ip:@port)).
   local PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $LTI_DIR/docker-compose.yml) # Extract generated Postgres password.
+
+  if [ -z "$PGPASSWORD" ]; then
+    err "failed to retrieve the LTI framework DB password - retry to resolve."
+  fi
+
   DATABASE_URL_ROOT="postgres://$PGUSER:$PGPASSWORD@$PGTXADDR" # Must be global - expected by install_lti_tool.
   REDIS_URL_ROOT="redis://$RSTXADDR" # Must be global - expected by install_lti_tool.
   BROKER_RELATIVE_URL_ROOT=lti # Must be global - expected by install_lti_tools.
@@ -1023,7 +1075,7 @@ install_lti(){
   say "starting BBB LTI framework services..."
   docker-compose -f $LTI_DIR/docker-compose.yml up -d
   sleep 5
-  say "BBB LTI framework is now installed, up to date and accessible on: https://$HOST/lti"
+  say "BBB LTI framework is installed, up to date and accessible on: https://$HOST/$BROKER_RELATIVE_URL_ROOT"
 
   return 0;
 }
@@ -1063,14 +1115,24 @@ install_lti_tool() {
   say "pulling latest $APP_IMG_REPO image..."
   docker pull $APP_IMG_REPO
 
-  if [ ! -f $LTI_APP_DIR/.env ]; then
-    docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat dotenv' > $LTI_APP_DIR/.env && say "$APP_NAME .env file was created"
-  fi
-
   # Configuring BBB LTI.
   say "checking the configuration of $APP_NAME..."
 
   local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $APP_IMG_REPO exec rake secret)
+
+  if [ -z "$SECRET_KEY_BASE" ]; then
+    err "failed to generate $APP_NAME secret key base - is docker running?"
+  fi
+
+  if [ ! -s $LTI_APP_DIR/.env ]; then
+    docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat dotenv' > $LTI_APP_DIR/.env
+
+    if [ ! -s $LTI_APP_DIR/.env ]; then
+      err "failed to create $APP_NAME .env file - is docker running?"
+    fi
+
+    say "$APP_NAME .env file was created"
+  fi
 
   # A note for future maintainers:
   #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
@@ -1091,7 +1153,9 @@ install_lti_tool() {
   sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_ROOT=.*|OMNIAUTH_BBBLTIBROKER_ROOT=$BROKER_RELATIVE_URL_ROOT|" $LTI_APP_DIR/.env
 
   # Placing application nginx file.
-  #cat lti/$NGINX_NAME.nginx > $NGINX_FILES_DEST/$NGINX_NAME.nginx && say "added $APP_NAME nginx file" # TMP
+  say "configuring nginx for $APP_NAME..."
+
+  cp -v $NGINX_FILES_DEST/$NGINX_NAME.nginx $NGINX_FILES_DEST/$NGINX_NAME.nginx.old && say "old $APP_NAME nginx config can be retrieved at $NGINX_FILES_DEST/$NGINX_NAME.nginx.old"
   docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat config.nginx' > $NGINX_FILES_DEST/$NGINX_NAME.nginx && say "added $APP_NAME nginx file"
 
   if [ -z "$COTURN" ]; then
@@ -1165,6 +1229,17 @@ install_docker() {
     curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
   fi
+
+  # Ensuring docker is running
+  if ! docker version > /dev/null ; then
+    # Attempting to auto resolve by restarting docker socket and engine.
+    systemctl restart docker.socket docker.service
+    sleep 5
+
+    docker version > /dev/null || err "docker is failing to restart, something is wrong retry to resolve - exiting"
+    say "docker is running!"
+  fi
+
 }
 
 
