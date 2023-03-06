@@ -56,7 +56,7 @@ OPTIONS (install BigBlueButton):
   -g                     Install Greenlight version 3
   -k                     Install Keycloak version 20
 
-  -t                     Install BigBlueButton LTI framework tools
+  -t <key>:<secret>      Install BigBlueButton LTI framework tools
 
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
@@ -89,14 +89,21 @@ OPTIONS (install Greenlight only):
 
 OPTIONS (install BigBlueButton LTI framework only):
 
-  -t                     Install BigBlueButton LTI framework tools (required)
+  -t <key>:<secret>      Install BigBlueButton LTI framework tools (required)
 
 EXAMPLES:
 
-Sample options for setup a BigBlueButton server
+Sample options for setup a BigBlueButton 2.6 server
 
     -v focal-260 -s bbb.example.com -e info@example.com
-    -v focal-260 -s bbb.example.com -e info@example.com -g
+
+Sample options for setup a BigBlueButton 2.6 server with Greenlight 3 and optionally Keylcoak
+
+    -v focal-260 -s bbb.example.com -e info@example.com -g [-k]
+
+Sample options for setup a BigBlueButton 2.6 server with LTI framework setting the LTI Tool Consumer credentials to MY_KEY:MY_SECRET 
+
+    -v focal-260 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -118,7 +125,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadwjikt" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:lxgadwjik" opt "${@}"; do
 
     case $opt in
       h)
@@ -174,7 +181,18 @@ main() {
         INSTALL_KC=true
         ;;
       t)
-        INSTALL_LTI=true
+        LTI_CREDS=$OPTARG
+
+        if [ "$LTI_CREDS" == "MY_KEY:MY_SECRET" ]; then 
+          err "You must use a valid complex credentials for your LTI setup (not the ones in the example)."
+        fi
+
+        if [[ ! $LTI_CREDS =~ .+:.+ ]]; then
+          err "You must respect the format <key>:<secret> when specifying your LTI credentials."
+        fi
+
+        IFS=: LTI_CREDS=($LTI_CREDS) IFS=' ' # Making LTI_CREDS an array, first element is the LTI TC key and the second is the LTI TC secret.
+        
         ;;
       a)
         err "Error: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
@@ -376,7 +394,7 @@ main() {
   fi
 
   # BBB ecosystem apps:
-  if [ -n "$INSTALL_LTI" ]; then
+  if [ -n "$LTI_CREDS" ]; then
     install_lti
   fi
 
@@ -1074,7 +1092,22 @@ install_lti(){
 
   say "starting BBB LTI framework services..."
   docker-compose -f $LTI_DIR/docker-compose.yml up -d
-  sleep 5
+
+  wait_broker_start
+
+  local LTI_KEY=${LTI_CREDS[0]}
+  local LTI_SECRET=${LTI_CREDS[1]}
+
+  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update[$LTI_KEY,$LTI_SECRET] \
+    2> /dev/null 1>&2; then
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add[$LTI_KEY,$LTI_SECRET] \
+      2> /dev/null 1>&2 || err "failed to set LTI credentials."
+
+      say "LTI credentials were added!"
+  else
+    say "LTI credentials were updated!"
+  fi
+
   say "BBB LTI framework is installed, up to date and accessible on: https://$HOST/$BROKER_RELATIVE_URL_ROOT"
 
   return 0;
@@ -1181,9 +1214,19 @@ install_lti_tool() {
 
 register_lti_tools() {
   # Registering/Updating LTI apps.
-  say "Waiting for the LTI broker to start..."
+  wait_broker_start
 
+  # BBB LTI TOOLS registration ↓
+  say "Registering BBB LTI framework apps..."
+  LTI_APP_DIR=$LTI_DIR/rooms LOG_NAME='LTI Rooms' APP_NAME=rooms register_lti_tool || return 1
+
+  return 0;
+}
+
+wait_broker_start() {
+  say "Waiting for the LTI broker to start..."
   docker-compose -f $LTI_DIR/docker-compose.yml up -d broker || err "failed to register LTI framework apps due to LTI broker failling to start - retry to resolve"
+
   local tries=0
   while ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:version 2> /dev/null 1>&2; do
     echo -n .
@@ -1192,12 +1235,8 @@ register_lti_tools() {
       err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve" 
     fi
   done
- 
-  say "LTI broker is UP!"
 
-  # BBB LTI TOOLS registration ↓
-  say "Registering BBB LTI framework apps..."
-  LTI_APP_DIR=$LTI_DIR/rooms LOG_NAME='LTI Rooms' APP_NAME=rooms register_lti_tool || return 1
+  say "LTI broker is UP!"
 
   return 0;
 }
