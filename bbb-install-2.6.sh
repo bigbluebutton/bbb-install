@@ -1088,24 +1088,27 @@ install_lti_tools() {
 
   # BBB LTI BROKER setup ↓
   say "installing BBB LTI framework broker..."
-  LTI_APP_DIR=$LTI_DIR/broker APP_IMG_REPO=$BROKER_IMG_REPO APP_NAME='LTI Broker' RELATIVE_URL_ROOT=$BROKER_RELATIVE_URL_ROOT \
+  LTI_APP_DIR=$LTI_DIR/broker APP_IMG_REPO=$BROKER_IMG_REPO LOG_NAME='LTI Broker' RELATIVE_URL_ROOT=$BROKER_RELATIVE_URL_ROOT \
   NGINX_NAME=bbb-lti-broker PGDBNAME=bbb_lti_broker install_lti_tool || return 1
 
   # BBB LTI TOOLS setup ↓
   say "installing BBB LTI framework apps..."
-  LTI_APP_DIR=$LTI_DIR/rooms APP_IMG_REPO=bigbluebutton/bbb-app-rooms APP_NAME='LTI Rooms' RELATIVE_URL_ROOT=$APPS_RELATIVE_URL_ROOT \
+  LTI_APP_DIR=$LTI_DIR/rooms APP_IMG_REPO=bigbluebutton/bbb-app-rooms LOG_NAME='LTI Rooms' RELATIVE_URL_ROOT=$APPS_RELATIVE_URL_ROOT \
   NGINX_NAME=bbb-app-rooms PGDBNAME=bbb_app_rooms install_lti_tool || return 1
+
+  # BBB LTI TOOLS registration ↓
+  register_lti_tools || return 1
 
   return 0;
 }
 
 install_lti_tool() {
  # Preparing and checking the enviroment.
-  if [[ -z $LTI_APP_DIR || -z $APP_IMG_REPO || -z $APP_NAME || -z $PGDBNAME || -z $RELATIVE_URL_ROOT ]]; then
-    err "$APP_NAME installation failed due to unmet requirements!"
+  if [[ -z $LTI_APP_DIR || -z $APP_IMG_REPO || -z $LOG_NAME || -z $PGDBNAME || -z $RELATIVE_URL_ROOT ]]; then
+    err "$LOG_NAME installation failed due to unmet requirements!"
   fi
 
-  say "preparing and checking the enviroment to install/update $APP_NAME..."
+  say "preparing and checking the enviroment to install/update $LOG_NAME..."
 
   if [ ! -d $LTI_APP_DIR ]; then
     mkdir -p $LTI_APP_DIR && say "created $LTI_APP_DIR"
@@ -1116,22 +1119,22 @@ install_lti_tool() {
   docker pull $APP_IMG_REPO
 
   # Configuring BBB LTI.
-  say "checking the configuration of $APP_NAME..."
+  say "checking the configuration of $LOG_NAME..."
 
   local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $APP_IMG_REPO exec rake secret)
 
   if [ -z "$SECRET_KEY_BASE" ]; then
-    err "failed to generate $APP_NAME secret key base - is docker running?"
+    err "failed to generate $LOG_NAME secret key base - is docker running?"
   fi
 
   if [ ! -s $LTI_APP_DIR/.env ]; then
     docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat dotenv' > $LTI_APP_DIR/.env
 
     if [ ! -s $LTI_APP_DIR/.env ]; then
-      err "failed to create $APP_NAME .env file - is docker running?"
+      err "failed to create $LOG_NAME .env file - is docker running?"
     fi
 
-    say "$APP_NAME .env file was created"
+    say "$LOG_NAME .env file was created"
   fi
 
   # A note for future maintainers:
@@ -1151,12 +1154,14 @@ install_lti_tool() {
   sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $LTI_APP_DIR/.env
   sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SITE=.*|OMNIAUTH_BBBLTIBROKER_SITE=https://$HOST|" $LTI_APP_DIR/.env
   sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_ROOT=.*|OMNIAUTH_BBBLTIBROKER_ROOT=$BROKER_RELATIVE_URL_ROOT|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_KEY=.*|OMNIAUTH_BBBLTIBROKER_KEY=$(openssl rand -hex 24)|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SECRET=.*|OMNIAUTH_BBBLTIBROKER_SECRET=$(openssl rand -hex 24)|" $LTI_APP_DIR/.env
 
   # Placing application nginx file.
-  say "configuring nginx for $APP_NAME..."
+  say "configuring nginx for $LOG_NAME..."
 
-  cp -v $NGINX_FILES_DEST/$NGINX_NAME.nginx $NGINX_FILES_DEST/$NGINX_NAME.nginx.old && say "old $APP_NAME nginx config can be retrieved at $NGINX_FILES_DEST/$NGINX_NAME.nginx.old"
-  docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat config.nginx' > $NGINX_FILES_DEST/$NGINX_NAME.nginx && say "added $APP_NAME nginx file"
+  cp -v $NGINX_FILES_DEST/$NGINX_NAME.nginx $NGINX_FILES_DEST/$NGINX_NAME.nginx.old && say "old $LOG_NAME nginx config can be retrieved at $NGINX_FILES_DEST/$NGINX_NAME.nginx.old"
+  docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat config.nginx' > $NGINX_FILES_DEST/$NGINX_NAME.nginx && say "added $LOG_NAME nginx file"
 
   if [ -z "$COTURN" ]; then
     # When NGINX is the frontend reverse proxy, 'X-Forwarded-Proto' proxy header will dynamically match the $scheme of the received client request.
@@ -1168,8 +1173,66 @@ install_lti_tool() {
   fi
 
   nginx -qt || return 1
-  nginx -qs reload && say "$APP_NAME was successfully configured"
+  nginx -qs reload && say "$LOG_NAME was successfully configured"
 
+  return 0;
+}
+
+
+register_lti_tools() {
+  # Registering/Updating LTI apps.
+  say "Waiting for the LTI broker to start..."
+
+  docker-compose -f $LTI_DIR/docker-compose.yml up -d broker || err "failed to register LTI framework apps due to LTI broker failling to start - retry to resolve"
+  local tries=0
+  while ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:version 2> /dev/null 1>&2; do
+    echo -n .
+    sleep 3
+    if (( ++tries == 3 )); then
+      err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve" 
+    fi
+  done
+ 
+  say "LTI broker is UP!"
+
+  # BBB LTI TOOLS registration ↓
+  say "Registering BBB LTI framework apps..."
+  LTI_APP_DIR=$LTI_DIR/rooms LOG_NAME='LTI Rooms' APP_NAME=rooms register_lti_tool || return 1
+
+  return 0;
+}
+
+register_lti_tool() {
+ # Preparing and checking the enviroment.
+  if [[ -z $LTI_APP_DIR || -z $APP_NAME || -z $LOG_NAME ]]; then
+    err "$LOG_NAME registration failed due to unmet requirements!"
+  fi
+
+  say "Registering $LOG_NAME..."
+
+  local OAUTH_KEY=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_KEY=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract generated OAUTH key.
+  local OAUTH_SECRET=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_SECRET=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract generated OAUTH secret.
+  local RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract app realtive URL root path.
+
+  if [ -z "$OAUTH_KEY" ] || [ -z "$OAUTH_SECRET" ] ; then
+    err "failed to retrieve the $LOG_NAME OAUTH credentials - retry to resolve."
+  fi
+
+  local CALLBACK_URI_SUFFIX=auth/bbbltibroker/callback
+  local CALLBACK_URI=https://$HOST/$RELATIVE_URL_ROOT/$APP_NAME/$CALLBACK_URI_SUFFIX
+
+  if ! check_container_running broker; then
+    err "failed to register $LOG_NAME due to LTI broker not running - retry to resolve."
+  fi
+
+  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show[$APP_NAME] \
+    2> /dev/null 1>&2; then
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add[$APP_NAME,$CALLBACK_URI,$OAUTH_KEY,$OAUTH_SECRET] \
+      2> /dev/null 1>&2 && say "$LOG_NAME was successfully registered."
+  else
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update[$APP_NAME,$CALLBACK_URI,$OAUTH_KEY,$OAUTH_SECRET] \
+      2> /dev/null 1>&2 && say "$LOG_NAME was successfully updated."
+  fi
 
   return 0;
 }
