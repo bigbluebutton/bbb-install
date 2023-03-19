@@ -254,12 +254,13 @@ main() {
     #need_ppa libreoffice-ubuntu-ppa-focal.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
     need_ppa bigbluebutton-ubuntu-support-focal.list ppa:bigbluebutton/support  E95B94BC # Needed for libopusenc0
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
-      sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
+      sudo apt-key adv --keyserver https://keyserver.ubuntu.com --recv-keys 5AFA7A83
     fi
 
     rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
-    if grep -q 12 /etc/apt/sources.list.d/nodesource.list ; then # Node 12 might be installed, previously used in BigBlueButton
+    if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 12 /etc/apt/sources.list.d/nodesource.list; then 
+      # Node 12 might be installed, previously used in BigBlueButton
       sudo apt-get purge nodejs
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
