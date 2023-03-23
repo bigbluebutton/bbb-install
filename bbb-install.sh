@@ -54,6 +54,7 @@ OPTIONS (install BigBlueButton):
   -v <version>           Install given version of BigBlueButton (e.g. 'bionic-24') (required)
 
   -s <hostname>          Configure server with <hostname>
+  -i <external_ip>       Configure server with specified IP <external_ip>
   -e <email>             Email for Let's Encrypt certbot
 
   -x                     Use Let's Encrypt certbot with manual dns challenges
@@ -112,7 +113,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadw" opt "${@}"; do
+  while builtin getopts "hs:i:r:c:v:e:p:m:lxgadw" opt "${@}"; do
 
     case $opt in
       h)
@@ -125,6 +126,13 @@ main() {
         if [ "$HOST" == "bbb.example.com" ]; then 
           err "You must specify a valid hostname (not the hostname given in the docs)."
         fi
+        ;;
+      i)
+        if [ -n "$IP" ]; then
+          err "Only one external IP address allowed."
+        fi
+        IP=$OPTARG
+        check_ip $IP
         ;;
       r)
         PACKAGE_REPOSITORY=$OPTARG
@@ -456,12 +464,18 @@ get_IP() {
   if [ -n "$IP" ]; then return 0; fi
 
   # Determine local IP
-  need_pkg net-tools
-  if LANG=c ifconfig | grep -q 'venet0:0'; then
-    IP=$(ifconfig | grep -v '127.0.0.1' | grep -E "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | tail -1 | cut -d: -f2 | awk '{ print $1}')
-  else
-    IP=$(ifconfig "$(route | grep ^default | head -1 | sed "s/.* //")" | awk '/inet /{ print $2}' | cut -d: -f2)
-  fi
+  need_pkg iproute2
+  local route=$(ip route show | grep -w -e "^default" | tail -1)
+  case $route in
+  *\ src\ *)
+    IP=$(sed -e "s/.* src //" -e "s/\([^ ]*\)\(.*\)/\1/" <<<$route)
+    ;;
+  *\ dev\ *)
+    local device=$(sed -e "s/.* dev //" -e "s/\([^ ]*\)\(.*\)/\1/" <<<$route)
+    IP=$(ip address show $device | grep -w -e "inet" | \
+      grep " $device$" | sed -e "s/\(.*inet \)\([^ /]*\)\(.*\)/\2/")
+    ;;
+  esac
 
   # Determine external IP 
   if grep -sqi ^ec2 /sys/devices/virtual/dmi/id/product_uuid; then
@@ -578,6 +592,21 @@ check_host() {
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
     get_IP "$1"
     if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
+  fi
+}
+
+check_ip() {
+  local ip=$1
+
+  ip=${ip//[1-9]/1}
+  ip=${ip//1[01][01]/3}
+  ip=${ip//1[01]/2}
+  ip=${ip//0/1}
+  ip=${ip//[123]/0}
+  if [ "${ip}" != "0.0.0.0" ]; then
+    err "IP address $1 doesn't follow x.x.x.x syntax."
+  elif (( ( ${1//./ > 255 ) || ( } > 255 ) )) ; then
+    err "IP address $1 is out of range (0-255 for each component)."
   fi
 }
 
