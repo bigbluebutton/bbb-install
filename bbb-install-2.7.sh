@@ -56,6 +56,8 @@ OPTIONS (install BigBlueButton):
   -g                     Install Greenlight version 3
   -k                     Install Keycloak version 20
 
+  -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
+
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
@@ -85,12 +87,23 @@ OPTIONS (install Greenlight only):
   -g                     Install Greenlight version 3 (required)
   -k                     Install Keycloak version 20 (optional)
 
+OPTIONS (install BigBlueButton LTI framework only):
+
+  -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret> (required)
+
 EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
     -v focal-270 -s bbb.example.com -e info@example.com
     -v focal-270 -s bbb.example.com -e info@example.com -g
+Sample options for setup a BigBlueButton 2.7 server with Greenlight 3 and optionally Keylcoak
+
+    -v focal-270 -s bbb.example.com -e info@example.com -g [-k]
+
+Sample options for setup a BigBlueButton 2.7 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET 
+
+    -v focal-270 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -105,13 +118,14 @@ main() {
   LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
   SOURCES_FETCHED=false
   GL3_DIR=~/greenlight-v3
+  LTI_DIR=~/bbb-lti
   NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   echo "\n" > $CR_TMPFILE
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:lxgadwjik" opt "${@}"; do
 
     case $opt in
       h)
@@ -165,6 +179,20 @@ main() {
         ;;
       k)
         INSTALL_KC=true
+        ;;
+      t)
+        LTI_CREDS=$OPTARG
+
+        if [ "$LTI_CREDS" == "MY_KEY:MY_SECRET" ]; then 
+          err "You must use a valid complex credentials for your LTI setup (not the ones in the example)."
+        fi
+
+        if [[ ! $LTI_CREDS =~ .+:.+ ]]; then
+          err "You must respect the format <key>:<secret> when specifying your LTI credentials."
+        fi
+
+        IFS=: LTI_CREDS=($LTI_CREDS) IFS=' ' # Making LTI_CREDS an array, first element is the LTI TC key and the second is the LTI TC secret.
+
         ;;
       a)
         err "Error: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
@@ -321,10 +349,6 @@ main() {
     install_ssl
   fi
 
-  if [ -n "$GREENLIGHT" ]; then
-    install_greenlight_v3
-  fi
-
   if [ -n "$COTURN" ]; then
     configure_coturn
 
@@ -367,6 +391,15 @@ main() {
 
   if ! systemctl show-environment | grep LANG= | grep -q UTF-8; then
     sudo systemctl set-environment LANG=C.UTF-8
+  fi
+
+  # BBB ecosystem apps:
+  if [ -n "$LTI_CREDS" ]; then
+    install_lti
+  fi
+
+  if [ -n "$GREENLIGHT" ]; then
+    install_greenlight_v3
   fi
 
   bbb-conf --check
@@ -789,21 +822,11 @@ HERE
 install_greenlight_v3(){
   # This function depends on the following files existing on their expected location so an eager check is done asserting that.
   if [[ -z $SERVLET_DIR  || ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties || ! -f $CR_TMPFILE || ! -f $BBB_WEB_ETC_CONFIG ]]; then
-    err "greenlight-v3 failed to install due to unmet requirements, have you followed the recommended steps to install Bigbluebutton?"
+    err "greenlight-v3 failed to install/update due to unmet requirements, have you followed the recommended steps to install Bigbluebutton?"
   fi
 
   check_root
   install_docker
-
-  # Purge older docker compose if exists.
-  if dpkg -l | grep -q docker-compose; then
-    apt-get purge -y docker-compose
-  fi
-
-  if [ ! -x /usr/local/bin/docker-compose ]; then
-    curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-  fi
 
   # Preparing and checking the enviroment.
   say "preparing and checking the enviroment to install/update greelight-v3..."
@@ -817,12 +840,14 @@ install_greenlight_v3(){
   say "pulling latest $GL_IMG_REPO image..."
   docker pull $GL_IMG_REPO
 
-  if [ ! -f $GL3_DIR/.env ]; then
-    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat sample.env' > $GL3_DIR/.env && say ".env file was created"
-  fi
+  if [ ! -s $GL3_DIR/docker-compose.yml ]; then
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml
 
-  if [ ! -f $GL3_DIR/docker-compose.yml ]; then
-    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.yml' > $GL3_DIR/docker-compose.yml && say "docker compose file was created"
+    if [ ! -s $GL3_DIR/docker-compose.yml ]; then
+      err "failed to create docker compose file - is docker running?"
+    fi
+
+    say "greenlight-v3 docker compose file was created"
   fi
 
   # Configuring Greenlight v3.
@@ -831,12 +856,39 @@ install_greenlight_v3(){
   local ROOT_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
   local BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
   local BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
-  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rake secret)
+
+  # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
+  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $GL3_DIR/docker-compose.yml # Do not overwrite the value if not empty.
+
+  
   local PGUSER=postgres # Postgres db user to be used by greenlight-v3.
   local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
-  local PGDBNAME=greenlight-v3-production
-  local PGPASSWORD=$(openssl rand -hex 24) # Postgres user password.
   local RSTXADDR=redis:6379
+  local PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $GL3_DIR/docker-compose.yml) # Extract generated Postgres password.
+
+  if [ -z "$PGPASSWORD" ]; then
+    err "failed to retrieve greenlight-v3 DB password - retry to resolve."
+  fi
+
+  local DATABASE_URL_ROOT="postgres://$PGUSER:$PGPASSWORD@$PGTXADDR"
+  local REDIS_URL_ROOT="redis://$RSTXADDR"
+
+  local PGDBNAME=greenlight-v3-production
+  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rake secret)
+
+  if [ -z "$SECRET_KEY_BASE" ]; then
+    err "failed to generate greenlight-v3 secret key base - is docker running?"
+  fi
+
+  if [ ! -s $GL3_DIR/.env ]; then
+    docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat sample.env' > $GL3_DIR/.env
+
+    if [ ! -s $GL3_DIR/.env ]; then
+      err "failed to create greenlight-v3 .env file - is docker running?"
+    fi
+ 
+    say "greenlight-v3 .env file was created"
+  fi
 
   # A note for future maintainers:
   #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
@@ -846,22 +898,21 @@ install_greenlight_v3(){
   # Configuring Greenlight v3 .env file (if already configured this will only update the BBB endpoint and secret).
   sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" $GL3_DIR/.env
   sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $GL3_DIR/.env
-  sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $GL3_DIR/.env
-  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=postgres://$PGUSER:$PGPASSWORD@$PGTXADDR/$PGDBNAME|" $GL3_DIR/.env
-  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=redis://$RSTXADDR/|" $GL3_DIR/.env
-  # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
-  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
+  sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $GL3_DIR/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $GL3_DIR/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $GL3_DIR/.env # Do not overwrite the value if not empty.
 
   # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your Bigbluebutton frontend (bbb-fe).
+  cp -v $NGINX_FILES_DEST/greenlight-v3.nginx $NGINX_FILES_DEST/greenlight-v3.nginx.old && say "old greenlight-v3 nginx config can be retrieved at $NGINX_FILES_DEST/greenlight-v3.nginx.old" #Backup
   docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > $NGINX_FILES_DEST/greenlight-v3.nginx && say "added greenlight-v3 nginx file"
 
   # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from COMMIT (583f868).
   # Move any nginx files from greenlight-v2 to the expected location.
-  if [ -f /etc/bigbluebutton/nginx/greenlight.nginx ]; then
+  if [ -s /etc/bigbluebutton/nginx/greenlight.nginx ]; then
     mv /etc/bigbluebutton/nginx/greenlight.nginx $NGINX_FILES_DEST/greenlight.nginx && say "found /etc/bigbluebutton/nginx/greenlight.nginx and moved to expected location."
   fi
 
-  if [ -f /etc/bigbluebutton/nginx/greenlight-redirect.nginx ]; then
+  if [ -s /etc/bigbluebutton/nginx/greenlight-redirect.nginx ]; then
     mv /etc/bigbluebutton/nginx/greenlight-redirect.nginx $NGINX_FILES_DEST/greenlight-redirect.nginx && say "found /etc/bigbluebutton/nginx/greenlight-redirect.nginx and moved to expected location."
   fi
 
@@ -873,7 +924,7 @@ install_greenlight_v3(){
     # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
     sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/greenlight-v3.nginx
 
-    if [ -f $NGINX_FILES_DEST/greenlight.nginx ]; then
+    if [ -s $NGINX_FILES_DEST/greenlight.nginx ]; then
       # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from PR (#579).
       sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/greenlight.nginx
     fi
@@ -889,38 +940,50 @@ install_greenlight_v3(){
   disable_nginx_site default-fe.nginx && say "found default bbb-fe 'Welcome' and disabled it!"
 
   # Adding Keycloak
+  if [ -n "$INSTALL_KC" ]; then
+      # When attepmting to install/update Keycloak let us attempt to create the database to resolve any issues caused by postgres false negatives.
+      docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
+      wait_postgres_start
+      docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;'
+  fi
+
   if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
+    # The following logic is expected to run only once when adding Keycloak.
     # Keycloak isn't installed
     if [ -n "$INSTALL_KC" ]; then
       # Add Keycloak
       say "Adding Keycloak..."
-      docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
-      sleep 5
-      docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;' || err "unable to create Keycloak DB"
 
-      say "created Keycloak DB"
       docker-compose -f $GL3_DIR/docker-compose.yml down
-      cp -v $GL3_DIR/docker-compose.yml $GL3_DIR/docker-compose.base.yml # Persist working base compose file for admins.
-      docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.kc.yml' >> $GL3_DIR/docker-compose.yml && say "added Keycloak to compose file"
+      cp -v $GL3_DIR/docker-compose.yml $GL3_DIR/docker-compose.base.yml # Persist working base compose file for admins as a Backup.
+
+      docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.kc.yml' >> $GL3_DIR/docker-compose.yml
+
+      if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
+        err "failed to add Keycloak service to greenlight-v3 compose file - is docker running?"
+      fi
+      say "added Keycloak to compose file"
+
       KCPASSWORD=$(openssl rand -hex 12) # Keycloak admin password.
-      PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $GL3_DIR/docker-compose.yml)
-      sed -i "s|^\([ \t-]*KEYCLOAK_ADMIN_PASSWORD\)\(=[ \t]*\)$|\1=$KCPASSWORD|g" $GL3_DIR/docker-compose.yml
-      sed -i "s|^\([ \t-]*KC_DB_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml
+      sed -i "s|^\([ \t-]*KEYCLOAK_ADMIN_PASSWORD\)\(=[ \t]*\)$|\1=$KCPASSWORD|g" $GL3_DIR/docker-compose.yml # Do not overwrite the value if not empty.
+      sed -i "s|^\([ \t-]*KC_DB_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml # Do not overwrite the value if not empty.
 
       # Updating Keycloak nginx file.
+      cp -v $NGINX_FILES_DEST/keycloak.nginx $NGINX_FILES_DEST/keycloak.nginx.old && say "old Keycloak nginx config can be retrieved at $NGINX_FILES_DEST/keycloak.nginx.old"
       docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat keycloak.nginx' > $NGINX_FILES_DEST/keycloak.nginx && say "added Keycloak nginx file"
     fi
 
   else
     # Update Keycloak nginx file only.
+    cp -v $NGINX_FILES_DEST/keycloak.nginx $NGINX_FILES_DEST/keycloak.nginx.old && say "old Keycloak nginx config can be retrieved at $NGINX_FILES_DEST/keycloak.nginx.old"
     docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat keycloak.nginx' > $NGINX_FILES_DEST/keycloak.nginx && say "added Keycloak nginx file"
   fi
 
-  if [ -z "$COTURN" ] && [ -f $NGINX_FILES_DEST/keycloak.nginx ]; then
+  if [ -z "$COTURN" ] && [ -s $NGINX_FILES_DEST/keycloak.nginx ]; then
     sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/keycloak.nginx
   fi
 
-  nginx -qt || err 'greenlight-v3 failed to install due to nginx tests failing to pass - if using the official image then please contact the maintainers.'
+  nginx -qt || err 'greenlight-v3 failed to install/update due to nginx tests failing to pass - if using the official image then please contact the maintainers.'
   nginx -qs reload && say 'greenlight-v3 was successfully configured'
 
   # Eager pulling images.
@@ -937,12 +1000,12 @@ install_greenlight_v3(){
   say "starting greenlight-v3..."
   docker-compose -f $GL3_DIR/docker-compose.yml up -d
   sleep 5
-  say "greenlight-v3 is now installed and accessible on: https://$HOST/"
+  say "greenlight-v3 is installed, up to date and accessible on: https://$HOST/"
   say "To create Greenlight administrator account, see: https://docs.bigbluebutton.org/greenlight_v3/gl3-install.html#creating-an-admin-account-1"
 
 
   if grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
-    say "Keycloak is now installed and accessible for configuration on: https://$HOST/keycloak/"
+    say "Keycloak is installed, up to date and accessible for configuration on: https://$HOST/keycloak/"
     if [ -n "$KCPASSWORD" ];then
       say "Use the following credentials when accessing the admin console:"
       say "   admin"
@@ -950,6 +1013,292 @@ install_greenlight_v3(){
     fi
 
     say "To complete the configuration of Keycloak, see: https://docs.bigbluebutton.org/greenlight_v3/gl3-external-authentication.html#configuring-keycloak"
+  fi
+
+  return 0;
+}
+
+# This function will install and update to the latest official version of BigBlueButton LTI framework.
+# BigBlueButton LTI tools framewrok provides a simple interface to integrate Bigbluebutton features into any LTI certified LMS.
+install_lti(){
+  # This function depends on the following files existing on their expected location so an eager check is done asserting that.
+  if [[ -z $SERVLET_DIR  || ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties || ! -f $CR_TMPFILE || ! -f $BBB_WEB_ETC_CONFIG ]]; then
+    err "BBB LTI framework failed to install/update due to unmet requirements, have you followed the recommended steps to install Bigbluebutton?"
+  fi
+
+  check_root
+  install_docker
+
+  # Preparing and checking the enviroment.
+  say "preparing and checking the enviroment to install/update BBB LTI framework..."
+
+  if [ ! -d $LTI_DIR ]; then
+    mkdir -p $LTI_DIR && say "created $LTI_DIR"
+  fi
+
+  BROKER_IMG_REPO=bigbluebutton/bbb-lti-broker
+
+  # Installing/Updating the LTI broker.
+  say "pulling latest $BROKER_IMG_REPO image..."
+  docker pull $BROKER_IMG_REPO
+
+  if [ ! -s $LTI_DIR/docker-compose.yml ]; then
+    docker run --rm --entrypoint sh $BROKER_IMG_REPO -c 'cat docker-compose.yml' > $LTI_DIR/docker-compose.yml
+
+    if [ ! -s $LTI_DIR/docker-compose.yml ]; then
+      err "failed to create docker compose file - is docker running?"
+    fi
+
+    say "LTI framework docker compose file was created"
+  fi
+
+  # Configuring BBB LTI.
+  say "prepping the configuration of BBB LTI framework..."
+
+  local ROOT_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
+  BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
+  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+
+  # Configuring BBB LTI docker-compose.yml (if configured no side effect will happen).
+  sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $LTI_DIR/docker-compose.yml # Do not overwrite the value if not empty.
+
+  say "installing/updating BBB LTI framework Broker and applications..."
+  local PGUSER=postgres # Postgres db user to be used by bbb-lti.
+  local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
+  local RSTXADDR=redis:6379 # Redis DB transport address (pair of (@ip:@port)).
+  local PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $LTI_DIR/docker-compose.yml) # Extract generated Postgres password.
+
+  if [ -z "$PGPASSWORD" ]; then
+    err "failed to retrieve the LTI framework DB password - retry to resolve."
+  fi
+
+  DATABASE_URL_ROOT="postgres://$PGUSER:$PGPASSWORD@$PGTXADDR" # Must be global - expected by install_lti_tool.
+  REDIS_URL_ROOT="redis://$RSTXADDR" # Must be global - expected by install_lti_tool.
+  BROKER_RELATIVE_URL_ROOT=lti # Must be global - expected by install_lti_tools, will be dynamic in the future.
+  APPS_RELATIVE_URL_ROOT=apps # Must be global - expected by install_lti_tools, will be dynamic in the future.
+
+  install_lti_tools || err "BBB LTI framework failed to install/update tools!"
+
+  # Updating BBB LTI framework images.
+  say "pulling latest BBB LTI framework services images..."
+  docker-compose -f $LTI_DIR/docker-compose.yml pull
+
+  if check_container_running broker; then
+    # Restarting BBB LTI framework services after updates.
+    say "BBB LTI framework is updating..."
+    say "shutting down BBB LTI framework services..."
+    docker-compose -f $LTI_DIR/docker-compose.yml down
+  fi
+
+  say "starting BBB LTI framework services..."
+  docker-compose -f $LTI_DIR/docker-compose.yml up -d
+
+  wait_lti_broker_start
+
+  local LTI_KEY=${LTI_CREDS[0]}
+  local LTI_SECRET=${LTI_CREDS[1]}
+
+  say "Setting/updating LTI credentials for LTI KEY: $LTI_KEY..."
+
+  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update[$LTI_KEY,$LTI_SECRET] \
+    2> /dev/null 1>&2; then
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add[$LTI_KEY,$LTI_SECRET] \
+      2> /dev/null 1>&2 || err "failed to set LTI credentials $LTI_KEY:$LTI_SECRET."
+
+      say "New LTI credentials for LTI KEY: $LTI_KEY were added!"
+  else
+    say "LTI credentials for LTI KEY: $LTI_KEY were updated!"
+  fi
+
+  say "BBB LTI framework is installed, up to date and accessible on: https://$HOST/$BROKER_RELATIVE_URL_ROOT"
+  say "You can refer to your LMS documentation on how to add a LTI application."
+  say " The LTI launch links for all of the installed BBB LTI framework applications can be found in https://$HOST/$BROKER_RELATIVE_URL_ROOT."
+
+  return 0;
+}
+
+install_lti_tools() {
+  # BBB LTI FRAMEWORK COMPONENTS
+  if [[ -z $BROKER_IMG_REPO || -z $DATABASE_URL_ROOT || -z $REDIS_URL_ROOT || -z $BROKER_RELATIVE_URL_ROOT || -z $APPS_RELATIVE_URL_ROOT ]]; then
+    err "BBB LTI tools installation/update failed due to unmet requirements!"
+  fi
+
+  # BBB LTI BROKER setup ↓
+  say "installing/updating BBB LTI framework broker..."
+  LTI_APP_DIR=$LTI_DIR/broker APP_IMG_REPO=$BROKER_IMG_REPO LOG_NAME='LTI Broker' RELATIVE_URL_ROOT=$BROKER_RELATIVE_URL_ROOT \
+  NGINX_NAME=bbb-lti-broker PGDBNAME=bbb_lti_broker install_lti_tool || return 1
+
+  say "BBB LTI Broker is installed, configured and up to date!"
+  # BBB LTI TOOLS setup ↓
+  say "installing/updating BBB LTI framework apps..."
+  LTI_APP_DIR=$LTI_DIR/rooms APP_IMG_REPO=bigbluebutton/bbb-app-rooms LOG_NAME='LTI Rooms' RELATIVE_URL_ROOT=$APPS_RELATIVE_URL_ROOT \
+  NGINX_NAME=bbb-app-rooms PGDBNAME=bbb_app_rooms install_lti_tool || return 1
+
+  say "All BBB LTI apps are installed, configured and up to date!"
+  # BBB LTI TOOLS registration ↓
+  register_lti_tools || return 1
+
+  say "All BBB LTI apps are registered to the LTI framework!"
+
+  return 0;
+}
+
+install_lti_tool() {
+ # Preparing and checking the enviroment.
+  if [[ -z $LTI_APP_DIR || -z $APP_IMG_REPO || -z $LOG_NAME || -z $RELATIVE_URL_ROOT || -z $NGINX_NAME || -z $PGDBNAME ]]; then
+    err "$LOG_NAME installation/update failed due to unmet requirements!"
+  fi
+
+  say "preparing and checking the enviroment to install/update $LOG_NAME..."
+
+  if [ ! -d $LTI_APP_DIR ]; then
+    mkdir -p $LTI_APP_DIR && say "created $LTI_APP_DIR"
+  fi
+
+  # Installing/Updating the LTI broker.
+  say "pulling latest $APP_IMG_REPO image..."
+  docker pull $APP_IMG_REPO
+
+  # Configuring BBB LTI.
+  say "checking/updating the configuration of $LOG_NAME..."
+
+  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $APP_IMG_REPO exec rake secret)
+
+  if [ -z "$SECRET_KEY_BASE" ]; then
+    err "failed to generate $LOG_NAME secret key base - is docker running?"
+  fi
+
+  if [ ! -s $LTI_APP_DIR/.env ]; then
+    docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat dotenv' > $LTI_APP_DIR/.env
+
+    if [ ! -s $LTI_APP_DIR/.env ]; then
+      err "failed to create $LOG_NAME .env file - is docker running?"
+    fi
+
+    say "$LOG_NAME .env file was created"
+  fi
+
+  # A note for future maintainers:
+  #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
+  #   Replaying these steps are a safe and an expected operation, this gurantees the seemless simple installation and upgrade of BBB LTI framework.
+  #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
+
+  # Configuring BBB LTI .env file (if already configured this will only update some expected or safe to change variables).
+  sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $LTI_APP_DIR/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*URL_HOST=.*$|URL_HOST=$HOST|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*RELATIVE_URL_ROOT=.*$|RELATIVE_URL_ROOT=$RELATIVE_URL_ROOT|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*DATABASE_URL=.*myuser:mypass@localhost.*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $LTI_APP_DIR/.env # Do not overwrite the value if not a default.
+  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $LTI_APP_DIR/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*REDIS_URL=.*myuser:mypass@localhost.*$|REDIS_URL=$REDIS_URL_ROOT/|" $LTI_APP_DIR/.env # Do not overwrite the value if not a default.
+  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $LTI_APP_DIR/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SITE=.*|OMNIAUTH_BBBLTIBROKER_SITE=https://$HOST|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_ROOT=.*|OMNIAUTH_BBBLTIBROKER_ROOT=$BROKER_RELATIVE_URL_ROOT|" $LTI_APP_DIR/.env
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_KEY=.*|OMNIAUTH_BBBLTIBROKER_KEY=$(openssl rand -hex 24)|" $LTI_APP_DIR/.env # Credentials are rotated on update.
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SECRET=.*|OMNIAUTH_BBBLTIBROKER_SECRET=$(openssl rand -hex 24)|" $LTI_APP_DIR/.env # Credentials are rotated on update.
+
+  # Placing application nginx file.
+  say "configuring nginx for $LOG_NAME..."
+
+  cp -v $NGINX_FILES_DEST/$NGINX_NAME.nginx $NGINX_FILES_DEST/$NGINX_NAME.nginx.old && say "old $LOG_NAME nginx config can be retrieved at $NGINX_FILES_DEST/$NGINX_NAME.nginx.old" # Backup.
+  docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat config.nginx' > $NGINX_FILES_DEST/$NGINX_NAME.nginx && say "added $LOG_NAME nginx file"
+
+  if [ -z "$COTURN" ]; then
+    # When NGINX is the frontend reverse proxy, 'X-Forwarded-Proto' proxy header will dynamically match the $scheme of the received client request.
+    # In case a builtin turn server is installed, then HAPROXY is introduced and it becomes the frontend reverse proxy.
+    # NGINX will then act as a backend reverse proxy residing behind of it.
+    # HTTPS traffic from the client then is terminated at HAPROXY and plain HTTP traffic is proxied to NGINX.
+    # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/$NGINX_NAME.nginx
+  fi
+
+  nginx -qt || return 1
+  nginx -qs reload && say "$LOG_NAME was successfully configured"
+
+  return 0;
+}
+
+
+register_lti_tools() {
+  # Registering/Updating LTI apps.
+  wait_lti_broker_start
+
+  # BBB LTI TOOLS registration ↓
+  say "Registering All BBB LTI framework apps..."
+  LTI_APP_DIR=$LTI_DIR/rooms LOG_NAME='LTI Rooms' APP_NAME=rooms register_lti_tool || return 1
+
+  return 0;
+}
+
+wait_lti_broker_start() {
+  say "Waiting for the LTI broker to start..."
+  docker-compose -f $LTI_DIR/docker-compose.yml up -d broker || err "failed to register LTI framework apps due to LTI broker failling to start - retry to resolve"
+
+  local tries=0
+  while ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:version 2> /dev/null 1>&2; do
+    echo -n .
+    sleep 3
+    if (( ++tries == 3 )); then
+      err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve" 
+    fi
+  done
+
+  sleep 3 # Optimistically wait for LTI Broker to become ready.
+
+  say "LTI broker is ready!"
+
+  return 0;
+}
+
+wait_postgres_start() {
+  say "Waiting for the Postgres DB to start..."
+  docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres || err "failed to start Postgres service - retry to resolve"
+
+  local tries=0
+  while ! docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres pg_isready 2> /dev/null 1>&2; do
+    echo -n .
+    sleep 3
+    if (( ++tries == 3 )); then
+      err "failed to start Postgres due to reaching waiting timeout - retry to resolve" 
+    fi
+  done
+
+  say "Postgres is ready!"
+
+  return 0;
+}
+
+register_lti_tool() {
+ # Preparing and checking the enviroment.
+  if [[ -z $LTI_APP_DIR || -z $APP_NAME || -z $LOG_NAME ]]; then
+    err "$LOG_NAME registration failed due to unmet requirements!"
+  fi
+
+  say "Registering $LOG_NAME..."
+
+  local OAUTH_KEY=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_KEY=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract the LTI app OAUTH key.
+  local OAUTH_SECRET=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_SECRET=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract LTI app OAUTH secret.
+  local RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract LTI app realtive URL root path.
+
+  if [ -z "$OAUTH_KEY" ] || [ -z "$OAUTH_SECRET" ] ; then
+    err "failed to retrieve the $LOG_NAME OAUTH credentials - retry to resolve."
+  fi
+
+  local CALLBACK_URI_SUFFIX=auth/bbbltibroker/callback
+  local CALLBACK_URI=https://$HOST/$RELATIVE_URL_ROOT/$APP_NAME/$CALLBACK_URI_SUFFIX
+
+  if ! check_container_running broker; then
+    err "failed to register $LOG_NAME due to LTI broker not running - retry to resolve."
+  fi
+
+  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show[$APP_NAME] \
+    2> /dev/null 1>&2; then
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add[$APP_NAME,$CALLBACK_URI,$OAUTH_KEY,$OAUTH_SECRET] \
+      2> /dev/null 1>&2 && say "$LOG_NAME was successfully registered."
+  else
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update[$APP_NAME,$CALLBACK_URI,$OAUTH_KEY,$OAUTH_SECRET] \
+      2> /dev/null 1>&2 && say "$LOG_NAME was successfully updated."
   fi
 
   return 0;
@@ -1001,10 +1350,26 @@ install_docker() {
   fi
   if ! which docker; then err "Docker did not install"; fi
 
-  # Remove Docker Compose
+  # Purge older docker compose if exists.
   if dpkg -l | grep -q docker-compose; then
     apt-get purge -y docker-compose
   fi
+
+  if [ ! -x /usr/local/bin/docker-compose ]; then
+    curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+  fi
+
+  # Ensuring docker is running
+  if ! docker version > /dev/null ; then
+    # Attempting to auto resolve by restarting docker socket and engine.
+    systemctl restart docker.socket docker.service
+    sleep 5
+
+    docker version > /dev/null || err "docker is failing to restart, something is wrong retry to resolve - exiting"
+    say "docker is running!"
+  fi
+
 }
 
 
