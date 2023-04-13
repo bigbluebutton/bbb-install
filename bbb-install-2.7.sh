@@ -120,17 +120,17 @@ HERE
 main() {
   export DEBIAN_FRONTEND=noninteractive
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
-  LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
+  LETS_ENCRYPT_OPTIONS=(--webroot --non-interactive)
   SOURCES_FETCHED=false
   GL3_DIR=~/greenlight-v3
   LTI_DIR=~/bbb-lti
   NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
-  echo "\n" > $CR_TMPFILE
+  printf '\n' > "$CR_TMPFILE"
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:t:lxgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwjik" opt "${@}"; do
 
     case $opt in
       h)
@@ -154,13 +154,12 @@ main() {
         fi
         ;;
       x)
-        LETS_ENCRYPT_OPTIONS="--manual --preferred-challenges dns"
-      ;;
+        LETS_ENCRYPT_OPTIONS=(--manual --preferred-challenges dns)
+        ;;
       c)
         COTURN=$OPTARG
         check_coturn "$COTURN"
         ;;
-
       v)
         VERSION=$OPTARG
         ;;
@@ -176,9 +175,6 @@ main() {
         fi
         ;;
 
-      l)
-        LETS_ENCRYPT_ONLY=true
-        ;;
       g)
         GREENLIGHT=true
         GL_DEFAULT_PATH=/
@@ -193,17 +189,18 @@ main() {
         INSTALL_KC=true
         ;;
       t)
-        LTI_CREDS=$OPTARG
+        LTI_CREDS_STR=$OPTARG
 
-        if [ "$LTI_CREDS" == "MY_KEY:MY_SECRET" ]; then 
+        if [ "$LTI_CREDS_STR" == "MY_KEY:MY_SECRET" ]; then
           err "You must use a valid complex credentials for your LTI setup (not the ones in the example)."
         fi
 
-        if [[ ! $LTI_CREDS =~ .+:.+ ]]; then
+        if [[ ! $LTI_CREDS_STR == *:* ]]; then
           err "You must respect the format <key>:<secret> when specifying your LTI credentials."
         fi
 
-        IFS=: LTI_CREDS=($LTI_CREDS) IFS=' ' # Making LTI_CREDS an array, first element is the LTI TC key and the second is the LTI TC secret.
+        # Making LTI_CREDS an array, first element is the LTI TC key and the second is the LTI TC secret.
+        IFS=: read -ra LTI_CREDS <<<"${LTI_CREDS_STR}"
         ;;
       a)
         err "Error: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
@@ -227,15 +224,12 @@ main() {
       i)
         SKIP_APACHE_INSTALLED_CHECK=true
         ;;
-
       :)
         err "Missing option argument for -$OPTARG"
-        exit 1
         ;;
 
       \?)
-        err "Invalid option: -$OPTARG" >&2
-        usage
+        usage_err "Invalid option: -$OPTARG" >&2
         ;;
     esac
   done
@@ -252,7 +246,7 @@ main() {
     check_apache2
   fi
 
-  # Check if we're installing coturn (need an e-mail address for Let's Encrypt) 
+  # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ -n "$COTURN" ]; then
     if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
     check_ubuntu 20.04
@@ -293,12 +287,13 @@ main() {
     #need_ppa libreoffice-ubuntu-ppa-focal.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
     need_ppa bigbluebutton-ubuntu-support-focal.list ppa:bigbluebutton/support  E95B94BC # Needed for libopusenc0
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
-      sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5AFA7A83
+      sudo apt-key adv --keyserver https://keyserver.ubuntu.com --recv-keys 5AFA7A83
     fi
 
     rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
-    if grep -q 12 /etc/apt/sources.list.d/nodesource.list ; then # Node 12 might be installed, previously used in BigBlueButton
+    if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 12 /etc/apt/sources.list.d/nodesource.list; then
+      # Node 12 might be installed, previously used in BigBlueButton
       sudo apt-get purge nodejs
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
@@ -334,7 +329,7 @@ main() {
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg nodejs $MONGODB apt-transport-https haveged
+  need_pkg nodejs "$MONGODB" apt-transport-https haveged
   need_pkg bigbluebutton
   need_pkg bbb-html5
 
@@ -342,7 +337,7 @@ main() {
     SERVLET_DIR=/usr/share/bbb-web
   fi
 
-  while [ ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; echo -n '.'; done
+  while [ ! -f "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" ]; do sleep 1; echo -n '.'; done
 
   check_lxc
   check_nat
@@ -376,7 +371,7 @@ main() {
     # of UDP packets sent from the turn server to FreeSWITCH.
     if [ -n "$INTERNAL_IP" ]; then
       need_pkg iptables-persistent
-      iptables -t nat -A OUTPUT -p udp -s $INTERNAL_IP -d $IP -j DNAT --to-destination $INTERNAL_IP
+      iptables -t nat -A OUTPUT -p udp -s "$INTERNAL_IP" -d "$IP" -j DNAT --to-destination "$INTERNAL_IP"
       netfilter-persistent save
     fi
   fi
@@ -405,7 +400,7 @@ main() {
   fi
 
   # BBB ecosystem apps:
-  if [ -n "$LTI_CREDS" ]; then
+  if [[ ${#LTI_CREDS} -eq 2 ]]; then
     install_lti
   fi
 
@@ -422,6 +417,12 @@ say() {
 
 err() {
   say "$1" >&2
+  exit 1
+}
+
+usage_err() {
+  say "$1" >&2
+  usage
   exit 1
 }
 
@@ -453,7 +454,7 @@ check_ubuntu(){
 }
 
 need_x64() {
-  UNAME=`uname -m`
+  UNAME=$(uname -m)
   if [ "$UNAME" != "x86_64" ]; then err "You must run this command on a 64-bit server."; fi
 }
 
@@ -483,23 +484,24 @@ get_IP() {
   fi
 
 
+  local external_ip
   # Determine external IP 
   if grep -sqi ^ec2 /sys/devices/virtual/dmi/id/product_uuid; then
     # EC2
-    local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
+    external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -f /var/lib/dhcp/dhclient.eth0.leases ] && grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases; then
     # Azure
-    local external_ip=$(curl -H Metadata:true "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-08-01&format=text")
+    external_ip=$(curl -H Metadata:true "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-08-01&format=text")
   elif [ -f /run/scw-metadata.cache ]; then
     # Scaleway
-    local external_ip=$(grep "PUBLIC_IP_ADDRESS" /run/scw-metadata.cache | cut -d '=' -f 2)
+    external_ip=$(grep "PUBLIC_IP_ADDRESS" /run/scw-metadata.cache | cut -d '=' -f 2)
   elif which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
-    local external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
+    external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
   elif [ -n "$1" ]; then
     # Try and determine the external IP from the given hostname
     need_pkg dnsutils
-    local external_ip=$(dig +short "$1" @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
+    external_ip=$(dig +short "$1" @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
   fi
 
   # Check if the external IP reaches the internal IP
@@ -547,8 +549,8 @@ need_pkg() {
     SOURCES_FETCHED=true
   fi
 
-  if ! dpkg -s ${@:1} >/dev/null 2>&1; then
-    LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
+  if ! dpkg -s "${@}" >/dev/null 2>&1; then
+    LC_CTYPE=C.UTF-8 apt-get install -yq "${@}"
   fi
   while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
 }
@@ -568,7 +570,7 @@ need_ppa() {
 
 check_version() {
   if ! echo "$1" | grep -Eq "focal-27"; then err "This script can only install BigBlueButton 2.7 and is meant to be run on Ubuntu 20.04 (focal) server."; fi
-  DISTRO=$(echo "$1" | sed 's/-.*//g')
+  DISTRO=${1%%-*}
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
   fi
@@ -614,8 +616,8 @@ check_apache2() {
   if dpkg -l | grep -q apache2-bin; then 
     echo "You must uninstall the Apache2 server first"
     if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
-      exit 1;
-   fi 
+      exit 1
+    fi
   fi
 }
 
@@ -864,9 +866,10 @@ install_greenlight_v3(){
   # Configuring Greenlight v3.
   say "checking the configuration of greenlight-v3..."
 
-  local ROOT_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
-  local BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
-  local BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+  local ROOT_URL BIGBLUEBUTTON_URL BIGBLUEBUTTON_SECRET
+  ROOT_URL=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
+  BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
+  BIGBLUEBUTTON_SECRET=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
 
   # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
   sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $GL3_DIR/docker-compose.yml # Do not overwrite the value if not empty.
@@ -874,7 +877,8 @@ install_greenlight_v3(){
   local PGUSER=postgres # Postgres db user to be used by greenlight-v3.
   local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
   local RSTXADDR=redis:6379 # Redis DB transport address (pair of (@ip:@port)).
-  local PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $GL3_DIR/docker-compose.yml) # Extract generated Postgres password.
+  local PGPASSWORD
+  PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $GL3_DIR/docker-compose.yml) # Extract generated Postgres password.
 
   if [ -z "$PGPASSWORD" ]; then
     err "failed to retrieve greenlight-v3 DB password - retry to resolve."
@@ -884,7 +888,8 @@ install_greenlight_v3(){
   local REDIS_URL_ROOT="redis://$RSTXADDR"
 
   local PGDBNAME=greenlight-v3-production
-  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rake secret)
+  local SECRET_KEY_BASE
+  SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rake secret)
 
   if [ -z "$SECRET_KEY_BASE" ]; then
     err "failed to generate greenlight-v3 secret key base - is docker running?"
@@ -934,10 +939,12 @@ install_greenlight_v3(){
     # NGINX will then act as a backend reverse proxy residing behind of it.
     # HTTPS traffic from the client then is terminated at HAPROXY and plain HTTP traffic is proxied to NGINX.
     # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
+    # shellcheck disable=SC2016
     sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/greenlight-v3.nginx
 
     if [ -s $NGINX_FILES_DEST/greenlight.nginx ]; then
       # For backward compatibility with deployments running greenlight-v2 and haven't picked the patch from PR (#579).
+      # shellcheck disable=SC2016
       sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/greenlight.nginx
     fi
   fi
@@ -992,6 +999,7 @@ install_greenlight_v3(){
   fi
 
   if [ -z "$COTURN" ] && [ -s $NGINX_FILES_DEST/keycloak.nginx ]; then
+    # shellcheck disable=SC2016
     sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/keycloak.nginx
   fi
 
@@ -1007,7 +1015,8 @@ HERE
     sed -i "s|^[# \t]*RELATIVE_URL_ROOT=.*|RELATIVE_URL_ROOT=$GL_PATH|" $GL3_DIR/.env
   fi
 
-  local GL_RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" $GL3_DIR/.env) # Extract relative URL root path.
+  local GL_RELATIVE_URL_ROOT
+  GL_RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" $GL3_DIR/.env) # Extract relative URL root path.
   say "Deploying Greenlight on the '${GL_RELATIVE_URL_ROOT:-$GL_DEFAULT_PATH}' path..."
 
   if [ -n "$GL_RELATIVE_URL_ROOT" ] && [ "$GL_RELATIVE_URL_ROOT" != "$GL_DEFAULT_PATH" ]; then
@@ -1087,9 +1096,10 @@ install_lti(){
   # Configuring BBB LTI.
   say "prepping the configuration of BBB LTI framework..."
 
-  local ROOT_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
+  local ROOT_URL
+  ROOT_URL=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
   BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+  BIGBLUEBUTTON_SECRET=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
 
   # Configuring BBB LTI docker-compose.yml (if configured no side effect will happen).
   sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $LTI_DIR/docker-compose.yml # Do not overwrite the value if not empty.
@@ -1098,7 +1108,8 @@ install_lti(){
   local PGUSER=postgres # Postgres db user to be used by bbb-lti.
   local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
   local RSTXADDR=redis:6379 # Redis DB transport address (pair of (@ip:@port)).
-  local PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $LTI_DIR/docker-compose.yml) # Extract generated Postgres password.
+  local PGPASSWORD
+  PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $LTI_DIR/docker-compose.yml) # Extract generated Postgres password.
 
   if [ -z "$PGPASSWORD" ]; then
     err "failed to retrieve the LTI framework DB password - retry to resolve."
@@ -1132,9 +1143,9 @@ install_lti(){
 
   say "Setting/updating LTI credentials for LTI KEY: $LTI_KEY..."
 
-  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update[$LTI_KEY,$LTI_SECRET] \
+  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update["$LTI_KEY","$LTI_SECRET"] \
     2> /dev/null 1>&2; then
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add[$LTI_KEY,$LTI_SECRET] \
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add["$LTI_KEY","$LTI_SECRET"] \
       2> /dev/null 1>&2 || err "failed to set LTI credentials $LTI_KEY:$LTI_SECRET."
 
       say "New LTI credentials for LTI KEY: $LTI_KEY were added!"
@@ -1183,27 +1194,28 @@ install_lti_tool() {
 
   say "preparing and checking the enviroment to install/update $LOG_NAME..."
 
-  if [ ! -d $LTI_APP_DIR ]; then
-    mkdir -p $LTI_APP_DIR && say "created $LTI_APP_DIR"
+  if [ ! -d "$LTI_APP_DIR" ]; then
+    mkdir -p "$LTI_APP_DIR" && say "created $LTI_APP_DIR"
   fi
 
   # Installing/Updating the LTI broker.
   say "pulling latest $APP_IMG_REPO image..."
-  docker pull $APP_IMG_REPO
+  docker pull "$APP_IMG_REPO"
 
   # Configuring BBB LTI.
   say "checking/updating the configuration of $LOG_NAME..."
 
-  local SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $APP_IMG_REPO exec rake secret)
+  local SECRET_KEY_BASE
+  SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle "$APP_IMG_REPO" exec rake secret)
 
   if [ -z "$SECRET_KEY_BASE" ]; then
     err "failed to generate $LOG_NAME secret key base - is docker running?"
   fi
 
-  if [ ! -s $LTI_APP_DIR/.env ]; then
-    docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat dotenv' > $LTI_APP_DIR/.env
+  if [ ! -s "$LTI_APP_DIR"/.env ]; then
+    docker run --rm --entrypoint sh "$APP_IMG_REPO" -c 'cat dotenv' > "$LTI_APP_DIR"/.env
 
-    if [ ! -s $LTI_APP_DIR/.env ]; then
+    if [ ! -s "$LTI_APP_DIR"/.env ]; then
       err "failed to create $LOG_NAME .env file - is docker running?"
     fi
 
@@ -1216,27 +1228,27 @@ install_lti_tool() {
   #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
 
   # Configuring BBB LTI .env file (if already configured this will only update some expected or safe to change variables).
-  cp -v $LTI_APP_DIR/.env $LTI_APP_DIR/.env.old && say "old $LOG_NAME .env file can be retrieved at $LTI_APP_DIR/.env.old" #Backup
+  cp -v "$LTI_APP_DIR"/.env "$LTI_APP_DIR"/.env.old && say "old $LOG_NAME .env file can be retrieved at $LTI_APP_DIR/.env.old" #Backup
 
-  sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $LTI_APP_DIR/.env # Do not overwrite the value if not empty.
-  sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" $LTI_APP_DIR/.env
-  sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $LTI_APP_DIR/.env
-  sed -i "s|^[# \t]*URL_HOST=.*$|URL_HOST=$HOST|" $LTI_APP_DIR/.env
-  sed -i "s|^[# \t]*RELATIVE_URL_ROOT=.*$|RELATIVE_URL_ROOT=$RELATIVE_URL_ROOT|" $LTI_APP_DIR/.env
-  sed -i "s|^[# \t]*DATABASE_URL=.*myuser:mypass@localhost.*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $LTI_APP_DIR/.env # Do not overwrite the value if not a default.
-  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $LTI_APP_DIR/.env # Do not overwrite the value if not empty.
-  sed -i "s|^[# \t]*REDIS_URL=.*myuser:mypass@localhost.*$|REDIS_URL=$REDIS_URL_ROOT/|" $LTI_APP_DIR/.env # Do not overwrite the value if not a default.
-  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $LTI_APP_DIR/.env # Do not overwrite the value if not empty.
-  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SITE=.*|OMNIAUTH_BBBLTIBROKER_SITE=https://$HOST|" $LTI_APP_DIR/.env
-  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_ROOT=.*|OMNIAUTH_BBBLTIBROKER_ROOT=$BROKER_RELATIVE_URL_ROOT|" $LTI_APP_DIR/.env
-  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_KEY=.*|OMNIAUTH_BBBLTIBROKER_KEY=$(openssl rand -hex 24)|" $LTI_APP_DIR/.env # Credentials are rotated on update.
-  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SECRET=.*|OMNIAUTH_BBBLTIBROKER_SECRET=$(openssl rand -hex 24)|" $LTI_APP_DIR/.env # Credentials are rotated on update.
+  sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" "$LTI_APP_DIR"/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" "$LTI_APP_DIR"/.env
+  sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  "$LTI_APP_DIR"/.env
+  sed -i "s|^[# \t]*URL_HOST=.*$|URL_HOST=$HOST|" "$LTI_APP_DIR"/.env
+  sed -i "s|^[# \t]*RELATIVE_URL_ROOT=.*$|RELATIVE_URL_ROOT=$RELATIVE_URL_ROOT|" "$LTI_APP_DIR"/.env
+  sed -i "s|^[# \t]*DATABASE_URL=.*myuser:mypass@localhost.*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" "$LTI_APP_DIR"/.env # Do not overwrite the value if not a default.
+  sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" "$LTI_APP_DIR"/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*REDIS_URL=.*myuser:mypass@localhost.*$|REDIS_URL=$REDIS_URL_ROOT/|" "$LTI_APP_DIR"/.env # Do not overwrite the value if not a default.
+  sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" "$LTI_APP_DIR"/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SITE=.*|OMNIAUTH_BBBLTIBROKER_SITE=https://$HOST|" "$LTI_APP_DIR"/.env
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_ROOT=.*|OMNIAUTH_BBBLTIBROKER_ROOT=$BROKER_RELATIVE_URL_ROOT|" "$LTI_APP_DIR"/.env
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_KEY=.*|OMNIAUTH_BBBLTIBROKER_KEY=$(openssl rand -hex 24)|" "$LTI_APP_DIR"/.env # Credentials are rotated on update.
+  sed -i "s|^[# \t]*OMNIAUTH_BBBLTIBROKER_SECRET=.*|OMNIAUTH_BBBLTIBROKER_SECRET=$(openssl rand -hex 24)|" "$LTI_APP_DIR"/.env # Credentials are rotated on update.
 
   # Placing application nginx file.
   say "configuring nginx for $LOG_NAME..."
 
-  cp -v $NGINX_FILES_DEST/$NGINX_NAME.nginx $NGINX_FILES_DEST/$NGINX_NAME.nginx.old && say "old $LOG_NAME nginx config can be retrieved at $NGINX_FILES_DEST/$NGINX_NAME.nginx.old" # Backup.
-  docker run --rm --entrypoint sh $APP_IMG_REPO -c 'cat config.nginx' > $NGINX_FILES_DEST/$NGINX_NAME.nginx && say "added $LOG_NAME nginx file"
+  cp -v $NGINX_FILES_DEST/"$NGINX_NAME.nginx" $NGINX_FILES_DEST/"$NGINX_NAME.nginx.old" && say "old $LOG_NAME nginx config can be retrieved at $NGINX_FILES_DEST/$NGINX_NAME.nginx.old" # Backup.
+  docker run --rm --entrypoint sh "$APP_IMG_REPO" -c 'cat config.nginx' > $NGINX_FILES_DEST/"$NGINX_NAME.nginx" && say "added $LOG_NAME nginx file"
 
   if [ -z "$COTURN" ]; then
     # When NGINX is the frontend reverse proxy, 'X-Forwarded-Proto' proxy header will dynamically match the $scheme of the received client request.
@@ -1244,7 +1256,8 @@ install_lti_tool() {
     # NGINX will then act as a backend reverse proxy residing behind of it.
     # HTTPS traffic from the client then is terminated at HAPROXY and plain HTTP traffic is proxied to NGINX.
     # Therefore the 'X-Forwarded-Proto' proxy header needs to correctly indicate that HTTPS traffic was proxied in such scenario.
-    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/$NGINX_NAME.nginx
+    # shellcheck disable=SC2016
+    sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/"$NGINX_NAME.nginx"
   fi
 
   nginx -qt || return 1
@@ -1311,9 +1324,10 @@ register_lti_tool() {
 
   say "Registering $LOG_NAME..."
 
-  local OAUTH_KEY=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_KEY=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract the LTI app OAUTH key.
-  local OAUTH_SECRET=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_SECRET=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract LTI app OAUTH secret.
-  local RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" $LTI_APP_DIR/.env) # Extract LTI app realtive URL root path.
+  local OAUTH_KEY OAUTH_SECRET RELATIVE_URL_ROOT
+  OAUTH_KEY=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_KEY=\)\(.*\)$/\2/p" "$LTI_APP_DIR"/.env) # Extract the LTI app OAUTH key.
+  OAUTH_SECRET=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_SECRET=\)\(.*\)$/\2/p" "$LTI_APP_DIR"/.env) # Extract LTI app OAUTH secret.
+  RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" "$LTI_APP_DIR"/.env) # Extract LTI app realtive URL root path.
 
   if [ -z "$OAUTH_KEY" ] || [ -z "$OAUTH_SECRET" ] ; then
     err "failed to retrieve the $LOG_NAME OAUTH credentials - retry to resolve."
@@ -1326,12 +1340,12 @@ register_lti_tool() {
     err "failed to register $LOG_NAME due to LTI broker not running - retry to resolve."
   fi
 
-  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show[$APP_NAME] \
+  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show["$APP_NAME"] \
     2> /dev/null 1>&2; then
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add[$APP_NAME,$CALLBACK_URI,$OAUTH_KEY,$OAUTH_SECRET] \
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully registered."
   else
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update[$APP_NAME,$CALLBACK_URI,$OAUTH_KEY,$OAUTH_SECRET] \
+    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully updated."
   fi
 
@@ -1351,12 +1365,12 @@ check_container_running() {
 disable_nginx_site() {
   local site_path="$1"
 
-  if [ -z $site_path ]; then
+  if [ -z "$site_path" ]; then
     return 1;
   fi
 
-  if [ -f $NGINX_FILES_DEST/$site_path ]; then
-    mv $NGINX_FILES_DEST/$site_path $NGINX_FILES_DEST/$site_path.disabled && return 0;
+  if [ -f $NGINX_FILES_DEST/"$site_path" ]; then
+    mv $NGINX_FILES_DEST/"$site_path" $NGINX_FILES_DEST/"$site_path.disabled" && return 0;
   fi
 
   return 1;
@@ -1447,7 +1461,7 @@ HERE
 
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
       if ! certbot --email "$EMAIL" --agree-tos --rsa-key-size 4096 -w /var/www/bigbluebutton-default/assets/ \
-           -d "$HOST" --deploy-hook "systemctl reload nginx" $LETS_ENCRYPT_OPTIONS certonly; then
+           -d "$HOST" --deploy-hook "systemctl reload nginx" "${LETS_ENCRYPT_OPTIONS[@]}" certonly; then
         systemctl restart nginx
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
@@ -1567,8 +1581,9 @@ fi
   # Configure rest of BigBlueButton Configuration for SSL
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
  
-  source /etc/bigbluebutton/bigbluebutton-release
-  if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+  # shellcheck disable=SC1091
+  eval "$(source /etc/bigbluebutton/bigbluebutton-release && declare -p BIGBLUEBUTTON_RELEASE)"
+  if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
     sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /usr/share/bigbluebutton/nginx/sip.nginx
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
@@ -1577,9 +1592,9 @@ fi
     xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
   fi
 
-  sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
-  if [ -f $BBB_WEB_ETC_CONFIG ]; then
-    sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $BBB_WEB_ETC_CONFIG
+  sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties"
+  if [ -f "$BBB_WEB_ETC_CONFIG" ]; then
+    sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$BBB_WEB_ETC_CONFIG"
   fi
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
@@ -1587,15 +1602,15 @@ fi
 
   # Update Greenlight (if installed) to use SSL
   for gl_dir in ~/greenlight $GL3_DIR;do
-    if [ -f $gl_dir/.env ]; then
-      if ! grep ^BIGBLUEBUTTON_ENDPOINT $gl_dir/.env | grep -q https; then
+    if [ -f "$gl_dir"/.env ]; then
+      if ! grep ^BIGBLUEBUTTON_ENDPOINT "$gl_dir"/.env | grep -q https; then
         if [[ -z $BIGBLUEBUTTON_URL ]]; then
-          BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
+          BIGBLUEBUTTON_URL=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
         fi
 
         sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
-        docker-compose -f $gl_dir/docker-compose.yml down
-        docker-compose -f $gl_dir/docker-compose.yml up -d
+        docker-compose -f "$gl_dir"/docker-compose.yml down
+        docker-compose -f "$gl_dir"/docker-compose.yml up -d
       fi
     fi
   done
@@ -1610,7 +1625,7 @@ fi
       yq w -i $TARGET kurento[0].ip "$IP"
       yq w -i $TARGET freeswitch.ip "$IP"
 
-      if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+      if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
         if [ -n "$INTERNAL_IP" ]; then
           yq w -i $TARGET freeswitch.sip_ip "$INTERNAL_IP"
         else
