@@ -113,44 +113,78 @@ You can get help by passing the `-h` option.
 
 ~~~
 Script for installing a BigBlueButton 2.6 server in under 30 minutes. It also supports upgrading a BigBlueButton server to version 2.6 (from version 2.5.0+ or an earlier 2.6.x version)
+
 This script also supports installation of a coturn (TURN) server on a separate server.
+
 USAGE:
     wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.6.sh | bash -s -- [OPTIONS]
+
 OPTIONS (install BigBlueButton):
+
   -v <version>           Install given version of BigBlueButton (e.g. 'focal-260') (required)
+
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
+
   -x                     Use Let's Encrypt certbot with manual dns challenges
+
   -g                     Install Greenlight version 3
   -k                     Install Keycloak version 20
+
   -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
+
   -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
-  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
+
+  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path>
+
   -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
+
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
+
   -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
                          Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
+
   -i                     Allows the installation of BigBlueButton to proceed even if Apache webserver is installed.
+
   -h                     Print help
+
 OPTIONS (install Let's Encrypt certificate only):
+
   -s <hostname>          Configure server with <hostname> (required)
   -e <email>             Configure email for Let's Encrypt certbot (required)
   -l                     Only install Let's Encrypt certificate (not BigBlueButton)
   -x                     Use Let's Encrypt certbot with manual dns challenges (optional)
+
 OPTIONS (install Greenlight only):
+
   -g                     Install Greenlight version 3 (required)
   -k                     Install Keycloak version 20 (optional)
+
 OPTIONS (install BigBlueButton LTI framework only):
+
   -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret> (required)
+
+VARIABLES (configure Greenlight only):
+  GL_PATH                Configure Greenlight relative URL root path (Optional)
+                          * Use this when deploying Greenlight behind a reverse proxy on a path other than the default '/' e.g. '/gl'.
+
+
 EXAMPLES:
+
 Sample options for setup a BigBlueButton 2.6 server
+
     -v focal-260 -s bbb.example.com -e info@example.com
+
 Sample options for setup a BigBlueButton 2.6 server with Greenlight 3 and optionally Keylcoak
+
     -v focal-260 -s bbb.example.com -e info@example.com -g [-k]
-Sample options for setup a BigBlueButton 2.6 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET 
+
+Sample options for setup a BigBlueButton 2.6 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET
+
     -v focal-260 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
+
 SUPPORT:
     Community: https://bigbluebutton.org/support
          Docs: https://github.com/bigbluebutton/bbb-install
