@@ -91,19 +91,24 @@ OPTIONS (install BigBlueButton LTI framework only):
 
   -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret> (required)
 
+VARIABLES (configure Greenlight only):
+  GL_PATH                Configure Greenlight relative URL root path (Optional)
+                          * Use this when deploying Greenlight behind a reverse proxy on a path other than the default '/' e.g. '/gl'.
+
+
 EXAMPLES:
 
-Sample options for setup a BigBlueButton server
+Sample options for setup a BigBlueButton 2.7 server
 
-    -v focal-270 -s bbb.example.com -e info@example.com
-    -v focal-270 -s bbb.example.com -e info@example.com -g
+    -v focal-260 -s bbb.example.com -e info@example.com
+
 Sample options for setup a BigBlueButton 2.7 server with Greenlight 3 and optionally Keylcoak
 
-    -v focal-270 -s bbb.example.com -e info@example.com -g [-k]
+    -v focal-260 -s bbb.example.com -e info@example.com -g [-k]
 
 Sample options for setup a BigBlueButton 2.7 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET 
 
-    -v focal-270 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
+    -v focal-260 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -176,6 +181,13 @@ main() {
         ;;
       g)
         GREENLIGHT=true
+        GL_DEFAULT_PATH=/
+
+        if [ -n "$GL_PATH"  ] && [ "$GL_PATH" != "$GL_DEFAULT_PATH" ]; then
+          if [[ ! $GL_PATH =~ ^/.*[^/]$ ]]; then
+            err "\$GL_PATH ENV is set to '$GL_PATH' which is invalid, Greenlight relative URL root path must start but not end with '/'."
+          fi
+        fi
         ;;
       k)
         INSTALL_KC=true
@@ -192,7 +204,6 @@ main() {
         fi
 
         IFS=: LTI_CREDS=($LTI_CREDS) IFS=' ' # Making LTI_CREDS an array, first element is the LTI TC key and the second is the LTI TC secret.
-
         ;;
       a)
         err "Error: bbb-demo (API demos, '-a' option) were deprecated in BigBlueButton 2.6. Please use Greenlight or API MATE"
@@ -860,10 +871,9 @@ install_greenlight_v3(){
   # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
   sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $GL3_DIR/docker-compose.yml # Do not overwrite the value if not empty.
 
-  
   local PGUSER=postgres # Postgres db user to be used by greenlight-v3.
   local PGTXADDR=postgres:5432 # Postgres DB transport address (pair of (@ip:@port)).
-  local RSTXADDR=redis:6379
+  local RSTXADDR=redis:6379 # Redis DB transport address (pair of (@ip:@port)).
   local PGPASSWORD=$(sed -ne "s/^\([ \t-]*POSTGRES_PASSWORD=\)\(.*\)$/\2/p" $GL3_DIR/docker-compose.yml) # Extract generated Postgres password.
 
   if [ -z "$PGPASSWORD" ]; then
@@ -896,6 +906,8 @@ install_greenlight_v3(){
   #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
 
   # Configuring Greenlight v3 .env file (if already configured this will only update the BBB endpoint and secret).
+  cp -v $GL3_DIR/.env $GL3_DIR/.env.old && say "old .env file can be retrieved at $GL3_DIR/.env.old" #Backup
+
   sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" $GL3_DIR/.env
   sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $GL3_DIR/.env
   sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $GL3_DIR/.env # Do not overwrite the value if not empty.
@@ -983,6 +995,26 @@ install_greenlight_v3(){
     sed -i '/X-Forwarded-Proto/s/$scheme/"https"/' $NGINX_FILES_DEST/keycloak.nginx
   fi
 
+  # Update .env file catching new configurations:
+  if ! grep -q 'RELATIVE_URL_ROOT=' $GL3_DIR/.env; then
+      cat <<HERE >> $GL3_DIR/.env
+#RELATIVE_URL_ROOT=/gl
+
+HERE
+  fi
+
+  if [ -n "$GL_PATH" ]; then
+    sed -i "s|^[# \t]*RELATIVE_URL_ROOT=.*|RELATIVE_URL_ROOT=$GL_PATH|" $GL3_DIR/.env
+  fi
+
+  local GL_RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" $GL3_DIR/.env) # Extract relative URL root path.
+  say "Deploying Greenlight on the '${GL_RELATIVE_URL_ROOT:-$GL_DEFAULT_PATH}' path..."
+
+  if [ -n "$GL_RELATIVE_URL_ROOT" ] && [ "$GL_RELATIVE_URL_ROOT" != "$GL_DEFAULT_PATH" ]; then
+    sed -i "s|^\([ \t]*location\)[ \t]*\(.*/cable\)[ \t]*\({\)$|\1 $GL_RELATIVE_URL_ROOT/cable \3|" $NGINX_FILES_DEST/greenlight-v3.nginx
+    sed -i "s|^\([ \t]*location\)[ \t]*\(@bbb-fe\)[ \t]*\({\)$|\1 $GL_RELATIVE_URL_ROOT \3|" $NGINX_FILES_DEST/greenlight-v3.nginx
+  fi
+
   nginx -qt || err 'greenlight-v3 failed to install/update due to nginx tests failing to pass - if using the official image then please contact the maintainers.'
   nginx -qs reload && say 'greenlight-v3 was successfully configured'
 
@@ -1000,8 +1032,8 @@ install_greenlight_v3(){
   say "starting greenlight-v3..."
   docker-compose -f $GL3_DIR/docker-compose.yml up -d
   sleep 5
-  say "greenlight-v3 is installed, up to date and accessible on: https://$HOST/"
-  say "To create Greenlight administrator account, see: https://docs.bigbluebutton.org/greenlight_v3/gl3-install.html#creating-an-admin-account-1"
+  say "greenlight-v3 is now installed and accessible on: https://$HOST${GL_RELATIVE_URL_ROOT:-$GL_DEFAULT_PATH}"
+  say "To create Greenlight administrator account, see: https://docs.bigbluebutton.org/greenlight/v3/install#creating-an-admin-account"
 
 
   if grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
@@ -1012,7 +1044,7 @@ install_greenlight_v3(){
       say "   $KCPASSWORD"
     fi
 
-    say "To complete the configuration of Keycloak, see: https://docs.bigbluebutton.org/greenlight_v3/gl3-external-authentication.html#configuring-keycloak"
+    say "To complete the configuration of Keycloak, see: https://docs.bigbluebutton.org/greenlight/v3/external-authentication#configuring-keycloak"
   fi
 
   return 0;
@@ -1184,6 +1216,8 @@ install_lti_tool() {
   #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
 
   # Configuring BBB LTI .env file (if already configured this will only update some expected or safe to change variables).
+  cp -v $LTI_APP_DIR/.env $LTI_APP_DIR/.env.old && say "old $LOG_NAME .env file can be retrieved at $LTI_APP_DIR/.env.old" #Backup
+
   sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $LTI_APP_DIR/.env # Do not overwrite the value if not empty.
   sed -i "s|^[# \t]*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" $LTI_APP_DIR/.env
   sed -i "s|^[# \t]*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  $LTI_APP_DIR/.env
