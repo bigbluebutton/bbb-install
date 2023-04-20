@@ -623,43 +623,40 @@ check_apache2() {
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
 check_lxc() {
-  if grep -qa container=lxc /proc/1/environ; then
-    if grep IOSchedulingClass /lib/systemd/system/freeswitch.service > /dev/null; then
-      cat > /lib/systemd/system/freeswitch.service << HERE
-[Unit]
-Description=freeswitch
-After=syslog.target network.target local-fs.target
+  grep -q container=lxc /proc/1/environ || return
 
+  # override /lib/systemd/system/freeswitch.service so that it does not use realtime scheduler
+  mkdir -p /etc/systemd/system/freeswitch.service.d
+  cat <<HERE > /etc/systemd/system/freeswitch.service.d/override.conf
 [Service]
-Type=forking
-PIDFile=/opt/freeswitch/var/run/freeswitch/freeswitch.pid
-Environment="DAEMON_OPTS=-nonat"
-EnvironmentFile=-/etc/default/freeswitch
-ExecStart=/opt/freeswitch/bin/freeswitch -u freeswitch -g daemon -ncwait \$DAEMON_OPTS
-TimeoutSec=45s
-Restart=always
-WorkingDirectory=/opt/freeswitch
-User=freeswitch
-Group=daemon
-
-LimitCORE=infinity
-LimitNOFILE=100000
-LimitNPROC=60000
-LimitSTACK=250000
-LimitRTPRIO=infinity
-LimitRTTIME=7000000
-#IOSchedulingClass=realtime
-#IOSchedulingPriority=2
-#CPUSchedulingPolicy=rr
-#CPUSchedulingPriority=89
-
-[Install]
-WantedBy=multi-user.target
+IOSchedulingClass=
+IOSchedulingPriority=
+CPUSchedulingPolicy=
+CPUSchedulingPriority=
 HERE
 
-    systemctl daemon-reload
-  fi
-fi
+  # override /usr/lib/systemd/system/bbb-html5-frontend@.service
+  mkdir -p /etc/systemd/system/bbb-html5-frontend@.service.d
+  cat <<HERE > /etc/systemd/system/bbb-html5-frontend@.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  # override /usr/lib/systemd/system/bbb-html5-backend@.service
+  mkdir -p /etc/systemd/system/bbb-html5-backend@.service.d
+  cat <<HERE > /etc/systemd/system/bbb-html5-backend@.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  # override /usr/lib/systemd/system/bbb-webrtc-sfu.service
+  mkdir -p /etc/systemd/system/bbb-webrtc-sfu.service.d
+  cat <<HERE > /etc/systemd/system/bbb-webrtc-sfu.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  systemctl daemon-reload
 }
 
 # Check if running externally with internal/external IP addresses
