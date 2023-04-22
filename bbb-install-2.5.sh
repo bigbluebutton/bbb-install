@@ -112,14 +112,14 @@ HERE
 main() {
   export DEBIAN_FRONTEND=noninteractive
   PACKAGE_REPOSITORY=ubuntu.bigbluebutton.org
-  LETS_ENCRYPT_OPTIONS="--webroot --non-interactive"
+  LETS_ENCRYPT_OPTIONS=(--webroot --non-interactive)
   SOURCES_FETCHED=false
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
-  echo "\n" > $CR_TMPFILE
+  printf '\n' > "$CR_TMPFILE"
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgadwji" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:xgadwji" opt "${@}"; do
 
     case $opt in
       h)
@@ -143,7 +143,7 @@ main() {
         fi
         ;;
       x)
-        LETS_ENCRYPT_OPTIONS="--manual --preferred-challenges dns"
+        LETS_ENCRYPT_OPTIONS=(--manual --preferred-challenges dns)
         ;;
       c)
         COTURN=$OPTARG
@@ -164,9 +164,6 @@ main() {
         fi
         ;;
 
-      l)
-        LETS_ENCRYPT_ONLY=true
-        ;;
       g)
         GREENLIGHT=true
         ;;
@@ -194,12 +191,10 @@ main() {
         ;;
       :)
         err "Missing option argument for -$OPTARG"
-        exit 1
         ;;
 
       \?)
-        err "Invalid option: -$OPTARG" >&2
-        usage
+        usage_err "Invalid option: -$OPTARG" >&2
         ;;
     esac
   done
@@ -262,7 +257,8 @@ main() {
 
     rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
-    if grep -q 12 /etc/apt/sources.list.d/nodesource.list ; then # Node 12 might be installed, previously used in BigBlueButton
+    if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 12 /etc/apt/sources.list.d/nodesource.list; then
+      # Node 12 might be installed, previously used in BigBlueButton
       sudo apt-get purge nodejs
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
@@ -281,7 +277,6 @@ main() {
     touch /root/.rnd
     MONGODB=mongodb-org
     install_docker		                     # needed for bbb-libreoffice-docker
-
     need_pkg ruby
 
     BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
@@ -293,7 +288,7 @@ main() {
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg nodejs $MONGODB apt-transport-https haveged
+  need_pkg nodejs "$MONGODB" apt-transport-https haveged
   need_pkg bigbluebutton
   need_pkg bbb-html5
 
@@ -302,7 +297,7 @@ main() {
     TURN_XML=$SERVLET_DIR/WEB-INF/classes/spring/turn-stun-servers.xml
   fi
 
-  while [ ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties ]; do sleep 1; echo -n '.'; done
+  while [ ! -f "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" ]; do sleep 1; echo -n '.'; done
 
   check_lxc
   check_nat
@@ -312,7 +307,7 @@ main() {
 
   if [ -n "$API_DEMOS" ]; then
     need_pkg bbb-demo
-    while [ ! -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; do sleep 1; echo -n '.'; done
+    while [ ! -f "/var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp" ]; do sleep 1; echo -n '.'; done
   fi
 
   if [ -n "$LINK_PATH" ]; then
@@ -368,6 +363,12 @@ err() {
   exit 1
 }
 
+usage_err() {
+  say "$1" >&2
+  usage
+  exit 1
+}
+
 check_root() {
   if [ $EUID != 0 ]; then err "You must run this command as root."; fi
 }
@@ -396,7 +397,7 @@ check_ubuntu(){
 }
 
 need_x64() {
-  UNAME=`uname -m`
+  UNAME=$(uname -m)
   if [ "$UNAME" != "x86_64" ]; then err "You must run this command on a 64-bit server."; fi
 }
 
@@ -426,23 +427,24 @@ get_IP() {
   fi
 
 
+  local external_ip
   # Determine external IP 
   if grep -sqi ^ec2 /sys/devices/virtual/dmi/id/product_uuid; then
     # EC2
-    local external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
+    external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
   elif [ -f /var/lib/dhcp/dhclient.eth0.leases ] && grep -q unknown-245 /var/lib/dhcp/dhclient.eth0.leases; then
     # Azure
-    local external_ip=$(curl -H Metadata:true "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-08-01&format=text")
+    external_ip=$(curl -H Metadata:true "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-08-01&format=text")
   elif [ -f /run/scw-metadata.cache ]; then
     # Scaleway
-    local external_ip=$(grep "PUBLIC_IP_ADDRESS" /run/scw-metadata.cache | cut -d '=' -f 2)
+    external_ip=$(grep "PUBLIC_IP_ADDRESS" /run/scw-metadata.cache | cut -d '=' -f 2)
   elif which dmidecode > /dev/null && dmidecode -s bios-vendor | grep -q Google; then
     # Google Compute Cloud
-    local external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
+    external_ip=$(wget -O - -q "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" --header 'Metadata-Flavor: Google')
   elif [ -n "$1" ]; then
     # Try and determine the external IP from the given hostname
     need_pkg dnsutils
-    local external_ip=$(dig +short "$1" @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
+    external_ip=$(dig +short "$1" @resolver1.opendns.com | grep '^[.0-9]*$' | tail -n1)
   fi
 
   # Check if the external IP reaches the internal IP
@@ -490,8 +492,8 @@ need_pkg() {
     SOURCES_FETCHED=true
   fi
 
-  if ! dpkg -s ${@:1} >/dev/null 2>&1; then
-    LC_CTYPE=C.UTF-8 apt-get install -yq ${@:1}
+  if ! dpkg -s "${@}" >/dev/null 2>&1; then
+    LC_CTYPE=C.UTF-8 apt-get install -yq "${@}"
   fi
   while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
 }
@@ -511,7 +513,7 @@ need_ppa() {
 
 check_version() {
   if ! echo "$1" | grep -Eq "focal-25"; then err "This script can only install BigBlueButton 2.5 (or later) and is meant to be run on Ubuntu 20.04 (focal) server."; fi
-  DISTRO=$(echo "$1" | sed 's/-.*//g')
+  DISTRO=${1%%-*}
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
   fi
@@ -695,9 +697,9 @@ install_greenlight(){
     docker run --rm bigbluebutton/greenlight:v2 cat ./sample.env > ~/greenlight/.env
   fi
 
-  BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
-  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 | sed 's/https\?:\/\///')
+  BIGBLUEBUTTON_URL=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
+  BIGBLUEBUTTON_SECRET=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+  SAFE_HOSTS=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 | sed 's/https\?:\/\///')
 
   # Update Greenlight configuration file in ~/greenlight/env
   sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                   ~/greenlight/.env
@@ -816,7 +818,7 @@ HERE
 
     if [ -z "$PROVIDED_CERTIFICATE" ]; then
       if ! certbot --email "$EMAIL" --agree-tos --rsa-key-size 4096 -w /var/www/bigbluebutton-default/ \
-           -d "$HOST" --deploy-hook "systemctl reload nginx" $LETS_ENCRYPT_OPTIONS certonly; then
+           -d "$HOST" --deploy-hook "systemctl reload nginx" "${LETS_ENCRYPT_OPTIONS[@]}" certonly; then
         systemctl restart nginx
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
@@ -873,8 +875,9 @@ HERE
   # Configure rest of BigBlueButton Configuration for SSL
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
  
-  source /etc/bigbluebutton/bigbluebutton-release
-  if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+  # shellcheck disable=SC1091
+  eval "$(source /etc/bigbluebutton/bigbluebutton-release && declare -p BIGBLUEBUTTON_RELEASE)"
+  if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
     sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /usr/share/bigbluebutton/nginx/sip.nginx
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
@@ -883,16 +886,16 @@ HERE
     xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
   fi
 
-  sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
-  if [ -f $BBB_WEB_ETC_CONFIG ]; then
-    sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $BBB_WEB_ETC_CONFIG
+  sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties"
+  if [ -f "$BBB_WEB_ETC_CONFIG" ]; then
+    sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$BBB_WEB_ETC_CONFIG"
   fi
 
   yq w -i /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml playback_protocol https
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
 
-  if [ -f /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp ]; then
-    sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' /var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp
+  if [ -f "/var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp" ]; then
+    sed -i 's/String BigBlueButtonURL = "http:/String BigBlueButtonURL = "https:/g' "/var/lib/$TOMCAT_USER/webapps/demo/bbb_api_conf.jsp"
   fi
 
   if [ -f /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml ]; then
@@ -902,7 +905,7 @@ HERE
   # Update Greenlight (if installed) to use SSL
   if [ -f ~/greenlight/.env ]; then
     if ! grep ^BIGBLUEBUTTON_ENDPOINT ~/greenlight/.env | grep -q https; then
-      BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties $CR_TMPFILE $BBB_WEB_ETC_CONFIG | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
+      BIGBLUEBUTTON_URL=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
       sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
       docker-compose -f ~/greenlight/docker-compose.yml down
       docker-compose -f ~/greenlight/docker-compose.yml up -d
@@ -919,7 +922,7 @@ HERE
       yq w -i $TARGET kurento[0].ip "$IP"
       yq w -i $TARGET freeswitch.ip "$IP"
 
-      if [ -n "$(echo "$BIGBLUEBUTTON_RELEASE" | grep '2.2')" ] && [ "$(echo "$BIGBLUEBUTTON_RELEASE" | cut -d\. -f3)" -lt 29 ]; then
+      if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
         if [ -n "$INTERNAL_IP" ]; then
           yq w -i $TARGET freeswitch.sip_ip "$INTERNAL_IP"
         else
@@ -949,7 +952,7 @@ HERE
 }
 
 configure_coturn() {
-  cat <<HERE > $TURN_XML
+  cat <<HERE > "$TURN_XML"
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
