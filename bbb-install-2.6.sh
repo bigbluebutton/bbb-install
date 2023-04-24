@@ -1515,9 +1515,11 @@ server {
   listen [::1]:81;
   server_name $HOST;
 
+  # nginx does not know its external port/protocol behind haproxy, so use relative redirects.
+  absolute_redirect off;
     
-    # HSTS (comment out to enable)
-    #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+  # HSTS (uncomment to enable)
+  #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
