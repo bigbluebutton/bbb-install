@@ -1482,9 +1482,20 @@ server {
   listen 80;
   listen [::]:80;
   server_name $HOST;
-  
-  return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
 
+  location ^~ / {
+    return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
+  }
+
+  location ^~ /.well-known/acme-challenge/ {
+    allow all;
+    default_type "text/plain";
+    root /var/www/bigbluebutton-default;
+  }
+
+  location = /.well-known/acme-challenge/ {
+    return 404;
+  }  
 }
 set_real_ip_from 127.0.0.1;
 real_ip_header proxy_protocol;
@@ -1529,9 +1540,21 @@ server {
   listen [::]:80;
   server_name $HOST;
   
-  return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
+  location ^~ / {
+    return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
+  }
 
+  location ^~ /.well-known/acme-challenge/ {
+    allow all;
+    default_type "text/plain";
+    root /var/www/bigbluebutton-default;
+  }
+
+  location = /.well-known/acme-challenge/ {
+    return 404;
+  }
 }
+
 server {
   listen 443 ssl http2;
   listen [::]:443 ssl http2;
