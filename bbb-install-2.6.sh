@@ -1523,6 +1523,10 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
+  # This variable is used instead of \$scheme by bigbluebutton nginx include
+  # files, so \$scheme can be overridden in reverse-proxy configurations.
+  set \$real_scheme "https";
+
   # BigBlueButton landing page.
   location / {
     root   /var/www/bigbluebutton-default/assets;
@@ -1575,6 +1579,10 @@ server {
     #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
+
+  # This variable is used instead of \$scheme by bigbluebutton nginx include
+  # files, so \$scheme can be overridden in reverse-proxy configurations.
+  set \$real_scheme \$scheme;
 
   # BigBlueButton landing page.
   location / {

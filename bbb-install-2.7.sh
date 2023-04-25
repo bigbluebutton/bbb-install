@@ -1495,8 +1495,9 @@ server {
 
   location = /.well-known/acme-challenge/ {
     return 404;
-  }  
+  }
 }
+
 set_real_ip_from 127.0.0.1;
 real_ip_header proxy_protocol;
 real_ip_recursive on;
@@ -1522,6 +1523,10 @@ server {
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
 
+  # This variable is used instead of \$scheme by bigbluebutton nginx include
+  # files, so \$scheme can be overridden in reverse-proxy configurations.
+  set \$real_scheme "https";
+
   # BigBlueButton landing page.
   location / {
     root   /var/www/bigbluebutton-default/assets;
@@ -1541,7 +1546,7 @@ server {
   listen 80;
   listen [::]:80;
   server_name $HOST;
-  
+
   location ^~ / {
     return 301 https://\$server_name\$request_uri; #redirect HTTP to HTTPS
   }
@@ -1574,6 +1579,10 @@ server {
     #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
   access_log  /var/log/nginx/bigbluebutton.access.log;
+
+  # This variable is used instead of \$scheme by bigbluebutton nginx include
+  # files, so \$scheme can be overridden in reverse-proxy configurations.
+  set \$real_scheme \$scheme;
 
   # BigBlueButton landing page.
   location / {
