@@ -400,7 +400,7 @@ main() {
   fi
 
   # BBB ecosystem apps:
-  if [[ ${#LTI_CREDS} -eq 2 ]]; then
+  if [[ ${#LTI_CREDS[*]} -eq 2 ]]; then
     install_lti
   fi
 
