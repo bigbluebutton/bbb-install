@@ -1566,7 +1566,7 @@ server {
     ssl_session_timeout 10m;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
-    ssl_dhparam /etc/nginx/ssl/dhp-4096.pem;
+    ssl_dhparam /etc/nginx/ssl/ffdhe2048.pem;
     
     # HSTS (comment out to enable)
     #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
@@ -1584,9 +1584,21 @@ server {
 }
 HERE
 
-    if [ ! -f /etc/nginx/ssl/dhp-4096.pem ]; then
-      openssl dhparam -dsaparam  -out /etc/nginx/ssl/dhp-4096.pem 4096
-    fi 
+    if [[ ! -f /etc/nginx/ssl/ffdhe2048.pem ]]; then
+      cat >/etc/nginx/ssl/ffdhe2048.pem <<"HERE"
+-----BEGIN DH PARAMETERS-----
+MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
++8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
+87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
+YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
+7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
+ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
+-----END DH PARAMETERS-----
+HERE
+    fi
+    if [[ -f /etc/nginx/ssl/dhp-4096.pem ]]; then
+      rm /etc/nginx/ssl/dhp-4096.pem
+    fi
   fi
 # Create the default Welcome page Bigbluebutton Frontend unless it exists.
 if [[ ! -f /usr/share/bigbluebutton/nginx/default-fe.nginx && ! -f /usr/share/bigbluebutton/nginx/default-fe.nginx.disabled ]]; then
