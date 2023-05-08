@@ -1490,7 +1490,7 @@ server {
   location ^~ /.well-known/acme-challenge/ {
     allow all;
     default_type "text/plain";
-    root /var/www/bigbluebutton-default;
+    root /var/www/bigbluebutton-default/assets;
   }
 
   location = /.well-known/acme-challenge/ {
@@ -1554,7 +1554,7 @@ server {
   location ^~ /.well-known/acme-challenge/ {
     allow all;
     default_type "text/plain";
-    root /var/www/bigbluebutton-default;
+    root /var/www/bigbluebutton-default/assets;
   }
 
   location = /.well-known/acme-challenge/ {
