@@ -26,7 +26,7 @@
 #  Install BigBlueButton 2.7.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com 
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
@@ -37,7 +37,7 @@ usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 2.7 server in under 30 minutes. It also supports upgrading a BigBlueButton server to version 2.7 (from version 2.6)
+Script for installing a BigBlueButton 2.7 server in under 30 minutes. It also supports upgrading a BigBlueButton server to version 2.7 (from version 2.6.0+ or an earlier 2.7.x version)
 
 This script also supports installation of a coturn (TURN) server on a separate server.
 
@@ -102,7 +102,7 @@ Sample options for setup a BigBlueButton 2.7 server
 
     -v focal-260 -s bbb.example.com -e info@example.com
 
-Sample options for setup a BigBlueButton 2.7 server with Greenlight 3 and optionally Keylcoak
+Sample options for setup a BigBlueButton 2.7 server with Greenlight 3 and optionally Keycloak
 
     -v focal-260 -s bbb.example.com -e info@example.com -g [-k]
 
@@ -400,7 +400,7 @@ main() {
   fi
 
   # BBB ecosystem apps:
-  if [[ ${#LTI_CREDS} -eq 2 ]]; then
+  if [[ ${#LTI_CREDS[*]} -eq 2 ]]; then
     install_lti
   fi
 
@@ -1490,7 +1490,7 @@ server {
   location ^~ /.well-known/acme-challenge/ {
     allow all;
     default_type "text/plain";
-    root /var/www/bigbluebutton-default;
+    root /var/www/bigbluebutton-default/assets;
   }
 
   location = /.well-known/acme-challenge/ {
@@ -1554,7 +1554,7 @@ server {
   location ^~ /.well-known/acme-challenge/ {
     allow all;
     default_type "text/plain";
-    root /var/www/bigbluebutton-default;
+    root /var/www/bigbluebutton-default/assets;
   }
 
   location = /.well-known/acme-challenge/ {
