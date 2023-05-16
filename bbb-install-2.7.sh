@@ -26,11 +26,11 @@
 #  Install BigBlueButton 2.7.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/2.7/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/2.7/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -42,7 +42,7 @@ Script for installing a BigBlueButton 2.7 server in under 30 minutes. It also su
 This script also supports installation of a coturn (TURN) server on a separate server.
 
 USAGE:
-    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.7.sh | bash -s -- [OPTIONS]
+    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/2.7/bbb-install-2.7.sh | bash -s -- [OPTIONS]
 
 OPTIONS (install BigBlueButton):
 
