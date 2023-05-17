@@ -339,7 +339,7 @@ main() {
 
   while [ ! -f "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" ]; do sleep 1; echo -n '.'; done
 
-  check_lxc
+  check_cap_sys_nice
   check_nat
   check_LimitNOFILE
 
@@ -377,11 +377,6 @@ main() {
   fi
 
   apt-get auto-remove -y
-
-  if systemctl status freeswitch.service | grep -q SETSCHEDULER; then
-    sed -i "s/^CPUSchedulingPolicy=rr/#CPUSchedulingPolicy=rr/g" /lib/systemd/system/freeswitch.service
-    systemctl daemon-reload
-  fi
 
   systemctl restart systemd-journald
 
@@ -621,45 +616,48 @@ check_apache2() {
   fi
 }
 
-# If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
-check_lxc() {
-  if grep -qa container=lxc /proc/1/environ; then
-    if grep IOSchedulingClass /lib/systemd/system/freeswitch.service > /dev/null; then
-      cat > /lib/systemd/system/freeswitch.service << HERE
-[Unit]
-Description=freeswitch
-After=syslog.target network.target local-fs.target
+# If CAP_SYS_NICE is not available, then the FreeSWITCH systemctl service
+# will fail to start, with an error message like "status=214/SETSCHEDULER".
+# In this case we need to modify this service so that it does not require a realtime scheduler.
+# A similar modification needs to be done to a couple of other services as well,
+# like: bbb-html5-frontend@.service, bbb-html5-backend@.service and bbb-webrtc-sfu.service
+check_cap_sys_nice() {
+  # if we don't detect a SETSCHEDULER error message in the status of the service,
+  # then there is nothing to be modified/customized
+  { systemctl status freeswitch | grep -q SETSCHEDULER; } || return
 
+  # override /lib/systemd/system/freeswitch.service so that it does not use realtime scheduler
+  mkdir -p /etc/systemd/system/freeswitch.service.d
+  cat <<HERE > /etc/systemd/system/freeswitch.service.d/override.conf
 [Service]
-Type=forking
-PIDFile=/opt/freeswitch/var/run/freeswitch/freeswitch.pid
-Environment="DAEMON_OPTS=-nonat"
-EnvironmentFile=-/etc/default/freeswitch
-ExecStart=/opt/freeswitch/bin/freeswitch -u freeswitch -g daemon -ncwait \$DAEMON_OPTS
-TimeoutSec=45s
-Restart=always
-WorkingDirectory=/opt/freeswitch
-User=freeswitch
-Group=daemon
-
-LimitCORE=infinity
-LimitNOFILE=100000
-LimitNPROC=60000
-LimitSTACK=250000
-LimitRTPRIO=infinity
-LimitRTTIME=7000000
-#IOSchedulingClass=realtime
-#IOSchedulingPriority=2
-#CPUSchedulingPolicy=rr
-#CPUSchedulingPriority=89
-
-[Install]
-WantedBy=multi-user.target
+IOSchedulingClass=
+IOSchedulingPriority=
+CPUSchedulingPolicy=
+CPUSchedulingPriority=
 HERE
 
-    systemctl daemon-reload
-  fi
-fi
+  # override /usr/lib/systemd/system/bbb-html5-frontend@.service
+  mkdir -p /etc/systemd/system/bbb-html5-frontend@.service.d
+  cat <<HERE > /etc/systemd/system/bbb-html5-frontend@.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  # override /usr/lib/systemd/system/bbb-html5-backend@.service
+  mkdir -p /etc/systemd/system/bbb-html5-backend@.service.d
+  cat <<HERE > /etc/systemd/system/bbb-html5-backend@.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  # override /usr/lib/systemd/system/bbb-webrtc-sfu.service
+  mkdir -p /etc/systemd/system/bbb-webrtc-sfu.service.d
+  cat <<HERE > /etc/systemd/system/bbb-webrtc-sfu.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  systemctl daemon-reload
 }
 
 # Check if running externally with internal/external IP addresses
