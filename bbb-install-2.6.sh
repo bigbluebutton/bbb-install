@@ -1432,6 +1432,14 @@ install_ssl() {
     add-apt-repository universe
     apt-get update
     need_pkg certbot
+
+    if [[ -f "/etc/letsencrypt/live/$HOST/fullchain.pem" ]] && [[ -f "/etc/letsencrypt/renewal/$HOST.conf" ]] \
+        && ! grep -q '/var/www/bigbluebutton-default/assets' "/etc/letsencrypt/renewal/$HOST.conf"; then
+      sed -i -e 's#/var/www/bigbluebutton-default#/var/www/bigbluebutton-default/assets#' "/etc/letsencrypt/renewal/$HOST.conf"
+      if ! certbot renew; then
+        err "Let's Encrypt SSL renewal request for $HOST did not succeed - exiting"
+      fi
+    fi
   fi
 
   if [ ! -f "/etc/letsencrypt/live/$HOST/fullchain.pem" ]; then
