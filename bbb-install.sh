@@ -17,7 +17,7 @@
 # BigBlueButton is an open source conferencing system. For more information see
 #    https://www.bigbluebutton.org/.
 #
-# This bbb-install-2.7.sh script automates many of the installation and configuration
+# This bbb-install.sh script automates many of the installation and configuration
 # steps at https://docs.bigbluebutton.org/2.7/install.html
 #
 #
@@ -26,11 +26,11 @@
 #  Install BigBlueButton 2.7.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/2.7/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v2.7.x-release/bbb-install.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/2.7/bbb-install-2.7.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v2.7.x-release/bbb-install.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -42,7 +42,7 @@ Script for installing a BigBlueButton 2.7 server in under 30 minutes. It also su
 This script also supports installation of a coturn (TURN) server on a separate server.
 
 USAGE:
-    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/2.7/bbb-install-2.7.sh | bash -s -- [OPTIONS]
+    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v2.7.x-release/bbb-install.sh | bash -s -- [OPTIONS]
 
 OPTIONS (install BigBlueButton):
 
@@ -339,7 +339,7 @@ main() {
 
   while [ ! -f "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" ]; do sleep 1; echo -n '.'; done
 
-  check_lxc
+  check_cap_sys_nice
   check_nat
   check_LimitNOFILE
 
@@ -377,11 +377,6 @@ main() {
   fi
 
   apt-get auto-remove -y
-
-  if systemctl status freeswitch.service | grep -q SETSCHEDULER; then
-    sed -i "s/^CPUSchedulingPolicy=rr/#CPUSchedulingPolicy=rr/g" /lib/systemd/system/freeswitch.service
-    systemctl daemon-reload
-  fi
 
   systemctl restart systemd-journald
 
@@ -621,45 +616,48 @@ check_apache2() {
   fi
 }
 
-# If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
-check_lxc() {
-  if grep -qa container=lxc /proc/1/environ; then
-    if grep IOSchedulingClass /lib/systemd/system/freeswitch.service > /dev/null; then
-      cat > /lib/systemd/system/freeswitch.service << HERE
-[Unit]
-Description=freeswitch
-After=syslog.target network.target local-fs.target
+# If CAP_SYS_NICE is not available, then the FreeSWITCH systemctl service
+# will fail to start, with an error message like "status=214/SETSCHEDULER".
+# In this case we need to modify this service so that it does not require a realtime scheduler.
+# A similar modification needs to be done to a couple of other services as well,
+# like: bbb-html5-frontend@.service, bbb-html5-backend@.service and bbb-webrtc-sfu.service
+check_cap_sys_nice() {
+  # if we don't detect a SETSCHEDULER error message in the status of the service,
+  # then there is nothing to be modified/customized
+  { systemctl status freeswitch | grep -q SETSCHEDULER; } || return
 
+  # override /lib/systemd/system/freeswitch.service so that it does not use realtime scheduler
+  mkdir -p /etc/systemd/system/freeswitch.service.d
+  cat <<HERE > /etc/systemd/system/freeswitch.service.d/override.conf
 [Service]
-Type=forking
-PIDFile=/opt/freeswitch/var/run/freeswitch/freeswitch.pid
-Environment="DAEMON_OPTS=-nonat"
-EnvironmentFile=-/etc/default/freeswitch
-ExecStart=/opt/freeswitch/bin/freeswitch -u freeswitch -g daemon -ncwait \$DAEMON_OPTS
-TimeoutSec=45s
-Restart=always
-WorkingDirectory=/opt/freeswitch
-User=freeswitch
-Group=daemon
-
-LimitCORE=infinity
-LimitNOFILE=100000
-LimitNPROC=60000
-LimitSTACK=250000
-LimitRTPRIO=infinity
-LimitRTTIME=7000000
-#IOSchedulingClass=realtime
-#IOSchedulingPriority=2
-#CPUSchedulingPolicy=rr
-#CPUSchedulingPriority=89
-
-[Install]
-WantedBy=multi-user.target
+IOSchedulingClass=
+IOSchedulingPriority=
+CPUSchedulingPolicy=
+CPUSchedulingPriority=
 HERE
 
-    systemctl daemon-reload
-  fi
-fi
+  # override /usr/lib/systemd/system/bbb-html5-frontend@.service
+  mkdir -p /etc/systemd/system/bbb-html5-frontend@.service.d
+  cat <<HERE > /etc/systemd/system/bbb-html5-frontend@.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  # override /usr/lib/systemd/system/bbb-html5-backend@.service
+  mkdir -p /etc/systemd/system/bbb-html5-backend@.service.d
+  cat <<HERE > /etc/systemd/system/bbb-html5-backend@.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  # override /usr/lib/systemd/system/bbb-webrtc-sfu.service
+  mkdir -p /etc/systemd/system/bbb-webrtc-sfu.service.d
+  cat <<HERE > /etc/systemd/system/bbb-webrtc-sfu.service.d/override.conf
+[Service]
+CPUSchedulingPolicy=
+HERE
+
+  systemctl daemon-reload
 }
 
 # Check if running externally with internal/external IP addresses
@@ -1466,7 +1464,7 @@ HERE
         err "Let's Encrypt SSL request for $HOST did not succeed - exiting"
       fi
     else
-      # Place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install-2.7.sh will deal with the rest.
+      # Place your fullchain.pem and privkey.pem files in /local/certs/ and bbb-install.sh will deal with the rest.
       mkdir -p "/etc/letsencrypt/live/$HOST/"
       ln -s /local/certs/fullchain.pem "/etc/letsencrypt/live/$HOST/fullchain.pem"
       ln -s /local/certs/privkey.pem "/etc/letsencrypt/live/$HOST/privkey.pem"
