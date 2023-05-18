@@ -1,9 +1,13 @@
 name: Differential ShellCheck
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
+      - v*-release
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
+      - v*-release
 
 permissions:
   contents: read
