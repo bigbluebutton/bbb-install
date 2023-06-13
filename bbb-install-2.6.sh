@@ -37,9 +37,9 @@ usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 2.6 server in under 30 minutes. It also supports upgrading a BigBlueButton server to version 2.6 (from version 2.5.0+ or an earlier 2.6.x version)
+Script for installing a BigBlueButton 2.6 server in under 30 minutes. It also supports upgrading a BigBlueButton server to version 2.6 (from version 2.5.0+ or an earlier 2.6.x version).
 
-This script also supports installation of a coturn (TURN) server on a separate server.
+This script also checks your server supports https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
 
 USAGE:
     wget -qO- https://ubuntu.bigbluebutton.org/bbb-install-2.6.sh | bash -s -- [OPTIONS]
@@ -51,14 +51,12 @@ OPTIONS (install BigBlueButton):
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
 
-  -x                     Use Let's Encrypt certbot with manual dns challenges
+  -x                     Use Let's Encrypt certbot with manual DNS challenges
 
   -g                     Install Greenlight version 3
   -k                     Install Keycloak version 20
 
-  -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
-
-  -c <hostname>:<secret> Configure with coturn server at <hostname> using <secret> (instead of built-in TURN server)
+  -c <hostname>:<secret> Configure with external coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
@@ -113,7 +111,7 @@ Sample options for setup a BigBlueButton 2.6 server with LTI framework while man
 SUPPORT:
     Community: https://bigbluebutton.org/support
          Docs: https://github.com/bigbluebutton/bbb-install
-
+               https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
 HERE
 }
 
@@ -269,6 +267,7 @@ main() {
 
   check_mem
   check_cpus
+  check_ipv6
 
   need_pkg software-properties-common  # needed for add-apt-repository
   sudo add-apt-repository universe
@@ -428,6 +427,15 @@ check_root() {
 check_mem() {
   if awk '$1~/MemTotal/ {exit !($2<3940000)}' /proc/meminfo; then
     echo "Your server needs to have (at least) 4G of memory."
+    if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
+      exit 1
+    fi
+  fi
+}
+
+check_ipv6() {
+  if [ ! -f /proc/net/if_inet6 ]; then
+    echo "Your server does not support IPV6"
     if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
       exit 1
     fi
