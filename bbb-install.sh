@@ -316,8 +316,8 @@ main() {
 
     BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
 
-    need_pkg openjdk-11-jre
-    update-java-alternatives -s java-1.11.0-openjdk-amd64
+    need_pkg openjdk-17-jre
+    update-java-alternatives -s java-1.17.0-openjdk-amd64
 
     # Remove old bbb-demo if installed from a previous 2.5 setup
     if dpkg -s bbb-demo > /dev/null 2>&1; then
