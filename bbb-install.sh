@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 # Copyright (c) 2023 BigBlueButton Inc.
 #
