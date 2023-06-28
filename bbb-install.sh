@@ -272,7 +272,6 @@ main() {
   check_cpus
   check_ipv6
 
-  need_ppa universe
   need_pkg wget curl gpg-agent dirmngr apparmor-utils
 
   # need_pkg xmlstarlet
@@ -1420,7 +1419,6 @@ install_ssl() {
   mkdir -p /etc/nginx/ssl
 
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
-    need_ppa universe
     apt-get update
     need_pkg certbot
 
