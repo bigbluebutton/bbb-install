@@ -280,7 +280,8 @@ main() {
   if [ "$DISTRO" == "jammy" ]; then
     need_pkg ca-certificates
 
-    need_ppa rmescandon-ubuntu-yq-jammy.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
+    #need_ppa rmescandon-ubuntu-yq-jammy.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
+    need_ppa ppa:rmescandon/yq
     need_pkg yq
     yq --version
 
