@@ -1374,9 +1374,6 @@ install_docker() {
   need_pkg apt-transport-https ca-certificates curl gnupg-agent software-properties-common openssl
 
   # Install Docker
-
-  exit
-
   if ! apt-key list | grep -q Docker; then
     if [ ! -f /usr/share/keyrings/docker-archive-keyring.gpg ]; then
       curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
