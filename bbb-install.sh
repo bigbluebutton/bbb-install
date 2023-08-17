@@ -1631,7 +1631,7 @@ fi
     sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /usr/share/bigbluebutton/nginx/sip.nginx
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-    yq -i '.public.media.sipjsHackViaWs = true' /etc/bigbluebutton/bbb-html5.yml
+    yq e -i '.public.media.sipjsHackViaWs = true' /etc/bigbluebutton/bbb-html5.yml
     sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /usr/share/bigbluebutton/nginx/sip.nginx
     xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
   fi
@@ -1641,7 +1641,7 @@ fi
     sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$BBB_WEB_ETC_CONFIG"
   fi
 
-  yq -i '.playback_protocol = https' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
+  yq e -i '.playback_protocol = https' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
 
   # Update Greenlight (if installed) to use SSL
@@ -1663,29 +1663,29 @@ fi
   TARGET=/etc/bigbluebutton/bbb-webrtc-sfu/production.yml
   touch $TARGET
 
-  yq -i ".freeswitch.ip = \"$IP\"" $TARGET
+  yq e -i ".freeswitch.ip = \"$IP\"" $TARGET
 
   if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
     if [ -n "$INTERNAL_IP" ]; then
-      yq -i ".freeswitch.sip_ip = \"$INTERNAL_IP\"" $TARGET
+      yq e -i ".freeswitch.sip_ip = \"$INTERNAL_IP\"" $TARGET
     else
-      yq -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
+      yq e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
     fi
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-    yq -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
+    yq e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
   fi
   chown bigbluebutton:bigbluebutton $TARGET
   chmod 644 $TARGET
 
   # Configure mediasoup IPs, reference: https://raw.githubusercontent.com/bigbluebutton/bbb-webrtc-sfu/v2.7.2/docs/mediasoup.md
   # mediasoup IPs: WebRTC
-  yq -i '.mediasoup.webrtc.listenIps[0].ip = "0.0.0.0"' $TARGET
-  yq -i ".mediasoup.webrtc.listenIps[0].announcedIp = \"$IP\"" $TARGET
+  yq e -i '.mediasoup.webrtc.listenIps[0].ip = "0.0.0.0"' $TARGET
+  yq e -i ".mediasoup.webrtc.listenIps[0].announcedIp = \"$IP\"" $TARGET
 
   # mediasoup IPs: plain RTP (internal comms, FS <-> mediasoup)
-  yq -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
-  yq -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
+  yq e -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
+  yq e -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
 
   systemctl reload nginx
 }
