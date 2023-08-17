@@ -1641,7 +1641,7 @@ fi
     sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$BBB_WEB_ETC_CONFIG"
   fi
 
-  yq e -i '.playback_protocol = https' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
+  yq e -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
 
   # Update Greenlight (if installed) to use SSL
