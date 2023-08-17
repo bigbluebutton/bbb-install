@@ -18,7 +18,7 @@
 #    https://www.bigbluebutton.org/.
 #
 # This bbb-install.sh script automates many of the installation and configuration
-# steps at https://docs.bigbluebutton.org/2.7/install.html
+# steps at https://docs.bigbluebutton.org/2.7/administration/install
 #
 #
 #  Examples
