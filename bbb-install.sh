@@ -789,7 +789,7 @@ defaults
 
 
 frontend nginx_or_turn
-  bind *:443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
+  bind *:443,:::443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
   mode tcp
   option tcplog
   tcp-request content capture req.payload(0,1) len 1
