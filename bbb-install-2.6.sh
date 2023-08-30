@@ -291,16 +291,16 @@ main() {
 
     rm -rf /etc/apt/sources.list.d/kurento.list     # Kurento 6.15 now packaged with 2.3
 
-    if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 12 /etc/apt/sources.list.d/nodesource.list; then
-      # Node 12 might be installed, previously used in BigBlueButton
+    if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 16 /etc/apt/sources.list.d/nodesource.list; then
+      # Node 16 might be installed, previously used in BigBlueButton
       sudo apt-get purge nodejs
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
-      curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+      curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
     fi
-    if ! apt-cache madison nodejs | grep -q node_16; then
-      err "Did not detect nodejs 16.x candidate for installation"
+    if ! apt-cache madison nodejs | grep -q node_18; then
+      err "Did not detect nodejs 18.x candidate for installation"
     fi
     if ! apt-key list MongoDB | grep -q 4.4; then
       wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
