@@ -301,6 +301,7 @@ main() {
       curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
       NODE_MAJOR=18
       echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+      force_update_sources
     fi
     if ! apt-cache madison nodejs | grep -q node_18; then
       err "Did not detect nodejs 18.x candidate for installation"
@@ -544,6 +545,17 @@ get_IP() {
   fi
 
   if [ -z "$IP" ]; then err "Unable to determine local IP address."; fi
+}
+
+force_update_sources() {
+  check_root
+  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
+
+  if [ ! "$SOURCES_FETCHED" = true ]; then
+    apt-get update
+    SOURCES_FETCHED=true
+  fi
+  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
 }
 
 need_pkg() {
