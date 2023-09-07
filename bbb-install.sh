@@ -298,7 +298,8 @@ main() {
 
     if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 16 /etc/apt/sources.list.d/nodesource.list; then
       # Node 16 might be installed, previously used in BigBlueButton
-      sudo apt-get purge nodejs
+      # Remove the repository config. This will cause the repository to get
+      # re-added using the current nodejs version, and nodejs will be upgraded.
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
