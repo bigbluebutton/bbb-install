@@ -289,10 +289,6 @@ main() {
     need_ppa bigbluebutton-ubuntu-support-jammy.list ppa:bigbluebutton/support  E95B94BC # Needed for libopusenc0
     need_ppa martin-uni-mainz-ubuntu-coturn-focal.list ppa:martin-uni-mainz/coturn  5D3BBDB # Coturn
 
-    if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
-      sudo apt-key adv --keyserver https://keyserver.ubuntu.com --recv-keys 5AFA7A83
-    fi
-
     if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 16 /etc/apt/sources.list.d/nodesource.list; then
       # Node 16 might be installed, previously used in BigBlueButton
       sudo apt-get purge nodejs
