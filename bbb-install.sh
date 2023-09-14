@@ -100,15 +100,15 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton 2.7 server
 
-    -v focal-260 -s bbb.example.com -e info@example.com
+    -v focal-270 -s bbb.example.com -e info@example.com
 
 Sample options for setup a BigBlueButton 2.7 server with Greenlight 3 and optionally Keycloak
 
-    -v focal-260 -s bbb.example.com -e info@example.com -g [-k]
+    -v focal-270 -s bbb.example.com -e info@example.com -g [-k]
 
 Sample options for setup a BigBlueButton 2.7 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET 
 
-    -v focal-260 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
+    -v focal-270 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
