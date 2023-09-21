@@ -287,17 +287,19 @@ main() {
 
     #need_ppa libreoffice-ubuntu-ppa-jammy.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
     need_ppa bigbluebutton-ubuntu-support-jammy.list ppa:bigbluebutton/support  E95B94BC # Needed for libopusenc0
+    #need_ppa martin-uni-mainz-ubuntu-coturn-jammy.list ppa:martin-uni-mainz/coturn  5D3BBDB3 # Coturn
 
     if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 16 /etc/apt/sources.list.d/nodesource.list; then
       # Node 16 might be installed, previously used in BigBlueButton
-      sudo apt-get purge nodejs
+      # Remove the repository config. This will cause the repository to get
+      # re-added using the current nodejs version, and nodejs will be upgraded.
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
-      curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    fi
-    if ! apt-cache madison nodejs | grep -q node_18; then
-      err "Did not detect nodejs 18.x candidate for installation"
+      sudo mkdir -p /etc/apt/keyrings
+      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+      NODE_MAJOR=18
+      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
     fi
 
    if [ ! -f /usr/share/keyrings/mongodb-server-6.0.gpg ]; then
@@ -772,7 +774,7 @@ defaults
 
 
 frontend nginx_or_turn
-  bind *:443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
+  bind *:443,:::443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
   mode tcp
   option tcplog
   tcp-request content capture req.payload(0,1) len 1
@@ -1825,9 +1827,9 @@ HERE
   cat > /etc/systemd/system/coturn.service.d/override.conf <<HERE
 [Service]
 LimitNOFILE=1048576
-AmbientCapabilities=CAP_NET_BIND_SERVICE
+# AmbientCapabilities=CAP_NET_BIND_SERVICE
 ExecStart=
-ExecStart=/usr/bin/turnserver --daemon -c /etc/turnserver.conf --pidfile /run/turnserver/turnserver.pid --no-stdout-log --simple-log --log-file /var/log/turnserver/turnserver.log
+ExecStart=/usr/bin/turnserver -c /etc/turnserver.conf --pidfile= --no-stdout-log --simple-log --log-file /var/log/turnserver/turnserver.log
 Restart=always
 HERE
 
