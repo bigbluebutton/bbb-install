@@ -816,9 +816,10 @@ END
   cat > /etc/letsencrypt/renewal-hooks/deploy/haproxy <<HERE
 #!/bin/bash -e
 
-{ cat /etc/letsencrypt/live/$HOST/fullchain.pem; echo; cat /etc/letsencrypt/live/$HOST/privkey.pem; } > /etc/haproxy/certbundle.pem.new
-chown root:haproxy /etc/haproxy/certbundle.pem.new
+{ touch /etc/haproxy/certbundle.pem.new
 chmod 0640 /etc/haproxy/certbundle.pem.new
+cat /etc/letsencrypt/live/$HOST/fullchain.pem; echo; cat /etc/letsencrypt/live/$HOST/privkey.pem; } > /etc/haproxy/certbundle.pem.new
+chown root:haproxy /etc/haproxy/certbundle.pem.new
 mv /etc/haproxy/certbundle.pem.new /etc/haproxy/certbundle.pem
 systemctl reload haproxy
 HERE
