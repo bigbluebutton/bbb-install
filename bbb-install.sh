@@ -287,8 +287,8 @@ main() {
     #need_ppa rmescandon-ubuntu-yq-bionic.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
 
     #need_ppa libreoffice-ubuntu-ppa-focal.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
-    need_ppa bigbluebutton-ubuntu-support-focal.list ppa:bigbluebutton/support  E95B94BC    # Needed for libopusenc0
-    need_ppa martin-uni-mainz-ubuntu-coturn-focal.list ppa:martin-uni-mainz/coturn  5D3BBDB3 # Coturn
+    need_ppa bigbluebutton-ubuntu-support-focal.list ppa:bigbluebutton/support  2E1B01D0E95B94BC    # Needed for libopusenc0
+    need_ppa martin-uni-mainz-ubuntu-coturn-focal.list ppa:martin-uni-mainz/coturn  4B77C2225D3BBDB3 # Coturn
 
     if ! apt-key list 5AFA7A83 | grep -q -E "1024|4096"; then   # Add Kurento package
       sudo apt-key adv --keyserver https://keyserver.ubuntu.com --recv-keys 5AFA7A83
@@ -903,7 +903,7 @@ install_greenlight_v3(){
 
   local PGDBNAME=greenlight-v3-production
   local SECRET_KEY_BASE
-  SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rake secret)
+  SECRET_KEY_BASE=$(docker run --rm --entrypoint bundle $GL_IMG_REPO exec rails secret)
 
   if [ -z "$SECRET_KEY_BASE" ]; then
     err "failed to generate greenlight-v3 secret key base - is docker running?"
