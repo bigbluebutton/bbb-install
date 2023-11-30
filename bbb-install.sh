@@ -1075,7 +1075,6 @@ HERE
 
 # This function will install and update to the latest official version of BigBlueButton LTI framework.
 # BigBlueButton LTI tools framework provides a simple interface to integrate BigBlueButton features into any LTI certified LMS.
-
 install_lti(){
   # This function depends on the following files existing on their expected location so an eager check is done asserting that.
   if [[ -z $SERVLET_DIR  || ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties || ! -f $CR_TMPFILE || ! -f $BBB_WEB_ETC_CONFIG ]]; then
