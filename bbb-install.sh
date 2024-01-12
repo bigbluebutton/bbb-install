@@ -561,7 +561,8 @@ need_pkg() {
   if ! dpkg -s "${@}" >/dev/null 2>&1; then
     LC_CTYPE=C.UTF-8 apt-get install -yq "${@}"
   fi
-  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
+  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg/lock is in use"; sleep 1; done
+  while lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do echo "Sleeping for 1 second because dpkg/lock-frontend in use"; sleep 1; done
 }
 
 need_ppa() {
