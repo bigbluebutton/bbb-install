@@ -838,8 +838,8 @@ install_greenlight_v3(){
   check_root
   install_docker
 
-  # Preparing and checking the enviroment.
-  say "preparing and checking the enviroment to install/update greenlight-v3..."
+  # Preparing and checking the environment.
+  say "preparing and checking the environment to install/update greenlight-v3..."
 
   if [ ! -d $GL3_DIR ]; then
     mkdir -p $GL3_DIR && say "created $GL3_DIR"
@@ -946,8 +946,8 @@ install_greenlight_v3(){
     fi
   fi
 
-  # For backward compatibility, any already installed greenlight-v2 application will remain but it will not be the default frontend for BigBluebutton.
-  # To access greenlight-v2 an explicit /b relative root needs to be indicated, otherwise greelight-v3 will be served by default.
+  # For backward compatibility, any already installed greenlight-v2 application will remain but it will not be the default frontend for BigBlueButton.
+  # To access greenlight-v2 an explicit /b relative root needs to be indicated, otherwise greenlight-v3 will be served by default.
 
   # Disabling the greenlight-v2 redirection rule.
   disable_nginx_site greenlight-redirect.nginx && say "found greenlight-v2 redirection rule and disabled it!"
