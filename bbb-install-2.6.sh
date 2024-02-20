@@ -1799,7 +1799,6 @@ max-port=65535
 verbose
 
 fingerprint
-lt-cred-mech
 use-auth-secret
 static-auth-secret=$COTURN_SECRET
 realm=$HOST
@@ -1807,8 +1806,11 @@ realm=$HOST
 keep-address-family
 
 no-cli
-no-tlsv1
-no-tlsv1_1
+# Cli password although not used need not be empty!
+cli-password=dummypassword
+# Only listening locally non encrypted (TLS termination by haproxy)
+no-tls
+no-dtls
 
 # Block connections to IP ranges which shouldn't be reachable
 no-loopback-peers
