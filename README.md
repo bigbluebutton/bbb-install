@@ -2,9 +2,6 @@
 
 ### Note:
 
-
-Naming convention:
-
 Please use `bbb-install.sh` to install or upgrade BigBlueButton.
 
 For example use `bbb-install.sh` with the parameter `-v focal-270` to install BigBlueButton 2.7 or upgrade to that release. Check https://docs.bigbluebutton.org for the latest production ready release of BigBlueButton.
