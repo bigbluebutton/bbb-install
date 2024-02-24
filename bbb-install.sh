@@ -425,7 +425,7 @@ check_root() {
 
 check_mem() {
   if awk '$1~/MemTotal/ {exit !($2<3940000)}' /proc/meminfo; then
-    echo "Your server needs to have (at least) 4G of memory."
+    echo "Your server should have (at least) 4 GB of memory."
     if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
       exit 1
     fi
@@ -434,7 +434,7 @@ check_mem() {
 
 check_ipv6() {
   if [ ! -f /proc/net/if_inet6 ]; then
-    echo "Your server does not support IPV6"
+    echo "Your server does not support IPv6"
     if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
       exit 1
     fi
@@ -443,7 +443,7 @@ check_ipv6() {
 
 check_cpus() {
   if [ "$(nproc --all)" -lt 4 ]; then
-    echo "Your server needs to have (at least) 4 CPUs (8 recommended for production)."
+    echo "Your server needs to have (at least) 4 CPU cores (8 CPU cores recommended for production)."
     if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
       exit 1
     fi
@@ -554,7 +554,8 @@ need_pkg() {
   if ! dpkg -s "${@}" >/dev/null 2>&1; then
     LC_CTYPE=C.UTF-8 apt-get install -yq "${@}"
   fi
-  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
+  while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg/lock is in use"; sleep 1; done
+  while lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do echo "Sleeping for 1 second because dpkg/lock-frontend in use"; sleep 1; done
 }
 
 need_ppa() {
@@ -828,20 +829,20 @@ HERE
   /etc/letsencrypt/renewal-hooks/deploy/haproxy
 }
 
-# This function will install the latest official version of greenlight-v3 and set it as the hosting Bigbluebutton default frontend or update greenlight-v3 if installed.
-# Greenlight is a simple to use Bigbluebutton room manager that offers a set of features useful to online workloads especially virtual schooling.
+# This function will install the latest official version of greenlight-v3 and set it as the hosting BigBlueButton default frontend or update greenlight-v3 if installed.
+# Greenlight is a simple to use BigBlueButton room manager that offers a set of features useful to online workloads especially virtual schooling.
 # https://docs.bigbluebutton.org/greenlight/gl-overview.html
 install_greenlight_v3(){
   # This function depends on the following files existing on their expected location so an eager check is done asserting that.
   if [[ -z $SERVLET_DIR  || ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties || ! -f $CR_TMPFILE || ! -f $BBB_WEB_ETC_CONFIG ]]; then
-    err "greenlight-v3 failed to install/update due to unmet requirements, have you followed the recommended steps to install Bigbluebutton?"
+    err "greenlight-v3 failed to install/update due to unmet requirements, have you followed the recommended steps to install BigBlueButton?"
   fi
 
   check_root
   install_docker
 
-  # Preparing and checking the enviroment.
-  say "preparing and checking the enviroment to install/update greenlight-v3..."
+  # Preparing and checking the environment.
+  say "preparing and checking the environment to install/update greenlight-v3..."
 
   if [ ! -d $GL3_DIR ]; then
     mkdir -p $GL3_DIR && say "created $GL3_DIR"
@@ -904,10 +905,10 @@ install_greenlight_v3(){
     say "greenlight-v3 .env file was created"
   fi
 
-  # A note for future maintainers:
-  #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
-  #   Replaying these steps are a safe and an expected operation, this gurantees the seemless simple installation and upgrade of Greenlight v3.
-  #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
+  # Note for Future Maintainers:
+  #   - The configuration steps below are idempotent. They affect the system (configuration) only on the first run.
+  #   - Repeating these steps is safe and expected, ensuring a smooth installation and upgrade process for Greenlight v3.
+  #   - Caution: Even minor changes might disrupt the idempotent nature, potentially affecting upgrade functionality or system stability.
 
   # Configuring Greenlight v3 .env file (if already configured this will only update the BBB endpoint and secret).
   cp -v $GL3_DIR/.env $GL3_DIR/.env.old && say "old .env file can be retrieved at $GL3_DIR/.env.old" #Backup
@@ -918,7 +919,7 @@ install_greenlight_v3(){
   sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $GL3_DIR/.env # Do not overwrite the value if not empty.
   sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $GL3_DIR/.env # Do not overwrite the value if not empty.
 
-  # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your Bigbluebutton frontend (bbb-fe).
+  # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your BigBlueButton frontend (bbb-fe).
   cp -v $NGINX_FILES_DEST/greenlight-v3.nginx $NGINX_FILES_DEST/greenlight-v3.nginx.old && say "old greenlight-v3 nginx config can be retrieved at $NGINX_FILES_DEST/greenlight-v3.nginx.old" #Backup
   docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat greenlight-v3.nginx' > $NGINX_FILES_DEST/greenlight-v3.nginx && say "added greenlight-v3 nginx file"
 
@@ -948,18 +949,18 @@ install_greenlight_v3(){
     fi
   fi
 
-  # For backward compatibility, any already installed greenlight-v2 application will remain but it will not be the default frontend for BigBluebutton.
-  # To access greenlight-v2 an explicit /b relative root needs to be indicated, otherwise greelight-v3 will be served by default.
+  # For backward compatibility, any already installed greenlight-v2 application will remain but it will not be the default frontend for BigBlueButton.
+  # To access greenlight-v2 an explicit /b relative root needs to be indicated, otherwise greenlight-v3 will be served by default.
 
   # Disabling the greenlight-v2 redirection rule.
   disable_nginx_site greenlight-redirect.nginx && say "found greenlight-v2 redirection rule and disabled it!"
 
-  # Disabling the Bigbluebutton default Welcome page frontend.
+  # Disabling the BigBlueButton default Welcome page frontend.
   disable_nginx_site default-fe.nginx && say "found default bbb-fe 'Welcome' and disabled it!"
 
   # Adding Keycloak
   if [ -n "$INSTALL_KC" ]; then
-      # When attepmting to install/update Keycloak let us attempt to create the database to resolve any issues caused by postgres false negatives.
+      # When attempting to install/update Keycloak let us attempt to create the database to resolve any issues caused by postgres false negatives.
       docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
       wait_postgres_start
       docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;'
@@ -1059,18 +1060,18 @@ HERE
 }
 
 # This function will install and update to the latest official version of BigBlueButton LTI framework.
-# BigBlueButton LTI tools framewrok provides a simple interface to integrate Bigbluebutton features into any LTI certified LMS.
+# BigBlueButton LTI tools framework provides a simple interface to integrate BigBlueButton features into any LTI certified LMS.
 install_lti(){
   # This function depends on the following files existing on their expected location so an eager check is done asserting that.
   if [[ -z $SERVLET_DIR  || ! -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties || ! -f $CR_TMPFILE || ! -f $BBB_WEB_ETC_CONFIG ]]; then
-    err "BBB LTI framework failed to install/update due to unmet requirements, have you followed the recommended steps to install Bigbluebutton?"
+    err "BBB LTI framework failed to install/update due to unmet requirements, have you followed the recommended steps to install BigBlueButton?"
   fi
 
   check_root
   install_docker
 
-  # Preparing and checking the enviroment.
-  say "preparing and checking the enviroment to install/update BBB LTI framework..."
+  # Preparing and checking the environment.
+  say "preparing and checking the environment to install/update BBB LTI framework..."
 
   if [ ! -d $LTI_DIR ]; then
     mkdir -p $LTI_DIR && say "created $LTI_DIR"
@@ -1154,7 +1155,7 @@ install_lti(){
 
   say "BBB LTI framework is installed, up to date and accessible on: https://$HOST/$BROKER_RELATIVE_URL_ROOT"
   say "You can refer to your LMS documentation on how to add a LTI application."
-  say " The LTI launch links for all of the installed BBB LTI framework applications can be found in https://$HOST/$BROKER_RELATIVE_URL_ROOT."
+  say "The LTI launch links for all of the installed BBB LTI framework applications can be found in https://$HOST/$BROKER_RELATIVE_URL_ROOT."
 
   return 0;
 }
@@ -1186,12 +1187,12 @@ install_lti_tools() {
 }
 
 install_lti_tool() {
- # Preparing and checking the enviroment.
+ # Preparing and checking the environment.
   if [[ -z $LTI_APP_DIR || -z $APP_IMG_REPO || -z $LOG_NAME || -z $RELATIVE_URL_ROOT || -z $NGINX_NAME || -z $PGDBNAME ]]; then
     err "$LOG_NAME installation/update failed due to unmet requirements!"
   fi
 
-  say "preparing and checking the enviroment to install/update $LOG_NAME..."
+  say "preparing and checking the environment to install/update $LOG_NAME..."
 
   if [ ! -d "$LTI_APP_DIR" ]; then
     mkdir -p "$LTI_APP_DIR" && say "created $LTI_APP_DIR"
@@ -1221,10 +1222,10 @@ install_lti_tool() {
     say "$LOG_NAME .env file was created"
   fi
 
-  # A note for future maintainers:
-  #   The following configuration operations were made idempotent, meaning that playing these actions will have an outcome on the system (configure it) only once.
-  #   Replaying these steps are a safe and an expected operation, this gurantees the seemless simple installation and upgrade of BBB LTI framework.
-  #   A simple change can impact that property and therefore render the upgrading functionnality unoperationnal or impact the running system.
+  # Note for Future Maintainers:
+  #   - The configuration steps below are designed to be idempotent. This means executing these actions will only configure the system once, regardless of how many times they are run.
+  #   - Repeating these steps is both safe and expected, ensuring a smooth installation and upgrade process for the BBB LTI framework.
+  #   - Caution: Minor changes might alter this idempotent behavior, potentially affecting the upgrade functionality or the stability of the running system.
 
   # Configuring BBB LTI .env file (if already configured this will only update some expected or safe to change variables).
   cp -v "$LTI_APP_DIR"/.env "$LTI_APP_DIR"/.env.old && say "old $LOG_NAME .env file can be retrieved at $LTI_APP_DIR/.env.old" #Backup
@@ -1316,7 +1317,7 @@ wait_postgres_start() {
 }
 
 register_lti_tool() {
- # Preparing and checking the enviroment.
+ # Preparing and checking the environment.
   if [[ -z $LTI_APP_DIR || -z $APP_NAME || -z $LOG_NAME ]]; then
     err "$LOG_NAME registration failed due to unmet requirements!"
   fi
@@ -1326,7 +1327,7 @@ register_lti_tool() {
   local OAUTH_KEY OAUTH_SECRET RELATIVE_URL_ROOT
   OAUTH_KEY=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_KEY=\)\(.*\)$/\2/p" "$LTI_APP_DIR"/.env) # Extract the LTI app OAUTH key.
   OAUTH_SECRET=$(sed -ne "s/^\([ \t]*OMNIAUTH_BBBLTIBROKER_SECRET=\)\(.*\)$/\2/p" "$LTI_APP_DIR"/.env) # Extract LTI app OAUTH secret.
-  RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" "$LTI_APP_DIR"/.env) # Extract LTI app realtive URL root path.
+  RELATIVE_URL_ROOT=$(sed -ne "s/^\([ \t]*RELATIVE_URL_ROOT=\)\(.*\)$/\2/p" "$LTI_APP_DIR"/.env) # Extract LTI app relative URL root path.
 
   if [ -z "$OAUTH_KEY" ] || [ -z "$OAUTH_SECRET" ] ; then
     err "failed to retrieve the $LOG_NAME OAUTH credentials - retry to resolve."
@@ -1352,7 +1353,7 @@ register_lti_tool() {
 }
 
 # Given a container name as $1, this function will check if there's a match for that name in the list of running docker containers on the system.
-# The result will be binded to $?.
+# The result will be bound to $?.
 check_container_running() {
   docker ps | grep -q "$1" || return 1;
 
@@ -1360,7 +1361,7 @@ check_container_running() {
 }
 
 # Given a filename as $1, if file exists under $sites_dir then the file will be suffixed with '.disabled'.
-# sites_dir points to Bigbluebutton nginx sites, when suffixed with '.disabled' nginx will not include the site on reload/restart thus disabling it.
+# sites_dir points to BigBlueButton nginx sites, when suffixed with '.disabled' nginx will not include the site on reload/restart thus disabling it.
 disable_nginx_site() {
   local site_path="$1"
 
@@ -1505,7 +1506,7 @@ set_real_ip_from 127.0.0.1;
 real_ip_header proxy_protocol;
 real_ip_recursive on;
 server {
-  # this double listenting is intended. We terminate SSL on haproxy. HTTP2 is a
+  # this double listening is intended. We terminate SSL on haproxy. HTTP2 is a
   # binary protocol. haproxy has to decide which protocol is spoken. This is
   # negotiated by ALPN.
   #
@@ -1614,10 +1615,10 @@ HERE
       rm /etc/nginx/ssl/dhp-4096.pem
     fi
   fi
-# Create the default Welcome page Bigbluebutton Frontend unless it exists.
+# Create the default Welcome page BigBlueButton Frontend unless it exists.
 if [[ ! -f /usr/share/bigbluebutton/nginx/default-fe.nginx && ! -f /usr/share/bigbluebutton/nginx/default-fe.nginx.disabled ]]; then
 cat <<HERE > /usr/share/bigbluebutton/nginx/default-fe.nginx
-# Default Bigbluebutton Landing page.
+# Default BigBlueButton Landing page.
 
 location @bbb-fe {
   index  index.html index.htm;
@@ -1713,7 +1714,7 @@ configure_coturn() {
     <!-- 
          We need turn0 for FireFox to workaround its limited ICE implementation.
          This is UDP connection.  Note that port 3478 must be open on this BigBlueButton
-         and reachble by the client.
+         and reachable by the client.
 
          Also, in 2.5, we previously defined turn:\$HOST:443?transport=tcp (not 'turns') 
          to workaround a bug in Safari's handling of Let's Encrypt. This bug is now fixed
@@ -1857,6 +1858,4 @@ HERE
 }
 
 main "$@" || exit 1
-
-
 
