@@ -1,3 +1,4 @@
+#bigbluebutton
 #!/bin/bash -e
 
 # Copyright (c) 2022 BigBlueButton Inc.
