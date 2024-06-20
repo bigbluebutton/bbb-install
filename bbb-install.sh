@@ -1814,6 +1814,10 @@ realm=$HOST
 
 keep-address-family
 
+# disabling UDP for not being part in DDoS attacks, read here: https://www.shadowserver.org/what-we-do/network-reporting/accessible-stun-service-report/
+no-udp
+no-udp-relay
+
 no-cli
 no-tlsv1
 no-tlsv1_1
