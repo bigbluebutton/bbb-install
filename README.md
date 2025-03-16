@@ -22,7 +22,7 @@ The full source code for the installation scripts can be found [here](https://gi
 So, to install the latest iteration of BigBlueButton 2.7 on a new 64-bit Ubuntu 20.04 server with a public IP address, a hostname (such as `bbb.example.com`) that resolves to the public IP address, and an email address (such as `info@example.com`), log into your new server via SSH and run the following command as root.
 
 ~~~
-wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v2.7.x-release/bbb-install.sh | bash -s -- -w -v focal-270 -s bbb.example.com -e info@example.com
+wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com
 ~~~
 
 This command pulls down the latest version of `bbb-install.sh` from BigBlueButton 2.7 branch , sends it to the Bash shell interpreter, and installs BigBlueButton using the parameters provided:
