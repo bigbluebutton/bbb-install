@@ -54,7 +54,7 @@ OPTIONS (install BigBlueButton):
   -x                     Use Let's Encrypt certbot with manual DNS challenges
 
   -g                     Install Greenlight version 3
-  -k                     Install Keycloak version 20
+  -k                     Install Keycloak version 26
 
   -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
 
@@ -85,7 +85,7 @@ OPTIONS (install Let's Encrypt certificate only):
 OPTIONS (install Greenlight only):
 
   -g                     Install Greenlight version 3 (required)
-  -k                     Install Keycloak version 20 (optional)
+  -k                     Install Keycloak version 26 (optional)
 
 OPTIONS (install BigBlueButton LTI framework only):
 
@@ -124,6 +124,7 @@ main() {
   LETS_ENCRYPT_OPTIONS=(--webroot --non-interactive)
   SOURCES_FETCHED=false
   GL3_DIR=~/greenlight-v3
+  KC_DIR=~/keycloack
   LTI_DIR=~/bbb-lti
   NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
@@ -946,33 +947,82 @@ install_greenlight_v3(){
   disable_nginx_site default-fe.nginx && say "found default bbb-fe 'Welcome' and disabled it!"
 
   # Adding Keycloak
-  if [ -n "$INSTALL_KC" ]; then
-      # When attempting to install/update Keycloak let us attempt to create the database to resolve any issues caused by postgres false negatives.
-      docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
-      wait_postgres_start
-      docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;'
-  fi
 
-  if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
+  if [ ! -f "$KC_DIR/docker-compose.yml" ] || [ ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml ]; then
     # The following logic is expected to run only once when adding Keycloak.
     # Keycloak isn't installed
     if [ -n "$INSTALL_KC" ]; then
       # Add Keycloak
       say "Adding Keycloak..."
 
-      docker-compose -f $GL3_DIR/docker-compose.yml down
-      cp -v $GL3_DIR/docker-compose.yml $GL3_DIR/docker-compose.base.yml # Persist working base compose file for admins as a Backup.
+  if [ ! -d $KC_DIR ]; then
+    mkdir -p $KC_DIR && say "created $KC_DIR"
+  fi
+      cat <<HERE > $KC_DIR/.env
+POSTGRES_DB=keycloak_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=
+HERE
 
-      docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.kc.yml' >> $GL3_DIR/docker-compose.yml
+      cat <<HERE > $KC_DIR/docker-compose.yml
+networks:
+  keycloak_network:
 
-      if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
-        err "failed to add Keycloak service to greenlight-v3 compose file - is docker running?"
-      fi
-      say "added Keycloak to compose file"
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres-keycloack
+    volumes:
+      - ./postgres17:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: \${POSTGRES_DB}
+      POSTGRES_USER: \${POSTGRES_USER}
+      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
+    networks:
+      - keycloak_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: keycloack
+    command: start
+    environment:
+      # KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 5151
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HTTP_RELATIVE_PATH: /keycloak
+      KC_HEALTH_ENABLED: true
+      KC_BOOTSTRAP_ADMIN_USERNAME: \${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: \${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres/\${POSTGRES_DB}
+      KC_DB_USERNAME: \${POSTGRES_USER}
+      KC_DB_PASSWORD: \${POSTGRES_PASSWORD}
+      KC_PROXY_HEADERS: xforwarded
+      
+    ports:
+      - 5151:8080
+    restart: always
+    depends_on:
+      - postgres
+    networks:
+      - keycloak_network
+
+volumes:
+  postgres17: {}
+
+HERE
+
 
       KCPASSWORD=$(openssl rand -hex 12) # Keycloak admin password.
-      sed -i "s|^\([ \t-]*KEYCLOAK_ADMIN_PASSWORD\)\(=[ \t]*\)$|\1=$KCPASSWORD|g" $GL3_DIR/docker-compose.yml # Do not overwrite the value if not empty.
-      sed -i "s|^\([ \t-]*KC_DB_PASSWORD\)\(=[ \t]*\)$|\1=$PGPASSWORD|g" $GL3_DIR/docker-compose.yml # Do not overwrite the value if not empty.
+      KCPGPASSWORD=$(openssl rand -hex 12) # Keycloak postgres password.
+      sed -i "s|^\([ \t-]*KEYCLOAK_ADMIN_PASSWORD\)\(=[ \t]*\)$|\1=$KCPASSWORD|g" $KC_DIR/.env # Do not overwrite the value if not empty.
+      sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$KCPGPASSWORD|g" $KC_DIR/.env # Do not overwrite the value if not empty.
+
+      docker-compose -f $KC_DIR/docker-compose.yml up -d
 
       # Updating Keycloak nginx file.
       cp -v $NGINX_FILES_DEST/keycloak.nginx $NGINX_FILES_DEST/keycloak.nginx.old && say "old Keycloak nginx config can be retrieved at $NGINX_FILES_DEST/keycloak.nginx.old"
@@ -1032,7 +1082,7 @@ HERE
   say "To create Greenlight administrator account, see: https://docs.bigbluebutton.org/greenlight/v3/install#creating-an-admin-account"
 
 
-  if grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
+  if grep -q 'keycloak:' $KC_DIR/docker-compose.yml; then
     say "Keycloak is installed, up to date and accessible for configuration on: https://$HOST/keycloak/"
     if [ -n "$KCPASSWORD" ];then
       say "Use the following credentials when accessing the admin console:"
