@@ -1004,7 +1004,7 @@ services:
       KC_PROXY_HEADERS: xforwarded
       
     ports:
-      - 5151:8080
+      - 5151:5151
     restart: always
     depends_on:
       - postgres
