@@ -948,7 +948,7 @@ install_greenlight_v3(){
 
   # Adding Keycloak
 
-  if [ ! -f "$KC_DIR/docker-compose.yml" ] || [ ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml ]; then
+  if ! -f "$KC_DIR/docker-compose.yml" || ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml ; then
     # The following logic is expected to run only once when adding Keycloak.
     # Keycloak isn't installed
     if [ -n "$INSTALL_KC" ]; then
