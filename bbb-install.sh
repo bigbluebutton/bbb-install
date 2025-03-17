@@ -955,10 +955,13 @@ install_greenlight_v3(){
       # Add Keycloak
       say "Adding Keycloak..."
 
+  # create Keycloak dir
   if [ ! -d $KC_DIR ]; then
     mkdir -p $KC_DIR && say "created $KC_DIR"
   fi
-      cat <<HERE > $KC_DIR/.env
+
+    # Create Keycloak docker files 
+    cat <<HERE > $KC_DIR/.env
 POSTGRES_DB=keycloak_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=
@@ -968,7 +971,7 @@ HERE
 
       cat <<HERE > $KC_DIR/docker-compose.yml
 networks:
-  keycloak_network:
+  kcnetwork:
 
 services:
   postgres:
@@ -981,18 +984,16 @@ services:
       POSTGRES_USER: \${POSTGRES_USER}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
     networks:
-      - keycloak_network
+      - kcnetwork
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.1
     container_name: keycloack
     command: start
     environment:
-      # KC_HOSTNAME: localhost
       KC_HOSTNAME_PORT: 5151
       KC_HOSTNAME_STRICT: false
       KC_HTTP_ENABLED: true
-      KC_HOSTNAME_STRICT_HTTPS: false
       KC_HTTP_RELATIVE_PATH: /keycloak
       KC_HEALTH_ENABLED: true
       KC_BOOTSTRAP_ADMIN_USERNAME: \${KEYCLOAK_ADMIN}
@@ -1009,14 +1010,14 @@ services:
     depends_on:
       - postgres
     networks:
-      - keycloak_network
+      - kcnetwork
 
 volumes:
   postgres17: {}
 
 HERE
 
-
+      # generate Keycloak passwords
       KCPASSWORD=$(openssl rand -hex 12) # Keycloak admin password.
       KCPGPASSWORD=$(openssl rand -hex 12) # Keycloak postgres password.
       sed -i "s|^\([ \t-]*KEYCLOAK_ADMIN_PASSWORD\)\(=[ \t]*\)$|\1=$KCPASSWORD|g" $KC_DIR/.env # Do not overwrite the value if not empty.
@@ -1085,7 +1086,7 @@ HERE
   if grep -q 'keycloak:' $KC_DIR/docker-compose.yml; then
     say "Keycloak is installed, up to date and accessible for configuration on: https://$HOST/keycloak/"
     if [ -n "$KCPASSWORD" ];then
-      say "Use the following credentials when accessing the admin console:"
+      say "Use the following credentials when accessing the admin console and create admin user:"
       say "   admin"
       say "   $KCPASSWORD"
     fi
