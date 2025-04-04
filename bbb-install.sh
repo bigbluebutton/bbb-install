@@ -278,17 +278,53 @@ main() {
   get_IP "$HOST"
 
   if [ "$DISTRO" == "jammy" ]; then
+    
     need_pkg ca-certificates
 
-    need_ppa rmescandon-ubuntu-yq-jammy.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
-    #need_ppa ppa:rmescandon/yq
-    need_pkg yq
-    yq --version
+
+    #ppa:rmescandon/yq installation
+    if [ -f /etc/apt/sources.list.d/rmescandon-ubuntu-yq-jammy.list ] &&  grep -q 18 /etc/apt/sources.list.d/rmescandon-ubuntu-yq-jammy.list; then
+        sudo rm -r /etc/apt/sources.list.d/rmescandon-ubuntu-yq-jammy.list
+        fi
+        if [ ! -f /etc/apt/sources.list.d/rmescandon-ubuntu-yq-jammy.list ]; then
+        if [ -f /etc/apt/keyrings/rmescandon-ubuntu-yq.gpg  ]; then
+            rm  -r /etc/apt/keyrings/rmescandon-ubuntu-yq.gpg  
+        fi
+        curl -fsSL "https://ppa.launchpadcontent.net/rmescandon/yq/ubuntu/dists/jammy/Release.gpg" -o /etc/apt/keyrings/rmescandon-ubuntu-yq-release.gpg
+        curl -sL 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x6657DBE0CC86BB64' | gpg --dearmor > /etc/apt/keyrings/rmescandon-ubuntu-yq.gpg 
+        rm -r /etc/apt/keyrings/rmescandon-ubuntu-yq-release.gpg 
+        echo "deb [signed-by=/etc/apt/keyrings/rmescandon-ubuntu-yq.gpg]  https://ppa.launchpadcontent.net/rmescandon/yq/ubuntu/  jammy main" > /etc/apt/sources.list.d/rmescandon-ubuntu-yq-jammy.list
+
+        fi
 
     #need_ppa libreoffice-ubuntu-ppa-jammy.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
-
-    need_ppa bigbluebutton-ubuntu-support-focal.list ppa:bigbluebutton/support  2E1B01D0E95B94BC    # Needed for libopusenc0
-    need_ppa martin-uni-mainz-ubuntu-coturn-focal.list ppa:martin-uni-mainz/coturn  4B77C2225D3BBDB3 # Coturn
+    
+    #BigBlueButton support
+    if [ -f /etc/apt/sources.list.d/bigbluebutton-ubuntu-support-jammy.list ] &&  grep -q 18 /etc/apt/sources.list.d/bigbluebutton-ubuntu-support-jammy.list; then
+      sudo rm -r /etc/apt/sources.list.d/bigbluebutton-ubuntu-support-jammy.list
+    fi
+    if [ ! -f /etc/apt/sources.list.d/bigbluebutton-ubuntu-support-jammy.list ]; then
+      if [ -f /etc/apt/keyrings/bigbluebutton-ubuntu-support.gpg]; then
+        rm -r /etc/apt/keyrings/bigbluebutton-ubuntu-support.gpg
+      fi
+      curl -fsSL "https://ppa.launchpadcontent.net/bigbluebutton/support/ubuntu/dists/jammy/Release.gpg" -o /etc/apt/keyrings/bigbluebutton-ubuntu-support-release.gpg
+      curl -sL 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2E1B01D0E95B94BC' | gpg --dearmor > /etc/apt/keyrings/bigbluebutton-ubuntu-support.gpg
+      rm -r /etc/apt/keyrings/bigbluebutton-ubuntu-support-release.gpg 
+      echo "deb [signed-by=/etc/apt/keyrings/bigbluebutton-ubuntu-support.gpg] https://ppa.launchpadcontent.net/bigbluebutton/support/ubuntu/ jammy main" > /etc/apt/sources.list.d/bigbluebutton-ubuntu-support-jammy.list
+    fi
+    #BigBlueButton matin mainz coturn
+    if [ -f /etc/apt/sources.list.d/martin-uni-mainz-ubuntu-coturn-jammy.list ] &&  grep -q 18 /etc/apt/sources.list.d/bigbluebutton-ubuntu-support-jammy.list; then
+      sudo rm -r /etc/apt/sources.list.d/martin-uni-mainz-ubuntu-coturn-jammy.list
+    fi
+    if [ ! -f /etc/apt/sources.list.d/martin-uni-mainz-ubuntu-coturn-jammy.list ]; then
+      if [ -f /etc/apt/keyrings/bigbluebutton-ubuntu-support-release.gpg ]; then
+        rm -r /etc/apt/keyrings/martin-uni-mainz-ubuntu-coturn.gpg 
+      fi
+      curl  https://ppa.launchpadcontent.net/martin-uni-mainz/coturn/ubuntu/dists/jammy/Release.gpg -o /etc/apt/keyrings/Release.gpg
+      curl -sL 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x4B77C2225D3BBDB3' | gpg --dearmor > /etc/apt/keyrings/martin-uni-mainz-ubuntu-coturn.gpg
+      rm -r /etc/apt/keyrings/Release.gpg
+      echo "deb [signed-by=/etc/apt/keyrings/martin-uni-mainz-ubuntu-coturn.gpg] https://ppa.launchpadcontent.net/martin-uni-mainz/coturn/ubuntu/ jammy main" > /etc/apt/sources.list.d/martin-uni-mainz-ubuntu-coturn-jammy.list
+    fi
 
     if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 18 /etc/apt/sources.list.d/nodesource.list; then
       # Node 18 might be installed, previously used in BigBlueButton
@@ -297,9 +333,8 @@ main() {
       sudo rm -r /etc/apt/sources.list.d/nodesource.list
     fi
     if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
-      sudo mkdir -p /etc/apt/keyrings
       if [ -f /etc/apt/keyrings/nodesource.gpg ]; then
-        rm /etc/apt/keyrings/nodesource.gpg
+        rm -r /etc/apt/keyrings/nodesource.gpg 
       fi
       curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
       NODE_MAJOR=22
@@ -314,6 +349,7 @@ main() {
 
     need_pkg openjdk-17-jre
     update-java-alternatives -s java-1.17.0-openjdk-amd64
+    chmod 644 /etc/apt/keyrings/* #make apt readable for apt
   fi
 
   apt-get update
@@ -1368,15 +1404,15 @@ install_docker() {
 
   # Install Docker
   if ! apt-key list | grep -q Docker; then
-    if [ ! -f /usr/share/keyrings/docker-archive-keyring.gpg ]; then
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    if [ ! -f /etc/apt/keyrings/docker-archive-keyring.gpg ]; then
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker-archive-keyring.gpg
     fi
   fi
   if ! dpkg -l | grep -q docker-ce; then
 
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
+    chmod 644 /etc/apt/keyrings/*
     apt-get update
     need_pkg docker-ce docker-ce-cli containerd.io
   fi
@@ -1391,7 +1427,23 @@ install_docker() {
     curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
   fi
-
+  #Adds the proxy to docker  
+  if [ -f /etc/systemd/system/docker.service.d  ]; then
+      rm  -r  /etc/systemd/system/docker.service.d 
+  fi
+  if [ -f /etc/systemd/system/docker.service.d/http-proxy.conf  ]; then
+      rm  -r /etc/systemd/system/docker.service.d/http-proxy.conf  
+  fi
+  mkdir -p /etc/systemd/system/docker.service.d
+  touch /etc/systemd/system/docker.service.d/http-proxy.conf
+  echo '[Service]' > /etc/systemd/system/docker.service.d/http-proxy.conf
+  echo Environment="HTTP_PROXY="$HTTP_PROXY"" >> /etc/systemd/system/docker.service.d/http-proxy.conf
+  echo Environment="HTTPS_PROXY="$HTTP_PROXY"" >> /etc/systemd/system/docker.service.d/http-proxy.conf
+  systemctl daemon-reload
+  systemctl restart docker
+  docker version > /dev/null || err "docker is failing to restart, something is wrong retry to resolve - exiting"
+  say "docker is running with proxy!"
+  
   # Ensuring docker is running
   if ! docker version > /dev/null ; then
     # Attempting to auto resolve by restarting docker socket and engine.
