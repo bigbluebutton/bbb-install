@@ -1364,46 +1364,9 @@ disable_nginx_site() {
 }
 
 install_docker() {
-  need_pkg apt-transport-https ca-certificates curl gnupg-agent software-properties-common openssl
-
-  # Install Docker
-  if ! apt-key list | grep -q Docker; then
-    if [ ! -f /usr/share/keyrings/docker-archive-keyring.gpg ]; then
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    fi
-  fi
-  if ! dpkg -l | grep -q docker-ce; then
-
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-     $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-    apt-get update
-    need_pkg docker-ce docker-ce-cli containerd.io
-  fi
-  if ! which docker; then err "Docker did not install"; fi
-
-  # Purge older docker compose if exists.
-  if dpkg -l | grep -q docker-compose; then
-    apt-get purge -y docker-compose
-  fi
-
-  if [ ! -x /usr/local/bin/docker-compose ]; then
-    curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-  fi
-
-  # Ensuring docker is running
-  if ! docker version > /dev/null ; then
-    # Attempting to auto resolve by restarting docker socket and engine.
-    systemctl restart docker.socket docker.service
-    sleep 5
-
-    docker version > /dev/null || err "docker is failing to restart, something is wrong retry to resolve - exiting"
-    say "docker is running!"
-  fi
-
+  need_pkg podman-docker
+  echo 'unqualified-search-registries = ["docker.io"]' >/etc/containers/registries.conf.d/bigbluebutton.conf
 }
-
 
 install_ssl() {
   if ! grep -q "$HOST" /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml; then
