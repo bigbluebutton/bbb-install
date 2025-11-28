@@ -948,9 +948,9 @@ install_greenlight_v3(){
   # Adding Keycloak
   if [ -n "$INSTALL_KC" ]; then
       # When attempting to install/update Keycloak let us attempt to create the database to resolve any issues caused by postgres false negatives.
-      docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
+      docker compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
       wait_postgres_start
-      docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;'
+      docker compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;'
   fi
 
   if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
@@ -960,7 +960,7 @@ install_greenlight_v3(){
       # Add Keycloak
       say "Adding Keycloak..."
 
-      docker-compose -f $GL3_DIR/docker-compose.yml down
+      docker compose -f $GL3_DIR/docker-compose.yml down
       cp -v $GL3_DIR/docker-compose.yml $GL3_DIR/docker-compose.base.yml # Persist working base compose file for admins as a Backup.
 
       docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.kc.yml' >> $GL3_DIR/docker-compose.yml
@@ -1016,17 +1016,17 @@ HERE
 
   # Eager pulling images.
   say "pulling latest greenlight-v3 services images..."
-  docker-compose -f $GL3_DIR/docker-compose.yml pull
+  docker compose -f $GL3_DIR/docker-compose.yml pull
 
   if check_container_running greenlight-v3; then
     # Restarting Greenlight-v3 services after updates.
     say "greenlight-v3 is updating..."
     say "shutting down greenlight-v3..."
-    docker-compose -f $GL3_DIR/docker-compose.yml down
+    docker compose -f $GL3_DIR/docker-compose.yml down
   fi
 
   say "starting greenlight-v3..."
-  docker-compose -f $GL3_DIR/docker-compose.yml up -d
+  docker compose -f $GL3_DIR/docker-compose.yml up -d
   sleep 5
   say "greenlight-v3 is now installed and accessible on: https://$HOST${GL_RELATIVE_URL_ROOT:-$GL_DEFAULT_PATH}"
   say "To create Greenlight administrator account, see: https://docs.bigbluebutton.org/greenlight/v3/install#creating-an-admin-account"
@@ -1111,17 +1111,17 @@ install_lti(){
 
   # Updating BBB LTI framework images.
   say "pulling latest BBB LTI framework services images..."
-  docker-compose -f $LTI_DIR/docker-compose.yml pull
+  docker compose -f $LTI_DIR/docker-compose.yml pull
 
   if check_container_running broker; then
     # Restarting BBB LTI framework services after updates.
     say "BBB LTI framework is updating..."
     say "shutting down BBB LTI framework services..."
-    docker-compose -f $LTI_DIR/docker-compose.yml down
+    docker compose -f $LTI_DIR/docker-compose.yml down
   fi
 
   say "starting BBB LTI framework services..."
-  docker-compose -f $LTI_DIR/docker-compose.yml up -d
+  docker compose -f $LTI_DIR/docker-compose.yml up -d
 
   wait_lti_broker_start
 
@@ -1130,9 +1130,9 @@ install_lti(){
 
   say "Setting/updating LTI credentials for LTI KEY: $LTI_KEY..."
 
-  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update["$LTI_KEY","$LTI_SECRET"] \
+  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update["$LTI_KEY","$LTI_SECRET"] \
     2> /dev/null 1>&2; then
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add["$LTI_KEY","$LTI_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add["$LTI_KEY","$LTI_SECRET"] \
       2> /dev/null 1>&2 || err "failed to set LTI credentials $LTI_KEY:$LTI_SECRET."
 
       say "New LTI credentials for LTI KEY: $LTI_KEY were added!"
@@ -1267,10 +1267,10 @@ register_lti_tools() {
 
 wait_lti_broker_start() {
   say "Waiting for the LTI broker to start..."
-  docker-compose -f $LTI_DIR/docker-compose.yml up -d broker || err "failed to register LTI framework apps due to LTI broker failling to start - retry to resolve"
+  docker compose -f $LTI_DIR/docker-compose.yml up -d broker || err "failed to register LTI framework apps due to LTI broker failling to start - retry to resolve"
 
   local tries=0
-  while ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:version 2> /dev/null 1>&2; do
+  while ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:version 2> /dev/null 1>&2; do
     echo -n .
     sleep 3
     if (( ++tries == 3 )); then
@@ -1287,10 +1287,10 @@ wait_lti_broker_start() {
 
 wait_postgres_start() {
   say "Waiting for the Postgres DB to start..."
-  docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres || err "failed to start Postgres service - retry to resolve"
+  docker compose -f $GL3_DIR/docker-compose.yml up -d postgres || err "failed to start Postgres service - retry to resolve"
 
   local tries=0
-  while ! docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres pg_isready 2> /dev/null 1>&2; do
+  while ! docker compose -f $GL3_DIR/docker-compose.yml exec -T postgres pg_isready 2> /dev/null 1>&2; do
     echo -n .
     sleep 3
     if (( ++tries == 3 )); then
@@ -1327,12 +1327,12 @@ register_lti_tool() {
     err "failed to register $LOG_NAME due to LTI broker not running - retry to resolve."
   fi
 
-  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show["$APP_NAME"] \
+  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show["$APP_NAME"] \
     2> /dev/null 1>&2; then
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully registered."
   else
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully updated."
   fi
 
@@ -1385,11 +1385,6 @@ install_docker() {
   # Purge older docker compose if exists.
   if dpkg -l | grep -q docker-compose; then
     apt-get purge -y docker-compose
-  fi
-
-  if [ ! -x /usr/local/bin/docker-compose ]; then
-    curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
   fi
 
   # Ensuring docker is running
@@ -1646,8 +1641,8 @@ fi
         fi
 
         sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
-        docker-compose -f "$gl_dir"/docker-compose.yml down
-        docker-compose -f "$gl_dir"/docker-compose.yml up -d
+        docker compose -f "$gl_dir"/docker-compose.yml down
+        docker compose -f "$gl_dir"/docker-compose.yml up -d
       fi
     fi
   done
