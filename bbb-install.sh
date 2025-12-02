@@ -126,6 +126,8 @@ main() {
   GL3_DIR=~/greenlight-v3
   LTI_DIR=~/bbb-lti
   NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
+  IMAGE_MAGICK_DIR=/etc/ImageMagick-6
+  OVERWRITE_IMAGE_MAGICK_POLICY=true
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   printf '\n' > "$CR_TMPFILE"
 
@@ -389,6 +391,117 @@ main() {
 
   if [ -n "$GREENLIGHT" ]; then
     install_greenlight_v3
+  fi
+
+  if [ "$OVERWRITE_IMAGE_MAGICK_POLICY" = true ]; then
+    echo "ATTENTION!!"
+    echo "Overwriting ImageMagick policy file (modifying the default configuration to seal security vectors)"
+
+    #
+    # This is the imagemagick-provided https://imagemagick.org/source/policy-websafe.xml with
+    # minimal modifications required for bigbluebutton presentation conversion to work
+
+
+    cat <<HERE > "$IMAGE_MAGICK_DIR/policy.xml"
+<!-- 
+  Creating a security policy that fits your specific local environment
+  before making use of ImageMagick is highly advised. You can find guidance on
+  setting up this policy at https://imagemagick.org/script/security-policy.php,
+  and it's important to verify your policy using the validation tool located
+  at https://imagemagick-secevaluator.doyensec.com/.
+  Web-safe ImageMagick security policy:
+  This security protocol designed for web-safe usage focuses on situations
+  where ImageMagick is applied in publicly accessible contexts, like websites.
+  It deactivates the capability to read from or write to any image formats
+  other than web-safe formats like GIF, JPEG, and PNG. Additionally, this
+  policy prohibits the execution of image filters and indirect reads, thereby
+  thwarting potential security breaches. By implementing these limitations,
+  the web-safe policy fortifies the safeguarding of systems accessible to
+  the public, reducing the risk of exploiting ImageMagick's capabilities
+  for potential attacks.
+ -->
+<policymap xmlns="">
+<!--  Set maximum parallel threads.  -->
+<policy xmlns="" domain="resource" name="thread" value="2"/>
+<!--  Set maximum time to live in seconds or neumonics, e.g. "2 minutes". When
+       this limit is exceeded, an exception is thrown and processing stops.  -->
+<policy xmlns="" domain="resource" name="time" value="60"/>
+<!--  Set maximum number of open pixel cache files. When this limit is
+       exceeded, any subsequent pixels cached to disk are closed and reopened
+       on demand.  -->
+<policy xmlns="" domain="resource" name="file" value="768"/>
+<!--  Set maximum amount of memory in bytes to allocate for the pixel cache
+       from the heap. When this limit is exceeded, the image pixels are cached
+       to memory-mapped disk.  -->
+<policy xmlns="" domain="resource" name="memory" value="256MiB"/>
+<!--  Set maximum amount of memory map in bytes to allocate for the pixel
+       cache. When this limit is exceeded, the image pixels are cached to
+       disk.  -->
+<policy xmlns="" domain="resource" name="map" value="512MiB"/>
+<!--  Set the maximum width * height of an image that can reside in the pixel
+       cache memory. Images that exceed the area limit are cached to disk.  -->
+<policy xmlns="" domain="resource" name="area" value="16KP"/>
+<!--  Set maximum amount of disk space in bytes permitted for use by the pixel
+       cache. When this limit is exceeded, the pixel cache is not be created
+       and an exception is thrown.  -->
+<policy xmlns="" domain="resource" name="disk" value="1GiB"/>
+<!--  Set the maximum length of an image sequence.  When this limit is
+       exceeded, an exception is thrown.  -->
+<policy xmlns="" domain="resource" name="list-length" value="16"/>
+<!--  Set the maximum width of an image.  When this limit is exceeded, an
+       exception is thrown.  -->
+<policy xmlns="" domain="resource" name="width" value="4KP"/>
+<!--  Set the maximum height of an image.  When this limit is exceeded, an
+       exception is thrown.  -->
+<policy xmlns="" domain="resource" name="height" value="4KP"/>
+<!--  Periodically yield the CPU for at least the time specified in
+       milliseconds.  -->
+<policy xmlns="" domain="resource" name="throttle" value="2"/>
+<!--  Do not create temporary files in the default shared directories, instead
+       specify a private area to store only ImageMagick temporary files.  -->
+<!--  <policy domain="resource" name="temporary-path" value="/magick/tmp/"/>  -->
+<!--  Force memory initialization by memory mapping select memory
+       allocations.  -->
+<policy xmlns="" domain="cache" name="memory-map" value="anonymous"/>
+<!--  Ensure all image data is fully flushed and synchronized to disk.  -->
+<policy xmlns="" domain="cache" name="synchronize" value="true"/>
+<!--  Replace passphrase for secure distributed processing  -->
+<!--  <policy domain="cache" name="shared-secret" value="secret-passphrase" stealth="true"/>  -->
+<!--  Do not permit any delegates to execute.  -->
+<policy xmlns="" domain="delegate" rights="none" pattern="*"/>
+<!--  Do not permit any image filters to load.  -->
+<policy xmlns="" domain="filter" rights="none" pattern="*"/>
+
+<!--  Don't read/write from/to stdin/stdout.  -->
+<policy xmlns="" domain="path" rights="none" pattern="-"/>
+
+<!--  Indirect reads are not permitted.  -->
+<policy xmlns="" domain="path" rights="none" pattern="@*"/>
+
+<!--  don't read sensitive paths.  -->
+<policy domain="path" rights="none" pattern="/*"/>
+
+<!--  allow access to required paths.  -->
+<policy domain="path" rights="read|write" pattern="/var/bigbluebutton/*"/>
+<policy domain="path" rights="read|write" pattern="/tmp/*"/>
+
+<!--  Deny all image modules and specifically exempt reading or writing
+       web-safe image formats.  -->
+<policy xmlns="" domain="module" rights="none" pattern="*"/>
+<policy domain="module" rights="read | write" pattern="{BMP,GIF,JPEG,PDF,PNG,TIFF,WEBP}"/>
+<policy xmlns="" domain="module" rights="read | write" pattern="{MPC}" stealth="true"/>
+<policy domain="module" rights="write" pattern="{JSON,INFO,PNM,PS,SVG}"/>
+<!--  This policy sets the number of times to replace content of certain
+       memory buffers and temporary files before they are freed or deleted.  -->
+<policy xmlns="" domain="system" name="shred" value="1"/>
+<!--  Enable the initialization of buffers with zeros, resulting in a minor
+       performance penalty but with improved security.  -->
+<policy xmlns="" domain="system" name="memory-map" value="anonymous"/>
+<!--  Set the maximum amount of memory in bytes that are permitted for
+       allocation requests.  -->
+<policy xmlns="" domain="system" name="max-memory-request" value="256MiB"/>
+</policymap>
+HERE
   fi
 
   bbb-conf --check
