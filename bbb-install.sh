@@ -345,6 +345,10 @@ main() {
     install_ssl
   fi
 
+  if [ -n "$UFW" ]; then
+    setup_ufw 
+  fi
+
   if [ -n "$COTURN" ]; then
     configure_coturn
 
@@ -360,19 +364,31 @@ main() {
     # so if NAT is in use, add an iptables rule to adjust the destination IP address
     # of UDP packets sent from the turn server to FreeSWITCH.
     if [ -n "$INTERNAL_IP" ]; then
-      need_pkg iptables-persistent
-      iptables -t nat -A OUTPUT -p udp -s "$INTERNAL_IP" -d "$IP" -j DNAT --to-destination "$INTERNAL_IP"
-      netfilter-persistent save
+      # Due to Ubuntu 22.04 bug #1987227 you can't use UFW and iptables-persistent
+      # Ubuntu will be stripped of network connectivity after reboot
+      # If UFW is being installed, use UFW
+      if [ -n "$UFW" ]; then
+      # Define the NAT rule to be added
+      RULE="-A OUTPUT -p udp -s $INTERNAL_IP -d $IP -j DNAT --to-destination $INTERNAL_IP"
+      # Check if the rule already exists in /etc/ufw/before.rules to avoid duplicates
+        if ! grep -qF "$RULE" /etc/ufw/before.rules; then
+          # Insert the rule into the *nat section before the COMMIT line
+          sed -i '/^*nat/,/^COMMIT$/ {/^COMMIT$/i '"$RULE"' }' /etc/ufw/before.rules
+          # Reload UFW to apply the changes immediately
+          ufw reload
+        fi
+      # If UFW is not being installed, use iptables-persistent
+      else
+        need_pkg iptables-persistent
+        iptables -t nat -A OUTPUT -p udp -s "$INTERNAL_IP" -d "$IP" -j DNAT --to-destination "$INTERNAL_IP"
+        netfilter-persistent save
+      fi
     fi
   fi
 
   apt-get auto-remove -y
 
   systemctl restart systemd-journald
-
-  if [ -n "$UFW" ]; then
-    setup_ufw 
-  fi
 
   if [ -n "$HOST" ]; then
     bbb-conf --setip "$HOST"
@@ -1962,4 +1978,3 @@ HERE
 }
 
 main "$@" || exit 1
-
