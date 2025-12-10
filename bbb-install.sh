@@ -498,6 +498,7 @@ main() {
   <policy domain="module" rights="none" pattern="*" />
   <policy domain="module" rights="read | write" pattern="{BMP,GIF,JPEG,PDF,PNG,TIFF,WEBP}"/>
   <policy domain="module" rights="read | write" pattern="{MPC}" stealth="true"/>
+  <policy domain="module" rights="read" pattern="{XC}"/>
   <policy domain="module" rights="write" pattern="{JSON,INFO,PNM,PS,SVG}"/>
   <!-- This policy sets the number of times to replace content of certain
        memory buffers and temporary files before they are freed or deleted. -->
