@@ -60,7 +60,7 @@ OPTIONS (install BigBlueButton):
 
   -c <hostname>:<secret> Configure with external coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
-  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
+  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path>
 
   -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
@@ -143,7 +143,7 @@ main() {
 
       s)
         HOST=$OPTARG
-        if [ "$HOST" == "bbb.example.com" ]; then 
+        if [ "$HOST" == "bbb.example.com" ]; then
           err "You must specify a valid hostname (not the hostname given in the docs)."
         fi
         ;;
@@ -152,7 +152,7 @@ main() {
         ;;
       e)
         EMAIL=$OPTARG
-        if [ "$EMAIL" == "info@example.com" ]; then 
+        if [ "$EMAIL" == "info@example.com" ]; then
           err "You must specify a valid email address (not the email in the docs)."
         fi
         ;;
@@ -312,7 +312,7 @@ main() {
     install_docker		                     # needed for bbb-libreoffice-docker
     need_pkg ruby
 
-    BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
+    BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
 
     need_pkg openjdk-17-jre
     update-java-alternatives -s java-1.17.0-openjdk-amd64
@@ -371,7 +371,7 @@ main() {
   systemctl restart systemd-journald
 
   if [ -n "$UFW" ]; then
-    setup_ufw 
+    setup_ufw
   fi
 
   if [ -n "$HOST" ]; then
@@ -416,7 +416,7 @@ main() {
 <!ATTLIST policy stealth NMTOKEN #IMPLIED>
 <!ATTLIST policy value CDATA #IMPLIED>
 ]>
-<!-- 
+<!--
   Creating a security policy that fits your specific local environment
   before making use of ImageMagick is highly advised. You can find guidance on
   setting up this policy at https://imagemagick.org/script/security-policy.php,
@@ -599,7 +599,7 @@ get_IP() {
 
 
   local external_ip
-  # Determine external IP 
+  # Determine external IP
   if grep -sqi ^ec2 /sys/devices/virtual/dmi/id/product_uuid; then
     # EC2
     external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
@@ -631,17 +631,17 @@ get_IP() {
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
     sleep 1
-    
+
      # Check if we can reach the server through it's external IP address
      if nc -zvw3 "$external_ip" 443  > /dev/null 2>&1; then
        INTERNAL_IP=$IP
        IP=$external_ip
-       echo 
+       echo
        echo "  Detected this server has an internal/external IP address."
-       echo 
+       echo
        echo "      INTERNAL_IP: $INTERNAL_IP"
        echo "    (external) IP: $IP"
-       echo 
+       echo
      fi
 
     kill $nc_PID  > /dev/null 2>&1;
@@ -671,7 +671,7 @@ need_pkg() {
 }
 
 need_ppa() {
-  need_pkg software-properties-common 
+  need_pkg software-properties-common
   if [ ! -f "/etc/apt/sources.list.d/$1" ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y "$2"
   fi
@@ -714,10 +714,10 @@ check_coturn() {
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
   if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
 
-  if [ "$COTURN_HOST" == "turn.example.com" ]; then 
+  if [ "$COTURN_HOST" == "turn.example.com" ]; then
     err "You must specify a valid hostname (not the example given in the docs)"
   fi
-  if [ "$COTURN_SECRET" == "1234abcd" ]; then 
+  if [ "$COTURN_SECRET" == "1234abcd" ]; then
     err "You must specify a new password (not the example given in the docs)."
   fi
 
@@ -725,7 +725,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then 
+  if dpkg -l | grep -q apache2-bin; then
     echo "You must uninstall the Apache2 server first"
     if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
       exit 1
@@ -791,8 +791,8 @@ check_nat() {
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
     if ! grep -q "$IP" /lib/systemd/system/dummy-nic.service > /dev/null 2>&1; then
-      if [ -f /lib/systemd/system/dummy-nic.service ]; then 
-        DAEMON_RELOAD=true; 
+      if [ -f /lib/systemd/system/dummy-nic.service ]; then
+        DAEMON_RELOAD=true;
       fi
 
       cat > /lib/systemd/system/dummy-nic.service << HERE
@@ -824,7 +824,7 @@ check_LimitNOFILE() {
 
   if [ "$CPU" -ge 8 ]; then
     if [ -f /lib/systemd/system/bbb-web.service ]; then
-      # Let's create an override file to increase the number of LimitNOFILE 
+      # Let's create an override file to increase the number of LimitNOFILE
       mkdir -p /etc/systemd/system/bbb-web.service.d/
       cat > /etc/systemd/system/bbb-web.service.d/override.conf << HERE
 [Service]
@@ -885,7 +885,8 @@ defaults
 
 
 frontend nginx_or_turn
-  bind *:443,:::443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
+  # Http2 is disabled, include h2 to the list if you want to enable it: h2,http/1.1,stun.turn
+  bind *:443,:::443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn http/1.1,stun.turn
   mode tcp
   option tcplog
   tcp-request content capture req.payload(0,1) len 1
@@ -1010,7 +1011,7 @@ install_greenlight_v3(){
     if [ ! -s $GL3_DIR/.env ]; then
       err "failed to create greenlight-v3 .env file - is docker running?"
     fi
- 
+
     say "greenlight-v3 .env file was created"
   fi
 
@@ -1396,7 +1397,7 @@ wait_lti_broker_start() {
     echo -n .
     sleep 3
     if (( ++tries == 3 )); then
-      err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve" 
+      err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve"
     fi
   done
 
@@ -1416,7 +1417,7 @@ wait_postgres_start() {
     echo -n .
     sleep 3
     if (( ++tries == 3 )); then
-      err "failed to start Postgres due to reaching waiting timeout - retry to resolve" 
+      err "failed to start Postgres due to reaching waiting timeout - retry to resolve"
     fi
   done
 
@@ -1617,8 +1618,12 @@ server {
   # Depending on the ALPN value traffic is redirected to either port 82 (HTTP2,
   # ALPN value h2) or 81 (HTTP 1.0 or HTTP 1.1, ALPN value http/1.1 or no value)
 
-  listen 127.0.0.1:82 http2 proxy_protocol;
-  listen [::1]:82 http2;
+  # Http2 is disabled, include http2 to the list if you want to enable it
+  # listen 127.0.0.1:82 http2 proxy_protocol;
+  # listen [::1]:82 http2;
+
+  listen 127.0.0.1:82 proxy_protocol;
+  listen [::1]:82;
   listen 127.0.0.1:81 proxy_protocol;
   listen [::1]:81;
   server_name $HOST;
@@ -1671,8 +1676,12 @@ server {
 }
 
 server {
-  listen 443 ssl http2;
-  listen [::]:443 ssl http2;
+  # Http2 is disabled, include http2 to the list if you want to enable it
+  # listen 443 ssl http2;
+  # listen [::]:443 ssl http2;
+
+  listen 443 ssl;
+  listen [::]:443 ssl;
   server_name $HOST;
 
     ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
@@ -1682,7 +1691,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
     ssl_dhparam /etc/nginx/ssl/ffdhe2048.pem;
-    
+
     # HSTS (comment out to enable)
     #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
@@ -1734,7 +1743,7 @@ fi
 
   # Configure rest of BigBlueButton Configuration for SSL
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
- 
+
   # shellcheck disable=SC1091
   eval "$(source /etc/bigbluebutton/bigbluebutton-release && declare -p BIGBLUEBUTTON_RELEASE)"
   if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
@@ -1752,7 +1761,7 @@ fi
   fi
 
   yq e -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
-  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
+  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
 
   # Update Greenlight (if installed) to use SSL
   for gl_dir in ~/greenlight $GL3_DIR;do
@@ -1815,12 +1824,12 @@ configure_coturn() {
         xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 
-    <!-- 
+    <!--
          We need turn0 for FireFox to workaround its limited ICE implementation.
          This is UDP connection.  Note that port 3478 must be open on this BigBlueButton
          and reachable by the client.
 
-         Also, in 2.5, we previously defined turn:\$HOST:443?transport=tcp (not 'turns') 
+         Also, in 2.5, we previously defined turn:\$HOST:443?transport=tcp (not 'turns')
          to workaround a bug in Safari's handling of Let's Encrypt. This bug is now fixed
          https://bugs.webkit.org/show_bug.cgi?id=219274, so we omit the 'turn' protocol over
          port 443.
@@ -1835,7 +1844,7 @@ configure_coturn() {
         <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
-    
+
     <bean id="stunTurnService"
             class="org.bigbluebutton.web.services.turn.StunTurnService">
         <property name="stunServers">
@@ -1931,7 +1940,7 @@ HERE
 
   # Eanble coturn to bind to port 443 with CAP_NET_BIND_SERVICE
   mkdir -p /etc/systemd/system/coturn.service.d
-  rm -rf /etc/systemd/system/coturn.service.d/ansible.conf      # Remove previous file 
+  rm -rf /etc/systemd/system/coturn.service.d/ansible.conf      # Remove previous file
   cat > /etc/systemd/system/coturn.service.d/override.conf <<HERE
 [Service]
 LimitNOFILE=1048576
@@ -1962,4 +1971,3 @@ HERE
 }
 
 main "$@" || exit 1
-
