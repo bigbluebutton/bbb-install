@@ -463,10 +463,10 @@ main() {
   <policy domain="resource" name="list-length" value="16"/>
   <!-- Set the maximum width of an image.  When this limit is exceeded, an
        exception is thrown. -->
-  <policy domain="resource" name="width" value="4KP"/>
+  <policy domain="resource" name="width" value="5KP"/>
   <!-- Set the maximum height of an image.  When this limit is exceeded, an
        exception is thrown. -->
-  <policy domain="resource" name="height" value="4KP"/>
+  <policy domain="resource" name="height" value="5KP"/>
   <!-- Periodically yield the CPU for at least the time specified in
        milliseconds. -->
   <policy domain="resource" name="throttle" value="2"/>
