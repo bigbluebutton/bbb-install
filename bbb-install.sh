@@ -1811,11 +1811,14 @@ fi
 }
 
 configure_coturn() {
-  TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
 
   if [ -z "$COTURN" ]; then
     # the user didn't pass '-c', so use the local TURN server's host
     COTURN_HOST=$HOST
+    TURN_XML=/usr/share/bbb-web/WEB-INF/classes/spring/turn-stun-servers.xml
+  elif [[ "$COTURN" ]]; then
+    # the user passed '-c' with 'host:secret'
+    TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
   fi
 
   cat <<HERE > $TURN_XML
