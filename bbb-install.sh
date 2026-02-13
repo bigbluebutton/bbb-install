@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-# Copyright (c) 2025 BigBlueButton Inc.
+# Copyright (c) 2026 BigBlueButton Inc.
 #
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU Lesser General Public License as published by the Free Software
@@ -23,30 +23,30 @@
 #
 #  Examples
 #
-#  Install BigBlueButton 3.1.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
+#  Install BigBlueButton 4.0.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh | bash -s -- -w -v jammy-310 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- -w -v jammy-400 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh  | bash -s -- -w -v jammy-310 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-400 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 3.1 server in under 30 minutes.
+Script for installing a BigBlueButton 4.0 server in under 30 minutes.
 
 This script also checks if your server supports https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
 
 USAGE:
-    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh | bash -s -- [OPTIONS]
+    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- [OPTIONS]
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'jammy-310') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'jammy-400') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -63,7 +63,7 @@ OPTIONS (install BigBlueButton):
   -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
 
   -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
-  -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
+  -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org or https://ftp.gwdg.de/pub/linux/misc/bigbluebutton/ubuntu/)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
@@ -98,17 +98,17 @@ VARIABLES (configure Greenlight only):
 
 EXAMPLES:
 
-Sample options for setup a BigBlueButton 3.1 server
+Sample options for setup a BigBlueButton 4.0 server
 
-    -v jammy-310 -s bbb.example.com -e info@example.com
+    -v jammy-400 -s bbb.example.com -e info@example.com
 
-Sample options for setup a BigBlueButton 3.1 server with Greenlight 3 and optionally Keycloak
+Sample options for setup a BigBlueButton 4.0 server with Greenlight 3 and optionally Keycloak
 
-    -v jammy-310 -s bbb.example.com -e info@example.com -g [-k]
+    -v jammy-400 -s bbb.example.com -e info@example.com -g [-k]
 
-Sample options for setup a BigBlueButton 3.1 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET
+Sample options for setup a BigBlueButton 4.0 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET
 
-    -v jammy-310 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
+    -v jammy-400 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -562,7 +562,7 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "jammy-31"; then err "This script can only install BigBlueButton 3.1 and is meant to be run on Ubuntu 22.04 (jammy) server."; fi
+  if ! echo "$1" | grep -Eq "jammy-40"; then err "This script can only install BigBlueButton 4.0 and is meant to be run on Ubuntu 22.04 (jammy) server."; fi
   DISTRO=${1%%-*}
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
