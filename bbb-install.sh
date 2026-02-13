@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-# Copyright (c) 2025 BigBlueButton Inc.
+# Copyright (c) 2026 BigBlueButton Inc.
 #
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU Lesser General Public License as published by the Free Software
@@ -23,30 +23,30 @@
 #
 #  Examples
 #
-#  Install BigBlueButton 3.1.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
+#  Install BigBlueButton 4.0.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh | bash -s -- -w -v jammy-310 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- -w -v jammy-400 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh  | bash -s -- -w -v jammy-310 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-400 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 3.1 server in under 30 minutes.
+Script for installing a BigBlueButton 4.0 server in under 30 minutes.
 
 This script also checks if your server supports https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
 
 USAGE:
-    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh | bash -s -- [OPTIONS]
+    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- [OPTIONS]
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'jammy-310') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'jammy-400') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -60,10 +60,10 @@ OPTIONS (install BigBlueButton):
 
   -c <hostname>:<secret> Configure with external coturn server at <hostname> using <secret> (instead of built-in TURN server)
 
-  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
+  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path>
 
   -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
-  -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
+  -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org or https://ftp.gwdg.de/pub/linux/misc/bigbluebutton/ubuntu/)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
@@ -98,17 +98,17 @@ VARIABLES (configure Greenlight only):
 
 EXAMPLES:
 
-Sample options for setup a BigBlueButton 3.1 server
+Sample options for setup a BigBlueButton 4.0 server
 
-    -v jammy-310 -s bbb.example.com -e info@example.com
+    -v jammy-400 -s bbb.example.com -e info@example.com
 
-Sample options for setup a BigBlueButton 3.1 server with Greenlight 3 and optionally Keycloak
+Sample options for setup a BigBlueButton 4.0 server with Greenlight 3 and optionally Keycloak
 
-    -v jammy-310 -s bbb.example.com -e info@example.com -g [-k]
+    -v jammy-400 -s bbb.example.com -e info@example.com -g [-k]
 
-Sample options for setup a BigBlueButton 3.1 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET
+Sample options for setup a BigBlueButton 4.0 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET
 
-    -v jammy-310 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
+    -v jammy-400 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -126,6 +126,8 @@ main() {
   GL3_DIR=~/greenlight-v3
   LTI_DIR=~/bbb-lti
   NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
+  IMAGE_MAGICK_DIR=/etc/ImageMagick-6
+  OVERWRITE_IMAGE_MAGICK_POLICY=true
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   printf '\n' > "$CR_TMPFILE"
 
@@ -141,7 +143,7 @@ main() {
 
       s)
         HOST=$OPTARG
-        if [ "$HOST" == "bbb.example.com" ]; then 
+        if [ "$HOST" == "bbb.example.com" ]; then
           err "You must specify a valid hostname (not the hostname given in the docs)."
         fi
         ;;
@@ -150,7 +152,7 @@ main() {
         ;;
       e)
         EMAIL=$OPTARG
-        if [ "$EMAIL" == "info@example.com" ]; then 
+        if [ "$EMAIL" == "info@example.com" ]; then
           err "You must specify a valid email address (not the email in the docs)."
         fi
         ;;
@@ -310,7 +312,7 @@ main() {
     install_docker		                     # needed for bbb-libreoffice-docker
     need_pkg ruby
 
-    BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
+    BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
 
     need_pkg openjdk-17-jre
     update-java-alternatives -s java-1.17.0-openjdk-amd64
@@ -369,7 +371,7 @@ main() {
   systemctl restart systemd-journald
 
   if [ -n "$UFW" ]; then
-    setup_ufw 
+    setup_ufw
   fi
 
   if [ -n "$HOST" ]; then
@@ -389,6 +391,127 @@ main() {
 
   if [ -n "$GREENLIGHT" ]; then
     install_greenlight_v3
+  fi
+
+  if [ "$OVERWRITE_IMAGE_MAGICK_POLICY" = true ]; then
+    echo "ATTENTION!!"
+    echo "Overwriting ImageMagick policy file (modifying the default configuration to seal security vectors)"
+
+    #
+    # This is the imagemagick-provided https://imagemagick.org/source/policy-websafe.xml with
+    # minimal modifications required for bigbluebutton presentation conversion to work
+
+
+    cat <<HERE > "$IMAGE_MAGICK_DIR/policy.xml"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policymap [
+<!ELEMENT policymap (policy)*>
+<!ATTLIST policymap xmlns CDATA #FIXED "">
+<!ELEMENT policy EMPTY>
+<!ATTLIST policy xmlns CDATA #FIXED "">
+<!ATTLIST policy domain NMTOKEN #REQUIRED>
+<!ATTLIST policy name NMTOKEN #IMPLIED>
+<!ATTLIST policy pattern CDATA #IMPLIED>
+<!ATTLIST policy rights NMTOKEN #IMPLIED>
+<!ATTLIST policy stealth NMTOKEN #IMPLIED>
+<!ATTLIST policy value CDATA #IMPLIED>
+]>
+<!--
+  Creating a security policy that fits your specific local environment
+  before making use of ImageMagick is highly advised. You can find guidance on
+  setting up this policy at https://imagemagick.org/script/security-policy.php,
+  and it's important to verify your policy using the validation tool located
+  at https://imagemagick-secevaluator.doyensec.com/.
+  Web-safe ImageMagick security policy:
+  This security protocol designed for web-safe usage focuses on situations
+  where ImageMagick is applied in publicly accessible contexts, like websites.
+  It deactivates the capability to read from or write to any image formats
+  other than web-safe formats like GIF, JPEG, and PNG. Additionally, this
+  policy prohibits the execution of image filters and indirect reads, thereby
+  thwarting potential security breaches. By implementing these limitations,
+  the web-safe policy fortifies the safeguarding of systems accessible to
+  the public, reducing the risk of exploiting ImageMagick's capabilities
+  for potential attacks.
+ -->
+<policymap>
+  <!-- Set maximum parallel threads. -->
+  <policy domain="resource" name="thread" value="2"/>
+  <!-- Set maximum time to live in seconds or neumonics, e.g. "2 minutes". When
+       this limit is exceeded, an exception is thrown and processing stops. -->
+  <policy domain="resource" name="time" value="60"/>
+  <!-- Set maximum number of open pixel cache files. When this limit is
+       exceeded, any subsequent pixels cached to disk are closed and reopened
+       on demand. -->
+  <policy domain="resource" name="file" value="768"/>
+  <!-- Set maximum amount of memory in bytes to allocate for the pixel cache
+       from the heap. When this limit is exceeded, the image pixels are cached
+       to memory-mapped disk. -->
+  <policy domain="resource" name="memory" value="256MiB"/>
+  <!-- Set maximum amount of memory map in bytes to allocate for the pixel
+       cache. When this limit is exceeded, the image pixels are cached to
+       disk. -->
+  <policy domain="resource" name="map" value="512MiB"/>
+  <!-- Set the maximum width * height of an image that can reside in the pixel
+       cache memory. Images that exceed the area limit are cached to disk. -->
+  <policy domain="resource" name="area" value="16KP"/>
+  <!-- Set maximum amount of disk space in bytes permitted for use by the pixel
+       cache. When this limit is exceeded, the pixel cache is not be created
+       and an exception is thrown. -->
+  <policy domain="resource" name="disk" value="1GiB"/>
+  <!-- Set the maximum length of an image sequence.  When this limit is
+       exceeded, an exception is thrown. -->
+  <policy domain="resource" name="list-length" value="16"/>
+  <!-- Set the maximum width of an image.  When this limit is exceeded, an
+       exception is thrown. -->
+  <policy domain="resource" name="width" value="5KP"/>
+  <!-- Set the maximum height of an image.  When this limit is exceeded, an
+       exception is thrown. -->
+  <policy domain="resource" name="height" value="5KP"/>
+  <!-- Periodically yield the CPU for at least the time specified in
+       milliseconds. -->
+  <policy domain="resource" name="throttle" value="2"/>
+  <!-- Do not create temporary files in the default shared directories, instead
+       specify a private area to store only ImageMagick temporary files. -->
+  <!-- <policy domain="resource" name="temporary-path" value="/magick/tmp/"/> -->
+  <!-- Force memory initialization by memory mapping select memory
+       allocations. -->
+  <policy domain="cache" name="memory-map" value="anonymous"/>
+  <!-- Ensure all image data is fully flushed and synchronized to disk. -->
+  <policy domain="cache" name="synchronize" value="true"/>
+  <!-- Replace passphrase for secure distributed processing -->
+  <!-- <policy domain="cache" name="shared-secret" value="secret-passphrase" stealth="true"/> -->
+  <!-- Do not permit any delegates to execute. -->
+  <policy domain="delegate" rights="none" pattern="*"/>
+  <!-- Do not permit any image filters to load. -->
+  <policy domain="filter" rights="none" pattern="*"/>
+  <!-- Don't read/write from/to stdin/stdout. -->
+  <policy domain="path" rights="none" pattern="-"/>
+  <!-- don't read sensitive paths. -->
+  <policy domain="path" rights="none" pattern="/*"/>
+  <!-- allow access to required paths. -->
+  <policy domain="path" rights="read|write" pattern="/var/bigbluebutton/*"/>
+  <policy domain="path" rights="read|write" pattern="/tmp/*"/>
+  <!-- Indirect reads are not permitted. -->
+  <policy domain="path" rights="none" pattern="@*"/>
+  <!-- Deny all image modules and specifically exempt reading or writing
+       web-safe image formats. -->
+  <policy domain="module" rights="none" pattern="*" />
+  <policy domain="module" rights="read | write" pattern="{BMP,GIF,JPEG,PDF,PNG,TIFF,WEBP}"/>
+  <policy domain="module" rights="read | write" pattern="{MPC}" stealth="true"/>
+  <policy domain="module" rights="read" pattern="{XC}"/>
+  <policy domain="module" rights="write" pattern="{JSON,INFO,PNM,PS,SVG}"/>
+  <!-- This policy sets the number of times to replace content of certain
+       memory buffers and temporary files before they are freed or deleted. -->
+  <policy domain="system" name="shred" value="1"/>
+  <!-- Enable the initialization of buffers with zeros, resulting in a minor
+       performance penalty but with improved security. -->
+  <policy domain="system" name="memory-map" value="anonymous"/>
+  <!-- Set the maximum amount of memory in bytes that are permitted for
+       allocation requests. -->
+  <policy domain="system" name="max-memory-request" value="256MiB"/>
+</policymap>
+
+HERE
   fi
 
   bbb-conf --check
@@ -477,7 +600,7 @@ get_IP() {
 
 
   local external_ip
-  # Determine external IP 
+  # Determine external IP
   if grep -sqi ^ec2 /sys/devices/virtual/dmi/id/product_uuid; then
     # EC2
     external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
@@ -509,17 +632,17 @@ get_IP() {
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
     sleep 1
-    
+
      # Check if we can reach the server through it's external IP address
      if nc -zvw3 "$external_ip" 443  > /dev/null 2>&1; then
        INTERNAL_IP=$IP
        IP=$external_ip
-       echo 
+       echo
        echo "  Detected this server has an internal/external IP address."
-       echo 
+       echo
        echo "      INTERNAL_IP: $INTERNAL_IP"
        echo "    (external) IP: $IP"
-       echo 
+       echo
      fi
 
     kill $nc_PID  > /dev/null 2>&1;
@@ -549,7 +672,7 @@ need_pkg() {
 }
 
 need_ppa() {
-  need_pkg software-properties-common 
+  need_pkg software-properties-common
   if [ ! -f "/etc/apt/sources.list.d/$1" ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y "$2"
   fi
@@ -562,7 +685,7 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "jammy-31"; then err "This script can only install BigBlueButton 3.1 and is meant to be run on Ubuntu 22.04 (jammy) server."; fi
+  if ! echo "$1" | grep -Eq "jammy-40"; then err "This script can only install BigBlueButton 4.0 and is meant to be run on Ubuntu 22.04 (jammy) server."; fi
   DISTRO=${1%%-*}
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
@@ -592,10 +715,10 @@ check_coturn() {
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
   if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
 
-  if [ "$COTURN_HOST" == "turn.example.com" ]; then 
+  if [ "$COTURN_HOST" == "turn.example.com" ]; then
     err "You must specify a valid hostname (not the example given in the docs)"
   fi
-  if [ "$COTURN_SECRET" == "1234abcd" ]; then 
+  if [ "$COTURN_SECRET" == "1234abcd" ]; then
     err "You must specify a new password (not the example given in the docs)."
   fi
 
@@ -603,7 +726,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then 
+  if dpkg -l | grep -q apache2-bin; then
     echo "You must uninstall the Apache2 server first"
     if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
       exit 1
@@ -669,8 +792,8 @@ check_nat() {
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
     if ! grep -q "$IP" /lib/systemd/system/dummy-nic.service > /dev/null 2>&1; then
-      if [ -f /lib/systemd/system/dummy-nic.service ]; then 
-        DAEMON_RELOAD=true; 
+      if [ -f /lib/systemd/system/dummy-nic.service ]; then
+        DAEMON_RELOAD=true;
       fi
 
       cat > /lib/systemd/system/dummy-nic.service << HERE
@@ -702,7 +825,7 @@ check_LimitNOFILE() {
 
   if [ "$CPU" -ge 8 ]; then
     if [ -f /lib/systemd/system/bbb-web.service ]; then
-      # Let's create an override file to increase the number of LimitNOFILE 
+      # Let's create an override file to increase the number of LimitNOFILE
       mkdir -p /etc/systemd/system/bbb-web.service.d/
       cat > /etc/systemd/system/bbb-web.service.d/override.conf << HERE
 [Service]
@@ -763,7 +886,8 @@ defaults
 
 
 frontend nginx_or_turn
-  bind *:443,:::443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
+  # Http2 is disabled, include h2 to the list if you want to enable it: h2,http/1.1,stun.turn
+  bind *:443,:::443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn http/1.1,stun.turn
   mode tcp
   option tcplog
   tcp-request content capture req.payload(0,1) len 1
@@ -888,7 +1012,7 @@ install_greenlight_v3(){
     if [ ! -s $GL3_DIR/.env ]; then
       err "failed to create greenlight-v3 .env file - is docker running?"
     fi
- 
+
     say "greenlight-v3 .env file was created"
   fi
 
@@ -1274,7 +1398,7 @@ wait_lti_broker_start() {
     echo -n .
     sleep 3
     if (( ++tries == 3 )); then
-      err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve" 
+      err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve"
     fi
   done
 
@@ -1294,7 +1418,7 @@ wait_postgres_start() {
     echo -n .
     sleep 3
     if (( ++tries == 3 )); then
-      err "failed to start Postgres due to reaching waiting timeout - retry to resolve" 
+      err "failed to start Postgres due to reaching waiting timeout - retry to resolve"
     fi
   done
 
@@ -1495,8 +1619,12 @@ server {
   # Depending on the ALPN value traffic is redirected to either port 82 (HTTP2,
   # ALPN value h2) or 81 (HTTP 1.0 or HTTP 1.1, ALPN value http/1.1 or no value)
 
-  listen 127.0.0.1:82 http2 proxy_protocol;
-  listen [::1]:82 http2;
+  # Http2 is disabled, include http2 to the list if you want to enable it
+  # listen 127.0.0.1:82 http2 proxy_protocol;
+  # listen [::1]:82 http2;
+
+  listen 127.0.0.1:82 proxy_protocol;
+  listen [::1]:82;
   listen 127.0.0.1:81 proxy_protocol;
   listen [::1]:81;
   server_name $HOST;
@@ -1549,8 +1677,12 @@ server {
 }
 
 server {
-  listen 443 ssl http2;
-  listen [::]:443 ssl http2;
+  # Http2 is disabled, include http2 to the list if you want to enable it
+  # listen 443 ssl http2;
+  # listen [::]:443 ssl http2;
+
+  listen 443 ssl;
+  listen [::]:443 ssl;
   server_name $HOST;
 
     ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
@@ -1560,7 +1692,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
     ssl_dhparam /etc/nginx/ssl/ffdhe2048.pem;
-    
+
     # HSTS (comment out to enable)
     #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
@@ -1612,7 +1744,7 @@ fi
 
   # Configure rest of BigBlueButton Configuration for SSL
   xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
- 
+
   # shellcheck disable=SC1091
   eval "$(source /etc/bigbluebutton/bigbluebutton-release && declare -p BIGBLUEBUTTON_RELEASE)"
   if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
@@ -1630,7 +1762,7 @@ fi
   fi
 
   yq e -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
-  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
+  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
 
   # Update Greenlight (if installed) to use SSL
   for gl_dir in ~/greenlight $GL3_DIR;do
@@ -1679,11 +1811,14 @@ fi
 }
 
 configure_coturn() {
-  TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
 
   if [ -z "$COTURN" ]; then
     # the user didn't pass '-c', so use the local TURN server's host
     COTURN_HOST=$HOST
+    TURN_XML=/usr/share/bbb-web/WEB-INF/classes/spring/turn-stun-servers.xml
+  elif [[ "$COTURN" ]]; then
+    # the user passed '-c' with 'host:secret'
+    TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
   fi
 
   cat <<HERE > $TURN_XML
@@ -1693,12 +1828,12 @@ configure_coturn() {
         xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 
-    <!-- 
+    <!--
          We need turn0 for FireFox to workaround its limited ICE implementation.
          This is UDP connection.  Note that port 3478 must be open on this BigBlueButton
          and reachable by the client.
 
-         Also, in 2.5, we previously defined turn:\$HOST:443?transport=tcp (not 'turns') 
+         Also, in 2.5, we previously defined turn:\$HOST:443?transport=tcp (not 'turns')
          to workaround a bug in Safari's handling of Let's Encrypt. This bug is now fixed
          https://bugs.webkit.org/show_bug.cgi?id=219274, so we omit the 'turn' protocol over
          port 443.
@@ -1713,7 +1848,7 @@ configure_coturn() {
         <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
-    
+
     <bean id="stunTurnService"
             class="org.bigbluebutton.web.services.turn.StunTurnService">
         <property name="stunServers">
@@ -1809,7 +1944,7 @@ HERE
 
   # Eanble coturn to bind to port 443 with CAP_NET_BIND_SERVICE
   mkdir -p /etc/systemd/system/coturn.service.d
-  rm -rf /etc/systemd/system/coturn.service.d/ansible.conf      # Remove previous file 
+  rm -rf /etc/systemd/system/coturn.service.d/ansible.conf      # Remove previous file
   cat > /etc/systemd/system/coturn.service.d/override.conf <<HERE
 [Service]
 LimitNOFILE=1048576
@@ -1840,4 +1975,3 @@ HERE
 }
 
 main "$@" || exit 1
-
