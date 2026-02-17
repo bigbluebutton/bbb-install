@@ -67,7 +67,7 @@ OPTIONS (install BigBlueButton):
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
-  -b                     Harden SSH access by specifying which ciphers to be used
+  -b                     Harden SSH access by specifying which ciphers to be used (recommended)
 
   -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
                          Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
