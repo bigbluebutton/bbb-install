@@ -67,6 +67,7 @@ OPTIONS (install BigBlueButton):
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
+  -b                     Harden SSH access by specifying which ciphers to be used
 
   -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
                          Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
@@ -128,7 +129,6 @@ main() {
   NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
   IMAGE_MAGICK_DIR=/etc/ImageMagick-6
   OVERWRITE_IMAGE_MAGICK_POLICY=true
-  HARDEN_SSH=true
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   printf '\n' > "$CR_TMPFILE"
 
@@ -227,6 +227,9 @@ main() {
         ;;
       i)
         SKIP_APACHE_INSTALLED_CHECK=true
+        ;;
+      b)
+        HARDEN_SSH=true
         ;;
       :)
         err "Missing option argument for -$OPTARG"
