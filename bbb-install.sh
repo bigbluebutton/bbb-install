@@ -1811,17 +1811,47 @@ fi
 }
 
 configure_coturn() {
+  # Path for the TURN/STUN servers XML
+  TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
 
-  if [ -z "$COTURN" ]; then
-    # the user didn't pass '-c', so use the local TURN server's host
-    COTURN_HOST=$HOST
-    TURN_XML=/usr/share/bbb-web/WEB-INF/classes/spring/turn-stun-servers.xml
-  elif [[ "$COTURN" ]]; then
-    # the user passed '-c' with 'host:secret'
-    TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
+  # If user explicitly supplied COTURN (format host[:secret]) we honor and overwrite.
+  if [ -n "$COTURN" ]; then
+    case "$COTURN" in
+      *:*)
+        COTURN_HOST="${COTURN%%:*}"
+        COTURN_SECRET="${COTURN#*:}"
+        ;;
+      *)
+        COTURN_HOST="$COTURN"
+        ;;
+    esac
+  else
+    # No explicit COTURN: use local host value
+    COTURN_HOST="$HOST"
+
+    # If file exists, check whether it points to a different TURN host.
+    if [ -f "$TURN_XML" ]; then
+      # Extract all turn:/turns: entries and normalize to hostnames only
+      existing_hosts=$(grep -Eo 'turns?:[^:]+(:[0-9]+)?' "$TURN_XML" 2>/dev/null | \
+                      sed -E 's/^turns?:([^:]+).*$/\1/' | sort -u)
+
+      for h in $existing_hosts; do
+        [ -z "$h" ] && continue
+        
+        # Treat unexpanded template placeholder '$HOST' as matching current host
+        if [ "$h" = "\$HOST" ] || [ "$h" = "$COTURN_HOST" ]; then
+          continue
+        fi
+
+        say "Warning: existing TURN host ($h) in $TURN_XML does not match current host ($COTURN_HOST). Leaving $TURN_XML unchanged."
+        return 0
+      done
+    fi
   fi
-
-  cat <<HERE > $TURN_XML
+  
+  # At this point: either user provided COTURN (we should write), or file doesn't exist
+  # or existing file contains only our host — (re)write the XML.
+  cat <<HERE > "$TURN_XML"
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
