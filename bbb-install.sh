@@ -2023,7 +2023,7 @@ install_livekit() {
 
   # Get main network interface and add it to LiveKit config.
   interface=$(awk '$2 == 00000000 { print $1 }' /proc/net/route | head -1)
-  yq -i '.rtc.interfaces.includes += ["'"$interface"'"]' /etc/bigbluebutton/livekit.yaml
+  yq e -i ".rtc.interfaces.includes = [\"$interface\"]" /etc/bigbluebutton/livekit.yaml
   systemctl restart livekit-server
 
   # Enable LiveKit in bbb-web.properties
@@ -2035,6 +2035,7 @@ install_livekit() {
       echo "${key}=livekit" >> "$props_file"
     fi
   done
+  systemctl restart bbb-web
 }
 
 main "$@" || exit 1
