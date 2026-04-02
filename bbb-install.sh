@@ -30,7 +30,7 @@
 #
 #  Install BigBlueButton with SSL + Greenlight + LiveKit
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com -g -lk
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com -g -L
 #
 
 usage() {
@@ -134,7 +134,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:t:L:xgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:Lxgadwjik" opt "${@}"; do
 
     case $opt in
       h)
