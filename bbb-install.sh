@@ -28,9 +28,9 @@
 #
 #    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com
 #
-#  Install BigBlueButton with SSL + Greenlight
+#  Install BigBlueButton with SSL + Greenlight + LiveKit
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com -g -L
 #
 
 usage() {
@@ -55,6 +55,7 @@ OPTIONS (install BigBlueButton):
 
   -g                     Install Greenlight version 3
   -k                     Install Keycloak version 20
+  -L                     Install LiveKit for BigBlueButton (optional)
 
   -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
 
@@ -133,7 +134,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:Lxgadwjik" opt "${@}"; do
 
     case $opt in
       h)
@@ -190,6 +191,10 @@ main() {
         ;;
       k)
         INSTALL_KC=true
+        ;;
+
+      L)
+        INSTALL_LIVEKIT=true
         ;;
       t)
         LTI_CREDS_STR=$OPTARG
@@ -391,6 +396,10 @@ main() {
 
   if [ -n "$GREENLIGHT" ]; then
     install_greenlight_v3
+  fi
+
+  if [ -n "$INSTALL_LIVEKIT" ]; then
+    install_livekit
   fi
 
   if [ "$OVERWRITE_IMAGE_MAGICK_POLICY" = true ]; then
@@ -2002,6 +2011,31 @@ enableUFWRules
 HERE
   chmod +x /etc/bigbluebutton/bbb-conf/apply-config.sh
   fi
+}
+
+install_livekit() {
+  apt-get update
+  need_pkg bbb-livekit
+
+  # Enable LiveKit
+  yq e -i '.livekit.enabled = true' /etc/bigbluebutton/bbb-webrtc-sfu/production.yml
+  systemctl restart bbb-webrtc-sfu
+
+  # Get main network interface and add it to LiveKit config.
+  interface=$(awk '$2 == 00000000 { print $1 }' /proc/net/route | head -1)
+  yq e -i ".rtc.interfaces.includes = [\"$interface\"]" /etc/bigbluebutton/livekit.yaml
+  systemctl restart livekit-server
+
+  # Enable LiveKit in bbb-web.properties
+  props_file=/etc/bigbluebutton/bbb-web.properties
+  for key in audioBridge cameraBridge screenShareBridge; do
+    if grep -q "^${key}=" "$props_file"; then
+      sed -i "s/^${key}=.*/${key}=livekit/" "$props_file"
+    else
+      echo "${key}=livekit" >> "$props_file"
+    fi
+  done
+  systemctl restart bbb-web
 }
 
 main "$@" || exit 1

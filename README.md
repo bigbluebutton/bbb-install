@@ -131,6 +131,7 @@ OPTIONS (install BigBlueButton):
 
   -g                     Install Greenlight version 3
   -k                     Install Keycloak version 20
+  -L                     Install LiveKit for BigBlueButton
 
   -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
 
