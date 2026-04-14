@@ -15,6 +15,7 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     permissions:
       security-events: write
