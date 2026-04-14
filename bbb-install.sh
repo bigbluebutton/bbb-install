@@ -67,6 +67,7 @@ OPTIONS (install BigBlueButton):
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
+  -b                     Harden SSH access by specifying which ciphers to be used (recommended)
 
   -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
                          Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
@@ -133,7 +134,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwjikb" opt "${@}"; do
 
     case $opt in
       h)
@@ -226,6 +227,9 @@ main() {
         ;;
       i)
         SKIP_APACHE_INSTALLED_CHECK=true
+        ;;
+      b)
+        HARDEN_SSH=true
         ;;
       :)
         err "Missing option argument for -$OPTARG"
@@ -372,6 +376,10 @@ main() {
 
   if [ -n "$UFW" ]; then
     setup_ufw
+  fi
+
+  if [ "$HARDEN_SSH" = true ]; then
+    harden_ssh
   fi
 
   if [ -n "$HOST" ]; then
@@ -1971,6 +1979,37 @@ source /etc/bigbluebutton/bbb-conf/apply-lib.sh
 enableUFWRules
 HERE
   chmod +x /etc/bigbluebutton/bbb-conf/apply-config.sh
+  fi
+}
+
+harden_ssh() {
+  say "Hardening SSH configuration..."
+
+  local SSH_HARDENING_FILE="/etc/ssh/sshd_config.d/99-hardened-ciphers.conf"
+
+  # Check if sshd_config includes the .d directory (Ubuntu 22.04 does by default)
+  if ! grep -q "^Include.*/etc/ssh/sshd_config.d/" /etc/ssh/sshd_config; then
+    say "Warning: /etc/ssh/sshd_config doesn't include sshd_config.d - adding include directive"
+    echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
+  fi
+
+  cat > "$SSH_HARDENING_FILE" <<HERE
+# SSH Hardening - Applied by bbb-install.sh
+# Modern ciphers, key exchange, and MACs only
+
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
+HERE
+
+  # Validate before applying
+  if sshd -t; then
+    systemctl restart sshd
+    say "SSH hardening applied successfully"
+  else
+    say "SSH config validation failed - removing hardening file"
+    rm -f "$SSH_HARDENING_FILE"
+    err "SSH hardening failed - sshd config invalid"
   fi
 }
 
