@@ -281,7 +281,6 @@ main() {
 
   if [ "$DISTRO" != "noble" ]; then
     err "This version of BigBlueButton requires Ubuntu 24.04"
-    exit 0
   fi
 
   get_IP "$HOST"
