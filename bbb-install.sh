@@ -1964,7 +1964,7 @@ harden_ssh() {
 
   local SSH_HARDENING_FILE="/etc/ssh/sshd_config.d/99-hardened-ciphers.conf"
 
-  # Check if sshd_config includes the .d directory (Ubuntu 22.04 does by default)
+  # Check if sshd_config includes the .d directory (Ubuntu 24.04 does by default)
   if ! grep -q "^Include.*/etc/ssh/sshd_config.d/" /etc/ssh/sshd_config; then
     say "Warning: /etc/ssh/sshd_config doesn't include sshd_config.d - adding include directive"
     echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
