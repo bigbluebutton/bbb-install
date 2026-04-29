@@ -37,84 +37,101 @@ usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 4.0 server in under 30 minutes.
-
-This script also checks if your server supports https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
+Script for installing, upgrading, or configuring a BigBlueButton server.
+Also checks that your server meets the minimum requirements:
+  https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
 
 USAGE:
     wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- [OPTIONS]
 
-OPTIONS (install BigBlueButton):
-
-  -v <version>           Install given version of BigBlueButton (e.g. 'noble-400') (required)
-
-  -s <hostname>          Configure server with <hostname>
+CORE:
+  -v <version>           BigBlueButton version (e.g. 'noble-400')
+  -s <hostname>          Server FQDN (must resolve to this host's public IP)
   -e <email>             Email for Let's Encrypt certbot
-
-  -x                     Use Let's Encrypt certbot with manual DNS challenges
-
-  -g                     Install Greenlight version 3
-  -k                     Install Keycloak version 20
-
-  -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
-
-  -c <hostname>:<secret> Configure with external coturn server at <hostname> using <secret> (instead of built-in TURN server)
-
-  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path>
-
-  -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
-  -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org or https://ftp.gwdg.de/pub/linux/misc/bigbluebutton/ubuntu/)
-
-  -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
-  -b                     Harden SSH access by specifying which ciphers to be used (recommended)
+  -h                     Print this help
 
-  -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
-                         Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
+SSL / CERTIFICATES:
+  -x                     Let's Encrypt with manual DNS challenge (for private networks)
+  -l                     Install only a Let's Encrypt certificate, not BigBlueButton
+                         (requires -s and -e)
+  -d                     Skip Let's Encrypt; use certificates from /local/certs/
 
-  -i                     Allows the installation of BigBlueButton to proceed even if Apache webserver is installed.
+ADD-ON APPLICATIONS:
+  -g                     Install Greenlight v3 (room manager web UI)
+  -k                     Install Keycloak v20 (external auth for Greenlight; implies -g)
+  -t <key>:<secret>      Install BigBlueButton LTI framework with initial consumer
+                         credentials. Re-run with the same <key> to rotate its
+                         secret; a new <key> adds another consumer.
 
-  -h                     Print help
+TURN / NETWORKING:
+  -c <hostname>:<secret> Either: (a) install coturn on this host (run without -v), or
+                         (b) configure BigBlueButton to relay through an existing
+                         coturn at <hostname> (run with -v).
+  -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
+  -r <host>              Use alternative apt repository
+                         (e.g. packages-eu.bigbluebutton.org)
 
-OPTIONS (install Let's Encrypt certificate only):
+STORAGE / HARDENING:
+  -m <link_path>         Symlink /var/bigbluebutton to <link_path> (e.g. separate volume)
+  -b                     Harden SSH ciphers (recommended)
 
-  -s <hostname>          Configure server with <hostname> (required)
-  -e <email>             Configure email for Let's Encrypt certbot (required)
-  -l                     Only install Let's Encrypt certificate (not BigBlueButton)
-  -x                     Use Let's Encrypt certbot with manual dns challenges (optional)
+OVERRIDES (use with care):
+  -j                     Proceed even if minimum requirements are not met
+                         (dev/CI scenarios; some checks still enforced)
+  -i                     Proceed even if Apache is already installed
 
-OPTIONS (install Greenlight only):
-
-  -g                     Install Greenlight version 3 (required)
-  -k                     Install Keycloak version 20 (optional)
-
-OPTIONS (install BigBlueButton LTI framework only):
-
-  -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret> (required)
-
-VARIABLES (configure Greenlight only):
-  GL_PATH                Configure Greenlight relative URL root path (Optional)
-                          * Use this when deploying Greenlight behind a reverse proxy on a path other than the default '/' e.g. '/gl'.
+VARIABLES:
+  GL_PATH                Relative URL root for Greenlight (e.g. '/gl') when deploying
+                         behind a reverse proxy on a non-root path.
 
 
 EXAMPLES:
 
-Sample options for setup a BigBlueButton 4.0 server
+  # Install BigBlueButton 4.0 with firewall + Let's Encrypt SSL
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w
 
-    -v noble-400 -s bbb.example.com -e info@example.com
+  # Same, plus Greenlight v3
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -g
 
-Sample options for setup a BigBlueButton 4.0 server with Greenlight 3 and optionally Keycloak
+  # Same, plus Greenlight + Keycloak for external auth
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -g -k
 
-    -v noble-400 -s bbb.example.com -e info@example.com -g [-k]
+  # With LTI framework (MY_KEY/MY_SECRET must be random and kept private)
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -t MY_KEY:MY_SECRET
 
-Sample options for setup a BigBlueButton 4.0 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET
+  # Install coturn on a dedicated TURN host (note: no -v)
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -c turn.example.com:1234abcd -e info@example.com
 
-    -v noble-400 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
+  # Then point BigBlueButton at that external TURN server
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -c turn.example.com:1234abcd
+
+  # Private network: manual DNS challenge for Let's Encrypt
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -x
+
+  # Store recordings on a separate volume
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -m /mnt/bbb
+
+  # Everything at once: BBB + UFW + Greenlight + Keycloak + LTI
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -g -k -t MY_KEY:MY_SECRET
+
+UPGRADING:
+    Re-run the same command used at install time to upgrade to the latest iteration
+    of the same version line. Change -v to jump to a newer line.
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
-         Docs: https://github.com/bigbluebutton/bbb-install
-               https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
+         Docs: https://docs.bigbluebutton.org
+         Repo: https://github.com/bigbluebutton/bbb-install
 
 HERE
 }
