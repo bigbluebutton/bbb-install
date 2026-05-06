@@ -1996,9 +1996,14 @@ KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-grou
 MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
 HERE
 
-  # Validate before applying
+  # Validate config before applying (binary is still sshd)
   if sshd -t; then
-    systemctl restart sshd
+    # Ubuntu 24.04 uses ssh.service, older Ubuntu used sshd.service
+    if systemctl is-active --quiet ssh 2>/dev/null; then
+      systemctl restart ssh
+    else
+      systemctl restart sshd
+    fi
     say "SSH hardening applied successfully"
   else
     say "SSH config validation failed - removing hardening file"
