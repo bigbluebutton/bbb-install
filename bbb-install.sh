@@ -26,11 +26,11 @@
 #  Install BigBlueButton 4.0.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- -w -v jammy-400 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- -w -v noble-400 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-400 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh  | bash -s -- -w -v noble-400 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -46,7 +46,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'jammy-400') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'noble-400') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -101,15 +101,15 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton 4.0 server
 
-    -v jammy-400 -s bbb.example.com -e info@example.com
+    -v noble-400 -s bbb.example.com -e info@example.com
 
 Sample options for setup a BigBlueButton 4.0 server with Greenlight 3 and optionally Keycloak
 
-    -v jammy-400 -s bbb.example.com -e info@example.com -g [-k]
+    -v noble-400 -s bbb.example.com -e info@example.com -g [-k]
 
 Sample options for setup a BigBlueButton 4.0 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET
 
-    -v jammy-400 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
+    -v noble-400 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
@@ -256,7 +256,7 @@ main() {
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ -n "$COTURN" ]; then
     if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
-    check_ubuntu 22.04
+    check_ubuntu 24.04
 
     install_coturn
     exit 0
@@ -278,56 +278,38 @@ main() {
   check_cpus
   check_ipv6
 
-  need_pkg wget curl gpg-agent dirmngr apparmor-utils
 
-  # need_pkg xmlstarlet
+  if [ "$DISTRO" != "noble" ]; then
+    err "This version of BigBlueButton requires Ubuntu 24.04"
+  fi
+
   get_IP "$HOST"
 
-  if [ "$DISTRO" == "jammy" ]; then
-    need_pkg ca-certificates
 
-    need_ppa rmescandon-ubuntu-yq-jammy.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
-    #need_ppa ppa:rmescandon/yq
-    need_pkg yq
-    yq --version
+  need_pkg wget curl gpg-agent dirmngr apparmor-utils ca-certificates yq ruby apt-transport-https haveged openjdk-17-jre dnsutils
+  #need_ppa martin-uni-mainz-ubuntu-coturn-noble.list ppa:martin-uni-mainz/coturn  4B77C2225D3BBDB3 # Coturn
 
-    #need_ppa libreoffice-ubuntu-ppa-jammy.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
-
-    need_ppa bigbluebutton-ubuntu-support-jammy.list ppa:bigbluebutton/support  2E1B01D0E95B94BC    # Needed for libopusenc0
-    need_ppa martin-uni-mainz-ubuntu-coturn-jammy.list ppa:martin-uni-mainz/coturn  4B77C2225D3BBDB3 # Coturn
-
-    if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 18 /etc/apt/sources.list.d/nodesource.list; then
-      # Node 18 might be installed, previously used in BigBlueButton
-      # Remove the repository config. This will cause the repository to get
-      # re-added using the current nodejs version, and nodejs will be upgraded.
-      sudo rm -r /etc/apt/sources.list.d/nodesource.list
+  if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
+    sudo mkdir -p /etc/apt/keyrings
+    if [ -f /etc/apt/keyrings/nodesource.gpg ]; then
+      rm /etc/apt/keyrings/nodesource.gpg
     fi
-    if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
-      sudo mkdir -p /etc/apt/keyrings
-      if [ -f /etc/apt/keyrings/nodesource.gpg ]; then
-        rm /etc/apt/keyrings/nodesource.gpg
-      fi
-      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-      NODE_MAJOR=22
-      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-    fi
-
-    touch /root/.rnd
-    install_docker		                     # needed for bbb-libreoffice-docker
-    need_pkg ruby
-
-    BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
-
-    need_pkg openjdk-17-jre
-    update-java-alternatives -s java-1.17.0-openjdk-amd64
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+    NODE_MAJOR=22
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
   fi
+
+  touch /root/.rnd
+  install_docker		                     # needed for bbb-libreoffice-docker
+
+  BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
+
+  update-java-alternatives -s java-1.17.0-openjdk-amd64
 
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg apt-transport-https haveged
   need_pkg bigbluebutton
-  need_pkg bbb-html5
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
     SERVLET_DIR=/usr/share/bbb-web
@@ -693,20 +675,18 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "jammy-40"; then err "This script can only install BigBlueButton 4.0 and is meant to be run on Ubuntu 22.04 (jammy) server."; fi
+  if ! echo "$1" | grep -Eq "noble-4"; then err "This script can only install BigBlueButton 4.0 and is meant to be run on Ubuntu 24.04 (noble) server."; fi
   DISTRO=${1%%-*}
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
   fi
   check_root
-  need_pkg curl apt-transport-https
   curl -fsSL "https://$PACKAGE_REPOSITORY/repo/bigbluebutton.asc" | sudo tee /etc/apt/keyrings/bigbluebutton.asc
   echo "deb [signed-by=/etc/apt/keyrings/bigbluebutton.asc] https://$PACKAGE_REPOSITORY/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
 check_host() {
   if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ]; then
-    need_pkg dnsutils apt-transport-https
     DIG_IP=$(dig +short "$1" | grep '^[.0-9]*$' | tail -n1)
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
     get_IP "$1"
@@ -1755,21 +1735,18 @@ fi
 
   # shellcheck disable=SC1091
   eval "$(source /etc/bigbluebutton/bigbluebutton-release && declare -p BIGBLUEBUTTON_RELEASE)"
-  if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
-    sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /usr/share/bigbluebutton/nginx/sip.nginx
-  else
-    # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-    yq e -i '.public.media.sipjsHackViaWs = true' /etc/bigbluebutton/bbb-html5.yml
-    sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /usr/share/bigbluebutton/nginx/sip.nginx
-    xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
-  fi
+  # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
+  if [ ! -s /etc/bigbluebutton/bbb-html5.yml ]; then echo '{}' > /etc/bigbluebutton/bbb-html5.yml; fi
+  yq -y -i '.public.media.sipjsHackViaWs = true' /etc/bigbluebutton/bbb-html5.yml
+  sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /usr/share/bigbluebutton/nginx/sip.nginx
+  xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
 
   sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties"
   if [ -f "$BBB_WEB_ETC_CONFIG" ]; then
     sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$BBB_WEB_ETC_CONFIG"
   fi
 
-  yq e -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
+  yq -y -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
 
   # Update Greenlight (if installed) to use SSL
@@ -1791,29 +1768,29 @@ fi
   TARGET=/etc/bigbluebutton/bbb-webrtc-sfu/production.yml
   touch $TARGET
 
-  yq e -i ".freeswitch.ip = \"$IP\"" $TARGET
+  yq -y -i ".freeswitch.ip = \"$IP\"" $TARGET
 
   if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
     if [ -n "$INTERNAL_IP" ]; then
-      yq e -i ".freeswitch.sip_ip = \"$INTERNAL_IP\"" $TARGET
+      yq -y -i ".freeswitch.sip_ip = \"$INTERNAL_IP\"" $TARGET
     else
-      yq e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
+      yq -y -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
     fi
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-    yq e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
+    yq -y -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
   fi
   chown bigbluebutton:bigbluebutton $TARGET
   chmod 644 $TARGET
 
   # Configure mediasoup IPs, reference: https://raw.githubusercontent.com/bigbluebutton/bbb-webrtc-sfu/v2.7.2/docs/mediasoup.md
   # mediasoup IPs: WebRTC
-  yq e -i '.mediasoup.webrtc.listenIps[0].ip = "0.0.0.0"' $TARGET
-  yq e -i ".mediasoup.webrtc.listenIps[0].announcedIp = \"$IP\"" $TARGET
+  yq -y -i '.mediasoup.webrtc.listenIps[0].ip = "0.0.0.0"' $TARGET
+  yq -y -i ".mediasoup.webrtc.listenIps[0].announcedIp = \"$IP\"" $TARGET
 
   # mediasoup IPs: plain RTP (internal comms, FS <-> mediasoup)
-  yq e -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
-  yq e -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
+  yq -y -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
+  yq -y -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
 
   systemctl reload nginx
 }
@@ -1987,7 +1964,7 @@ harden_ssh() {
 
   local SSH_HARDENING_FILE="/etc/ssh/sshd_config.d/99-hardened-ciphers.conf"
 
-  # Check if sshd_config includes the .d directory (Ubuntu 22.04 does by default)
+  # Check if sshd_config includes the .d directory (Ubuntu 24.04 does by default)
   if ! grep -q "^Include.*/etc/ssh/sshd_config.d/" /etc/ssh/sshd_config; then
     say "Warning: /etc/ssh/sshd_config doesn't include sshd_config.d - adding include directive"
     echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
@@ -2002,9 +1979,14 @@ KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-grou
 MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
 HERE
 
-  # Validate before applying
+  # Validate config before applying (binary is still sshd)
   if sshd -t; then
-    systemctl restart sshd
+    # Ubuntu 24.04 uses ssh.service, older Ubuntu used sshd.service
+    if systemctl is-active --quiet ssh 2>/dev/null; then
+      systemctl restart ssh
+    else
+      systemctl restart sshd
+    fi
     say "SSH hardening applied successfully"
   else
     say "SSH config validation failed - removing hardening file"
