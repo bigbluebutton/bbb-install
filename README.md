@@ -2,7 +2,7 @@
 
 # bbb-install
 
-`bbb-install.sh` is a shell script that installs, upgrades, and configures a BigBlueButton server in under 30 minutes. Use it on a fresh Ubuntu server that meets the [minimum requirements](https://docs.bigbluebutton.org/administration/install#minimum-server-requirements) and has a fully qualified domain name (FQDN) pointing to it.
+`bbb-install.sh` is a shell script that installs, upgrades, and configures a BigBlueButton server in under 20 minutes. Use it on a fresh Ubuntu server that meets the [minimum requirements](https://docs.bigbluebutton.org/administration/install#minimum-server-requirements) and has a fully qualified domain name (FQDN) pointing to it.
 
 ## Quickstart
 
