@@ -113,4 +113,4 @@ For help with BigBlueButton itself, post to the [BigBlueButton community](https:
 ## Limitations
 
 - If you are behind an external firewall, `bbb-install.sh` won't configure it. See [External firewall](#external-firewall).
-- Cross-major-OS upgrades are not supported. If you're moving from an older Ubuntu release, install on a fresh server and [transfer your recordings](https://docs.bigbluebutton.org/admin/customize.html#transfer-recordings).
+- Cross-major-OS upgrades are not supported. If you're moving from an older Ubuntu release, install on a fresh server and [transfer your recordings](https://docs.bigbluebutton.org/administration/customize/#transfer-recordings).
