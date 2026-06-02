@@ -108,7 +108,7 @@ Updates are announced on the [bigbluebutton-dev](https://groups.google.com/forum
 
 If the script fails or misbehaves, open a [GitHub issue](https://github.com/bigbluebutton/bbb-install/issues) with steps to reproduce.
 
-For help with BigBlueButton itself, post to the [BigBlueButton Setup](https://bigbluebutton.org/support/community/) community.
+For help with BigBlueButton itself, post to the [BigBlueButton community](https://bigbluebutton.org/community-support/).
 
 ## Limitations
 
