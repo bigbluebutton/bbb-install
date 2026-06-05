@@ -1747,7 +1747,6 @@ HERE
 fi
 
   # Configure rest of BigBlueButton Configuration for SSL
-  xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
 
   # shellcheck disable=SC1091
   eval "$(source /etc/bigbluebutton/bigbluebutton-release && declare -p BIGBLUEBUTTON_RELEASE)"
