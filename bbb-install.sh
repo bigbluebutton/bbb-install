@@ -302,9 +302,9 @@ main() {
 
   get_IP "$HOST"
 
-
-  need_pkg wget curl gpg-agent dirmngr apparmor-utils ca-certificates yq ruby apt-transport-https haveged openjdk-17-jre dnsutils
   #need_ppa martin-uni-mainz-ubuntu-coturn-noble.list ppa:martin-uni-mainz/coturn  4B77C2225D3BBDB3 # Coturn
+  need_ppa martin-uni-mainz-ubuntu-yq-go-noble.list ppa:martin-uni-mainz/yq-go 4B77C2225D3BBDB3 # Edit yaml files with debian's yq-go (mikefarah/yq syntax BBB 3.0 used rather than kislyuk syntax used by the yq tool included in Ubuntu 24.04)
+  need_pkg wget curl gpg-agent dirmngr apparmor-utils ca-certificates ruby apt-transport-https haveged openjdk-17-jre dnsutils yq-go
 
   if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
     sudo mkdir -p /etc/apt/keyrings
@@ -1757,7 +1757,7 @@ fi
     sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$BBB_WEB_ETC_CONFIG"
   fi
 
-  yq -y -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
+  yq-go e -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
   chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
 
   # Update Greenlight (if installed) to use SSL
@@ -1779,29 +1779,29 @@ fi
   TARGET=/etc/bigbluebutton/bbb-webrtc-sfu/production.yml
   touch $TARGET
 
-  yq -y -i ".freeswitch.ip = \"$IP\"" $TARGET
+  yq-go e -i ".freeswitch.ip = \"$IP\"" $TARGET
 
   if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
     if [ -n "$INTERNAL_IP" ]; then
-      yq -y -i ".freeswitch.sip_ip = \"$INTERNAL_IP\"" $TARGET
+      yq-go e -i ".freeswitch.sip_ip = \"$INTERNAL_IP\"" $TARGET
     else
-      yq -y -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
+      yq-go e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
     fi
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-    yq -y -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
+    yq-go e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
   fi
   chown bigbluebutton:bigbluebutton $TARGET
   chmod 644 $TARGET
 
   # Configure mediasoup IPs, reference: https://raw.githubusercontent.com/bigbluebutton/bbb-webrtc-sfu/v2.7.2/docs/mediasoup.md
   # mediasoup IPs: WebRTC
-  yq -y -i '.mediasoup.webrtc.listenIps[0].ip = "0.0.0.0"' $TARGET
-  yq -y -i ".mediasoup.webrtc.listenIps[0].announcedIp = \"$IP\"" $TARGET
+  yq-go e -i '.mediasoup.webrtc.listenIps[0].ip = "0.0.0.0"' $TARGET
+  yq-go e -i ".mediasoup.webrtc.listenIps[0].announcedIp = \"$IP\"" $TARGET
 
   # mediasoup IPs: plain RTP (internal comms, FS <-> mediasoup)
-  yq -y -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
-  yq -y -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
+  yq-go e -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
+  yq-go e -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
 
   systemctl reload nginx
 }
