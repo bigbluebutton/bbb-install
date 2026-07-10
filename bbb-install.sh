@@ -680,14 +680,15 @@ need_pkg() {
 
 need_ppa() {
   need_pkg software-properties-common
-  if [ ! -f "/etc/apt/sources.list.d/$1" ]; then
+  # On Ubuntu 24.04, add-apt-repository writes a deb822 *.sources file and keeps the PPA
+  # signing key in its own keyring. apt-key is deprecated and its keyring is empty on noble,
+  # so gate on the sources file add-apt-repository creates instead of `apt-key list "$3"`.
+  local base="/etc/apt/sources.list.d/${1%.list}"
+  if [ ! -f "$base.sources" ] && [ ! -f "$base.list" ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y "$2"
   fi
-  if ! apt-key list "$3" | grep -q -E "1024|4096"; then  # Let's try it a second time
-    LC_CTYPE=C.UTF-8 add-apt-repository "$2" -y
-    if ! apt-key list "$3" | grep -q -E "1024|4096"; then
-      err "Unable to setup PPA for $2"
-    fi
+  if [ ! -f "$base.sources" ] && [ ! -f "$base.list" ]; then
+    err "Unable to setup PPA for $2"
   fi
 }
 
