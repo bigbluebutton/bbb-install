@@ -321,7 +321,7 @@ main() {
 
   BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
 
-  update-java-alternatives -s java-1.17.0-openjdk-amd64
+  update-java-alternatives -s java-1.21.0-openjdk-amd64
 
   apt-get update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
