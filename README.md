@@ -9,16 +9,16 @@
 Log in as root to a fresh Ubuntu server and run:
 
 ```
-wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- -v noble-400 -s bbb.example.com -e info@example.com -w
+wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- -v noble-410 -s bbb.example.com -e info@example.com -w
 ```
 
 Substitute your own hostname and email. For the full list of flags and more example command lines:
 
 ```
-wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- -h
+wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- -h
 ```
 
-The `-v` flag selects the version line, e.g. `noble-400` for BigBlueButton 4.0 on Ubuntu 24.04. Re-running the same command later upgrades to the latest iteration of that line; change `-v` to jump to a newer line.
+The `-v` flag selects the version line, e.g. `noble-410` for BigBlueButton 4.1 on Ubuntu 24.04. Re-running the same command later upgrades to the latest iteration of that line; change `-v` to jump to a newer line.
 
 ## Before you run the script
 
