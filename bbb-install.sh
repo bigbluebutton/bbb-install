@@ -23,14 +23,14 @@
 #
 #  Examples
 #
-#  Install BigBlueButton 4.0.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
+#  Install BigBlueButton 4.1.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- -w -v noble-400 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- -w -v noble-410 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh  | bash -s -- -w -v noble-400 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh  | bash -s -- -w -v noble-410 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -42,10 +42,10 @@ Also checks that your server meets the minimum requirements:
   https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
 
 USAGE:
-    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- [OPTIONS]
+    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- [OPTIONS]
 
 CORE:
-  -v <version>           BigBlueButton version (e.g. 'noble-400')
+  -v <version>           BigBlueButton version (e.g. 'noble-410')
   -s <hostname>          Server FQDN (must resolve to this host's public IP)
   -e <email>             Email for Let's Encrypt certbot
   -w                     Install UFW firewall (recommended)
@@ -88,41 +88,41 @@ VARIABLES:
 
 EXAMPLES:
 
-  # Install BigBlueButton 4.0 with firewall + Let's Encrypt SSL
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-400 -s bbb.example.com -e info@example.com -w
+  # Install BigBlueButton 4.1 with firewall + Let's Encrypt SSL
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-410 -s bbb.example.com -e info@example.com -w
 
   # Same, plus Greenlight v3
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-400 -s bbb.example.com -e info@example.com -w -g
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-410 -s bbb.example.com -e info@example.com -w -g
 
   # Same, plus Greenlight + Keycloak for external auth
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-400 -s bbb.example.com -e info@example.com -w -g -k
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-410 -s bbb.example.com -e info@example.com -w -g -k
 
   # With LTI framework (MY_KEY/MY_SECRET must be random and kept private)
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-400 -s bbb.example.com -e info@example.com -w -t MY_KEY:MY_SECRET
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-410 -s bbb.example.com -e info@example.com -w -t MY_KEY:MY_SECRET
 
   # Install coturn on a dedicated TURN host (note: no -v)
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
     -c turn.example.com:1234abcd -e info@example.com
 
   # Then point BigBlueButton at that external TURN server
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-400 -s bbb.example.com -e info@example.com -w -c turn.example.com:1234abcd
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-410 -s bbb.example.com -e info@example.com -w -c turn.example.com:1234abcd
 
   # Private network: manual DNS challenge for Let's Encrypt
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-400 -s bbb.example.com -e info@example.com -w -x
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-410 -s bbb.example.com -e info@example.com -w -x
 
   # Store recordings on a separate volume
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-400 -s bbb.example.com -e info@example.com -w -m /mnt/bbb
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-410 -s bbb.example.com -e info@example.com -w -m /mnt/bbb
 
   # Everything at once: BBB + UFW + Greenlight + Keycloak + LTI
-  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-400 -s bbb.example.com -e info@example.com -w -g -k -t MY_KEY:MY_SECRET
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-410 -s bbb.example.com -e info@example.com -w -g -k -t MY_KEY:MY_SECRET
 
 UPGRADING:
     Re-run the same command used at install time to upgrade to the latest iteration
@@ -693,7 +693,7 @@ need_ppa() {
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "noble-4"; then err "This script can only install BigBlueButton 4.0 and is meant to be run on Ubuntu 24.04 (noble) server."; fi
+  if ! echo "$1" | grep -Eq "noble-41"; then err "This script can only install BigBlueButton 4.1 and is meant to be run on Ubuntu 24.04 (noble) server."; fi
   DISTRO=${1%%-*}
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
