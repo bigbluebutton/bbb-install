@@ -348,7 +348,6 @@ main() {
 
   if [ -n "$COTURN" ]; then
     configure_coturn
-	systemctl enable --now coturn
 
     if systemctl is-active --quiet haproxy.service; then
       systemctl disable --now haproxy.service
