@@ -319,8 +319,8 @@ main() {
 
     BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
 
-    need_pkg openjdk-17-jre
-    update-java-alternatives -s java-1.17.0-openjdk-amd64
+    need_pkg openjdk-21-jre
+    update-java-alternatives -s java-1.21.0-openjdk-amd64
   fi
 
   apt-get update
