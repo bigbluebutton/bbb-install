@@ -302,8 +302,6 @@ main() {
 
   get_IP "$HOST"
 
-  #need_ppa martin-uni-mainz-ubuntu-coturn-noble.list ppa:martin-uni-mainz/coturn  4B77C2225D3BBDB3 # Coturn
-  #need_ppa martin-uni-mainz-ubuntu-yq-go-noble.list ppa:martin-uni-mainz/yq-go 4B77C2225D3BBDB3 # Edit yaml files with debian's yq-go (mikefarah/yq syntax BBB 3.0 used rather than kislyuk syntax used by the yq tool included in Ubuntu 24.04)
   need_pkg wget curl gpg-agent dirmngr apparmor-utils ca-certificates ruby apt-transport-https haveged openjdk-21-jre dnsutils bbb-yq-go
 
   if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
@@ -1873,7 +1871,7 @@ install_coturn() {
 
   need_pkg software-properties-common certbot
 
-  need_pkg coturn
+  need_pkg bbb-coturn
 
   if [ -n "$INTERNAL_IP" ]; then
     SECOND_ALLOWED_PEER_IP="allowed-peer-ip=$INTERNAL_IP"
@@ -1954,6 +1952,7 @@ HERE
   systemctl daemon-reload
   systemctl restart coturn
   configure_coturn
+  systemctl enable --now coturn
 }
 
 
