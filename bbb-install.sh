@@ -304,13 +304,15 @@ main() {
 
   need_pkg wget curl gpg-agent dirmngr apparmor-utils ca-certificates ruby apt-transport-https haveged openjdk-21-jre dnsutils bbb-yq-go
 
-  if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
+  NODE_MAJOR=24
+  # Rewrite the NodeSource repo whenever it points at any other Node major (upgrade
+  # path from servers installed with Node <= 22), not only when it is absent.
+  if ! grep -qs "deb.nodesource.com/node_$NODE_MAJOR.x" /etc/apt/sources.list.d/nodesource.list; then
     sudo mkdir -p /etc/apt/keyrings
     if [ -f /etc/apt/keyrings/nodesource.gpg ]; then
       rm /etc/apt/keyrings/nodesource.gpg
     fi
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-    NODE_MAJOR=24
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
   fi
 
