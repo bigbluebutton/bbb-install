@@ -963,6 +963,18 @@ install_greenlight_v3(){
   # Preparing and checking the environment.
   say "preparing and checking the environment to install/update greenlight-v3..."
 
+  # Check for potential DNS resolution conflicts
+  # See https://github.com/bigbluebutton/greenlight/issues/6174
+  if grep -qE "^(127\.[0-9.]+\.[0-9]+\.[0-9]+|::1)[[:space:]]+.*$HOST" /etc/hosts; then
+    err "Hosts configuration issue detected: Your domain '$HOST' is mapped to a loopback address in /etc/hosts.
+    This is known to cause connectivity issues between Greenlight and the BigBlueButton API (see Greenlight issue #6174).
+    WARNING: This entry may be added automatically by cloud providers.
+    To fix this, you have two options:
+    1. Edit, comment or remove the affected line in /etc/hosts
+    2. Disable reading '/etc/hosts' by adding 'ReadEtcHosts=no' to '/etc/systemd/resolved.conf' and restart systemd-resolved
+    Please apply one of these workaround, then restart the installation script."
+  fi
+
   if [ ! -d $GL3_DIR ]; then
     mkdir -p $GL3_DIR && say "created $GL3_DIR"
   fi
