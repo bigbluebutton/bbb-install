@@ -1807,6 +1807,13 @@ fi
   yq e -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
   yq e -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
 
+  # nginx package enables default website which collides with bigbluebutton config
+  # check if the default website is enabled (symlink present) parallel to bigbluebutton
+  # being enabled and if so, remove the symlink | fixes https://github.com/bigbluebutton/bbb-install/issues/780
+  DEFAULT_SITE=/etc/nginx/sites-enabled/default
+  BBB_SITE=/etc/nginx/sites-enabled/bigbluebutton
+  [ -L $DEFAULT_SITE ] && [ -L $BBB_SITE ] && rm $DEFAULT_SITE
+
   systemctl reload nginx
 }
 
