@@ -321,7 +321,7 @@ main() {
 
   update-java-alternatives -s java-1.21.0-openjdk-amd64
 
-  apt-get update
+  apt_update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
   need_pkg bigbluebutton
@@ -531,6 +531,14 @@ err() {
   exit 1
 }
 
+apt_update() {
+  # --allow-releaseinfo-change: without it a changed Release Origin/Label makes
+  # apt keep the stale lists, so the dist-upgrade below silently upgrades nothing.
+  if ! apt-get update --allow-releaseinfo-change "$@"; then
+    say "WARNING: apt-get update reported errors; package lists may be stale" >&2
+  fi
+}
+
 usage_err() {
   say "$1" >&2
   usage
@@ -665,7 +673,7 @@ need_pkg() {
   while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
 
   if [ ! "$SOURCES_FETCHED" = true ]; then
-    apt-get update
+    apt_update
     SOURCES_FETCHED=true
   fi
 
@@ -1505,7 +1513,7 @@ install_docker() {
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-    apt-get update
+    apt_update
     need_pkg docker-ce docker-ce-cli containerd.io
   fi
   if ! which docker; then err "Docker did not install"; fi
@@ -1536,7 +1544,7 @@ install_ssl() {
   mkdir -p /etc/nginx/ssl
 
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
-    apt-get update
+    apt_update
     need_pkg certbot
 
     if [[ -f "/etc/letsencrypt/live/$HOST/fullchain.pem" ]] && [[ -f "/etc/letsencrypt/renewal/$HOST.conf" ]] \
@@ -1867,7 +1875,7 @@ HERE
 
 
 install_coturn() {
-  apt-get update
+  apt_update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
   need_pkg software-properties-common certbot
