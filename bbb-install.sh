@@ -534,7 +534,7 @@ err() {
 apt_update() {
   # --allow-releaseinfo-change: without it a changed Release Origin/Label makes
   # apt keep the stale lists, so the dist-upgrade below silently upgrades nothing.
-  if ! apt-get update --allow-releaseinfo-change "$@"; then
+  if ! apt-get update --allow-releaseinfo-change; then
     say "WARNING: apt-get update reported errors; package lists may be stale" >&2
   fi
 }
