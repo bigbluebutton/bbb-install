@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-# Copyright (c) 2025 BigBlueButton Inc.
+# Copyright (c) 2026 BigBlueButton Inc.
 #
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU Lesser General Public License as published by the Free Software
@@ -18,102 +18,120 @@
 #    https://www.bigbluebutton.org/.
 #
 # This bbb-install script automates many of the installation and configuration
-# steps at https://docs.bigbluebutton.org/3.1/install
+# steps at https://docs.bigbluebutton.org/administration/install
 #
 #
 #  Examples
 #
-#  Install BigBlueButton 3.1.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
+#  Install BigBlueButton 4.0.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
 #  and email address info@example.com and apply a basic firewall
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh | bash -s -- -w -v jammy-310 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- -w -v noble-400 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh  | bash -s -- -w -v jammy-310 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh  | bash -s -- -w -v noble-400 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
     set +x
     cat 1>&2 <<HERE
 
-Script for installing a BigBlueButton 3.1 server in under 30 minutes.
-
-This script also checks if your server supports https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
+Script for installing, upgrading, or configuring a BigBlueButton server.
+Also checks that your server meets the minimum requirements:
+  https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
 
 USAGE:
-    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.1.x-release/bbb-install.sh | bash -s -- [OPTIONS]
+    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- [OPTIONS]
 
-OPTIONS (install BigBlueButton):
-
-  -v <version>           Install given version of BigBlueButton (e.g. 'jammy-310') (required)
-
-  -s <hostname>          Configure server with <hostname>
+CORE:
+  -v <version>           BigBlueButton version (e.g. 'noble-400')
+  -s <hostname>          Server FQDN (must resolve to this host's public IP)
   -e <email>             Email for Let's Encrypt certbot
-
-  -x                     Use Let's Encrypt certbot with manual DNS challenges
-
-  -g                     Install Greenlight version 3
-  -k                     Install Keycloak version 20
-
-  -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
-
-  -c <hostname>:<secret> Configure with external coturn server at <hostname> using <secret> (instead of built-in TURN server)
-
-  -m <link_path>         Create a Symbolic link from /var/bigbluebutton to <link_path> 
-
-  -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
-  -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
-
-  -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
   -w                     Install UFW firewall (recommended)
+  -h                     Print this help
 
-  -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
-                         Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
+SSL / CERTIFICATES:
+  -x                     Let's Encrypt with manual DNS challenge (for private networks)
+  -l                     Install only a Let's Encrypt certificate, not BigBlueButton
+                         (requires -s and -e)
+  -d                     Skip Let's Encrypt; use certificates from /local/certs/
 
-  -i                     Allows the installation of BigBlueButton to proceed even if Apache webserver is installed.
+ADD-ON APPLICATIONS:
+  -g                     Install Greenlight v3 (room manager web UI)
+  -k                     Install Keycloak v20 (external auth for Greenlight; implies -g)
+  -t <key>:<secret>      Install BigBlueButton LTI framework with initial consumer
+                         credentials. Re-run with the same <key> to rotate its
+                         secret; a new <key> adds another consumer.
 
-  -h                     Print help
+TURN / NETWORKING:
+  -c <hostname>:<secret> Either: (a) install coturn on this host (run without -v), or
+                         (b) configure BigBlueButton to relay through an existing
+                         coturn at <hostname> (run with -v).
+  -p <host>[:<port>]     Use apt-get proxy at <host> (default port 3142)
+  -r <host>              Use alternative apt repository
+                         (e.g. packages-eu.bigbluebutton.org)
 
-OPTIONS (install Let's Encrypt certificate only):
+STORAGE / HARDENING:
+  -m <link_path>         Symlink /var/bigbluebutton to <link_path> (e.g. separate volume)
+  -b                     Harden SSH ciphers (recommended)
 
-  -s <hostname>          Configure server with <hostname> (required)
-  -e <email>             Configure email for Let's Encrypt certbot (required)
-  -l                     Only install Let's Encrypt certificate (not BigBlueButton)
-  -x                     Use Let's Encrypt certbot with manual dns challenges (optional)
+OVERRIDES (use with care):
+  -j                     Proceed even if minimum requirements are not met
+                         (dev/CI scenarios; some checks still enforced)
+  -i                     Proceed even if Apache is already installed
 
-OPTIONS (install Greenlight only):
-
-  -g                     Install Greenlight version 3 (required)
-  -k                     Install Keycloak version 20 (optional)
-
-OPTIONS (install BigBlueButton LTI framework only):
-
-  -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret> (required)
-
-VARIABLES (configure Greenlight only):
-  GL_PATH                Configure Greenlight relative URL root path (Optional)
-                          * Use this when deploying Greenlight behind a reverse proxy on a path other than the default '/' e.g. '/gl'.
+VARIABLES:
+  GL_PATH                Relative URL root for Greenlight (e.g. '/gl') when deploying
+                         behind a reverse proxy on a non-root path.
 
 
 EXAMPLES:
 
-Sample options for setup a BigBlueButton 3.1 server
+  # Install BigBlueButton 4.0 with firewall + Let's Encrypt SSL
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w
 
-    -v jammy-310 -s bbb.example.com -e info@example.com
+  # Same, plus Greenlight v3
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -g
 
-Sample options for setup a BigBlueButton 3.1 server with Greenlight 3 and optionally Keycloak
+  # Same, plus Greenlight + Keycloak for external auth
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -g -k
 
-    -v jammy-310 -s bbb.example.com -e info@example.com -g [-k]
+  # With LTI framework (MY_KEY/MY_SECRET must be random and kept private)
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -t MY_KEY:MY_SECRET
 
-Sample options for setup a BigBlueButton 3.1 server with LTI framework while managing LTI consumer credentials MY_KEY:MY_SECRET
+  # Install coturn on a dedicated TURN host (note: no -v)
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -c turn.example.com:1234abcd -e info@example.com
 
-    -v jammy-310 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
+  # Then point BigBlueButton at that external TURN server
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -c turn.example.com:1234abcd
+
+  # Private network: manual DNS challenge for Let's Encrypt
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -x
+
+  # Store recordings on a separate volume
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -m /mnt/bbb
+
+  # Everything at once: BBB + UFW + Greenlight + Keycloak + LTI
+  wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.0.x-release/bbb-install.sh | bash -s -- \\
+    -v noble-400 -s bbb.example.com -e info@example.com -w -g -k -t MY_KEY:MY_SECRET
+
+UPGRADING:
+    Re-run the same command used at install time to upgrade to the latest iteration
+    of the same version line. Change -v to jump to a newer line.
 
 SUPPORT:
     Community: https://bigbluebutton.org/support
-         Docs: https://github.com/bigbluebutton/bbb-install
-               https://docs.bigbluebutton.org/administration/install/#minimum-server-requirements
+         Docs: https://docs.bigbluebutton.org
+         Repo: https://github.com/bigbluebutton/bbb-install
 
 HERE
 }
@@ -126,12 +144,14 @@ main() {
   GL3_DIR=~/greenlight-v3
   LTI_DIR=~/bbb-lti
   NGINX_FILES_DEST=/usr/share/bigbluebutton/nginx
+  IMAGE_MAGICK_DIR=/etc/ImageMagick-6
+  OVERWRITE_IMAGE_MAGICK_POLICY=true
   CR_TMPFILE=$(mktemp /tmp/carriage-return.XXXXXX)
   printf '\n' > "$CR_TMPFILE"
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwjikb" opt "${@}"; do
 
     case $opt in
       h)
@@ -141,7 +161,7 @@ main() {
 
       s)
         HOST=$OPTARG
-        if [ "$HOST" == "bbb.example.com" ]; then 
+        if [ "$HOST" == "bbb.example.com" ]; then
           err "You must specify a valid hostname (not the hostname given in the docs)."
         fi
         ;;
@@ -150,7 +170,7 @@ main() {
         ;;
       e)
         EMAIL=$OPTARG
-        if [ "$EMAIL" == "info@example.com" ]; then 
+        if [ "$EMAIL" == "info@example.com" ]; then
           err "You must specify a valid email address (not the email in the docs)."
         fi
         ;;
@@ -225,6 +245,9 @@ main() {
       i)
         SKIP_APACHE_INSTALLED_CHECK=true
         ;;
+      b)
+        HARDEN_SSH=true
+        ;;
       :)
         err "Missing option argument for -$OPTARG"
         ;;
@@ -250,7 +273,7 @@ main() {
   # Check if we're installing coturn (need an e-mail address for Let's Encrypt)
   if [ -z "$VERSION" ] && [ -n "$COTURN" ]; then
     if [ -z "$EMAIL" ]; then err "Installing coturn needs an e-mail address for Let's Encrypt"; fi
-    check_ubuntu 22.04
+    check_ubuntu 24.04
 
     install_coturn
     exit 0
@@ -272,56 +295,36 @@ main() {
   check_cpus
   check_ipv6
 
-  need_pkg wget curl gpg-agent dirmngr apparmor-utils
 
-  # need_pkg xmlstarlet
-  get_IP "$HOST"
-
-  if [ "$DISTRO" == "jammy" ]; then
-    need_pkg ca-certificates
-
-    need_ppa rmescandon-ubuntu-yq-jammy.list         ppa:rmescandon/yq          CC86BB64 # Edit yaml files with yq
-    #need_ppa ppa:rmescandon/yq
-    need_pkg yq
-    yq --version
-
-    #need_ppa libreoffice-ubuntu-ppa-jammy.list       ppa:libreoffice/ppa        1378B444 # Latest version of libreoffice
-
-    need_ppa bigbluebutton-ubuntu-support-focal.list ppa:bigbluebutton/support  2E1B01D0E95B94BC    # Needed for libopusenc0
-    need_ppa martin-uni-mainz-ubuntu-coturn-focal.list ppa:martin-uni-mainz/coturn  4B77C2225D3BBDB3 # Coturn
-
-    if [ -f /etc/apt/sources.list.d/nodesource.list ] &&  grep -q 18 /etc/apt/sources.list.d/nodesource.list; then
-      # Node 18 might be installed, previously used in BigBlueButton
-      # Remove the repository config. This will cause the repository to get
-      # re-added using the current nodejs version, and nodejs will be upgraded.
-      sudo rm -r /etc/apt/sources.list.d/nodesource.list
-    fi
-    if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
-      sudo mkdir -p /etc/apt/keyrings
-      if [ -f /etc/apt/keyrings/nodesource.gpg ]; then
-        rm /etc/apt/keyrings/nodesource.gpg
-      fi
-      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-      NODE_MAJOR=22
-      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-    fi
-
-    touch /root/.rnd
-    install_docker		                     # needed for bbb-libreoffice-docker
-    need_pkg ruby
-
-    BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings 
-
-    need_pkg openjdk-17-jre
-    update-java-alternatives -s java-1.17.0-openjdk-amd64
+  if [ "$DISTRO" != "noble" ]; then
+    err "This version of BigBlueButton requires Ubuntu 24.04"
   fi
 
-  apt-get update
+  get_IP "$HOST"
+
+  need_pkg wget curl gpg-agent dirmngr apparmor-utils ca-certificates ruby apt-transport-https haveged openjdk-21-jre dnsutils bbb-yq-go
+
+  if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
+    sudo mkdir -p /etc/apt/keyrings
+    if [ -f /etc/apt/keyrings/nodesource.gpg ]; then
+      rm /etc/apt/keyrings/nodesource.gpg
+    fi
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+    NODE_MAJOR=22
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+  fi
+
+  touch /root/.rnd
+  install_docker		                     # needed for bbb-libreoffice-docker
+
+  BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
+
+  update-java-alternatives -s java-1.21.0-openjdk-amd64
+
+  apt_update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
-  need_pkg apt-transport-https haveged
   need_pkg bigbluebutton
-  need_pkg bbb-html5
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
     SERVLET_DIR=/usr/share/bbb-web
@@ -369,7 +372,11 @@ main() {
   systemctl restart systemd-journald
 
   if [ -n "$UFW" ]; then
-    setup_ufw 
+    setup_ufw
+  fi
+
+  if [ "$HARDEN_SSH" = true ]; then
+    harden_ssh
   fi
 
   if [ -n "$HOST" ]; then
@@ -391,6 +398,127 @@ main() {
     install_greenlight_v3
   fi
 
+  if [ "$OVERWRITE_IMAGE_MAGICK_POLICY" = true ]; then
+    echo "ATTENTION!!"
+    echo "Overwriting ImageMagick policy file (modifying the default configuration to seal security vectors)"
+
+    #
+    # This is the imagemagick-provided https://imagemagick.org/source/policy-websafe.xml with
+    # minimal modifications required for bigbluebutton presentation conversion to work
+
+
+    cat <<HERE > "$IMAGE_MAGICK_DIR/policy.xml"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policymap [
+<!ELEMENT policymap (policy)*>
+<!ATTLIST policymap xmlns CDATA #FIXED "">
+<!ELEMENT policy EMPTY>
+<!ATTLIST policy xmlns CDATA #FIXED "">
+<!ATTLIST policy domain NMTOKEN #REQUIRED>
+<!ATTLIST policy name NMTOKEN #IMPLIED>
+<!ATTLIST policy pattern CDATA #IMPLIED>
+<!ATTLIST policy rights NMTOKEN #IMPLIED>
+<!ATTLIST policy stealth NMTOKEN #IMPLIED>
+<!ATTLIST policy value CDATA #IMPLIED>
+]>
+<!--
+  Creating a security policy that fits your specific local environment
+  before making use of ImageMagick is highly advised. You can find guidance on
+  setting up this policy at https://imagemagick.org/script/security-policy.php,
+  and it's important to verify your policy using the validation tool located
+  at https://imagemagick-secevaluator.doyensec.com/.
+  Web-safe ImageMagick security policy:
+  This security protocol designed for web-safe usage focuses on situations
+  where ImageMagick is applied in publicly accessible contexts, like websites.
+  It deactivates the capability to read from or write to any image formats
+  other than web-safe formats like GIF, JPEG, and PNG. Additionally, this
+  policy prohibits the execution of image filters and indirect reads, thereby
+  thwarting potential security breaches. By implementing these limitations,
+  the web-safe policy fortifies the safeguarding of systems accessible to
+  the public, reducing the risk of exploiting ImageMagick's capabilities
+  for potential attacks.
+ -->
+<policymap>
+  <!-- Set maximum parallel threads. -->
+  <policy domain="resource" name="thread" value="2"/>
+  <!-- Set maximum time to live in seconds or neumonics, e.g. "2 minutes". When
+       this limit is exceeded, an exception is thrown and processing stops. -->
+  <policy domain="resource" name="time" value="60"/>
+  <!-- Set maximum number of open pixel cache files. When this limit is
+       exceeded, any subsequent pixels cached to disk are closed and reopened
+       on demand. -->
+  <policy domain="resource" name="file" value="768"/>
+  <!-- Set maximum amount of memory in bytes to allocate for the pixel cache
+       from the heap. When this limit is exceeded, the image pixels are cached
+       to memory-mapped disk. -->
+  <policy domain="resource" name="memory" value="256MiB"/>
+  <!-- Set maximum amount of memory map in bytes to allocate for the pixel
+       cache. When this limit is exceeded, the image pixels are cached to
+       disk. -->
+  <policy domain="resource" name="map" value="512MiB"/>
+  <!-- Set the maximum width * height of an image that can reside in the pixel
+       cache memory. Images that exceed the area limit are cached to disk. -->
+  <policy domain="resource" name="area" value="16KP"/>
+  <!-- Set maximum amount of disk space in bytes permitted for use by the pixel
+       cache. When this limit is exceeded, the pixel cache is not be created
+       and an exception is thrown. -->
+  <policy domain="resource" name="disk" value="1GiB"/>
+  <!-- Set the maximum length of an image sequence.  When this limit is
+       exceeded, an exception is thrown. -->
+  <policy domain="resource" name="list-length" value="16"/>
+  <!-- Set the maximum width of an image.  When this limit is exceeded, an
+       exception is thrown. -->
+  <policy domain="resource" name="width" value="5KP"/>
+  <!-- Set the maximum height of an image.  When this limit is exceeded, an
+       exception is thrown. -->
+  <policy domain="resource" name="height" value="5KP"/>
+  <!-- Periodically yield the CPU for at least the time specified in
+       milliseconds. -->
+  <policy domain="resource" name="throttle" value="2"/>
+  <!-- Do not create temporary files in the default shared directories, instead
+       specify a private area to store only ImageMagick temporary files. -->
+  <!-- <policy domain="resource" name="temporary-path" value="/magick/tmp/"/> -->
+  <!-- Force memory initialization by memory mapping select memory
+       allocations. -->
+  <policy domain="cache" name="memory-map" value="anonymous"/>
+  <!-- Ensure all image data is fully flushed and synchronized to disk. -->
+  <policy domain="cache" name="synchronize" value="true"/>
+  <!-- Replace passphrase for secure distributed processing -->
+  <!-- <policy domain="cache" name="shared-secret" value="secret-passphrase" stealth="true"/> -->
+  <!-- Do not permit any delegates to execute. -->
+  <policy domain="delegate" rights="none" pattern="*"/>
+  <!-- Do not permit any image filters to load. -->
+  <policy domain="filter" rights="none" pattern="*"/>
+  <!-- Don't read/write from/to stdin/stdout. -->
+  <policy domain="path" rights="none" pattern="-"/>
+  <!-- don't read sensitive paths. -->
+  <policy domain="path" rights="none" pattern="/*"/>
+  <!-- allow access to required paths. -->
+  <policy domain="path" rights="read|write" pattern="/var/bigbluebutton/*"/>
+  <policy domain="path" rights="read|write" pattern="/tmp/*"/>
+  <!-- Indirect reads are not permitted. -->
+  <policy domain="path" rights="none" pattern="@*"/>
+  <!-- Deny all image modules and specifically exempt reading or writing
+       web-safe image formats. -->
+  <policy domain="module" rights="none" pattern="*" />
+  <policy domain="module" rights="read | write" pattern="{BMP,GIF,JPEG,PDF,PNG,TIFF,WEBP}"/>
+  <policy domain="module" rights="read | write" pattern="{MPC}" stealth="true"/>
+  <policy domain="module" rights="read" pattern="{XC}"/>
+  <policy domain="module" rights="write" pattern="{JSON,INFO,PNM,PS,SVG}"/>
+  <!-- This policy sets the number of times to replace content of certain
+       memory buffers and temporary files before they are freed or deleted. -->
+  <policy domain="system" name="shred" value="1"/>
+  <!-- Enable the initialization of buffers with zeros, resulting in a minor
+       performance penalty but with improved security. -->
+  <policy domain="system" name="memory-map" value="anonymous"/>
+  <!-- Set the maximum amount of memory in bytes that are permitted for
+       allocation requests. -->
+  <policy domain="system" name="max-memory-request" value="256MiB"/>
+</policymap>
+
+HERE
+  fi
+
   bbb-conf --check
 }
 
@@ -401,6 +529,14 @@ say() {
 err() {
   say "$1" >&2
   exit 1
+}
+
+apt_update() {
+  # --allow-releaseinfo-change: without it a changed Release Origin/Label makes
+  # apt keep the stale lists, so the dist-upgrade below silently upgrades nothing.
+  if ! apt-get update --allow-releaseinfo-change; then
+    say "WARNING: apt-get update reported errors; package lists may be stale" >&2
+  fi
 }
 
 usage_err() {
@@ -477,7 +613,7 @@ get_IP() {
 
 
   local external_ip
-  # Determine external IP 
+  # Determine external IP
   if grep -sqi ^ec2 /sys/devices/virtual/dmi/id/product_uuid; then
     # EC2
     external_ip=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
@@ -509,17 +645,17 @@ get_IP() {
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
     sleep 1
-    
+
      # Check if we can reach the server through it's external IP address
      if nc -zvw3 "$external_ip" 443  > /dev/null 2>&1; then
        INTERNAL_IP=$IP
        IP=$external_ip
-       echo 
+       echo
        echo "  Detected this server has an internal/external IP address."
-       echo 
+       echo
        echo "      INTERNAL_IP: $INTERNAL_IP"
        echo "    (external) IP: $IP"
-       echo 
+       echo
      fi
 
     kill $nc_PID  > /dev/null 2>&1;
@@ -537,7 +673,7 @@ need_pkg() {
   while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg lock"; sleep 1; done
 
   if [ ! "$SOURCES_FETCHED" = true ]; then
-    apt-get update
+    apt_update
     SOURCES_FETCHED=true
   fi
 
@@ -549,33 +685,32 @@ need_pkg() {
 }
 
 need_ppa() {
-  need_pkg software-properties-common 
-  if [ ! -f "/etc/apt/sources.list.d/$1" ]; then
+  need_pkg software-properties-common
+  # On Ubuntu 24.04, add-apt-repository writes a deb822 *.sources file and keeps the PPA
+  # signing key in its own keyring. apt-key is deprecated and its keyring is empty on noble,
+  # so gate on the sources file add-apt-repository creates instead of `apt-key list "$3"`.
+  local base="/etc/apt/sources.list.d/${1%.list}"
+  if [ ! -f "$base.sources" ] && [ ! -f "$base.list" ]; then
     LC_CTYPE=C.UTF-8 add-apt-repository -y "$2"
   fi
-  if ! apt-key list "$3" | grep -q -E "1024|4096"; then  # Let's try it a second time
-    LC_CTYPE=C.UTF-8 add-apt-repository "$2" -y
-    if ! apt-key list "$3" | grep -q -E "1024|4096"; then
-      err "Unable to setup PPA for $2"
-    fi
+  if [ ! -f "$base.sources" ] && [ ! -f "$base.list" ]; then
+    err "Unable to setup PPA for $2"
   fi
 }
 
 check_version() {
-  if ! echo "$1" | grep -Eq "jammy-31"; then err "This script can only install BigBlueButton 3.1 and is meant to be run on Ubuntu 22.04 (jammy) server."; fi
+  if ! echo "$1" | grep -Eq "noble-4"; then err "This script can only install BigBlueButton 4.0 and is meant to be run on Ubuntu 24.04 (noble) server."; fi
   DISTRO=${1%%-*}
   if ! wget -qS --spider "https://$PACKAGE_REPOSITORY/$1/dists/bigbluebutton-$DISTRO/Release.gpg" > /dev/null 2>&1; then
     err "Unable to locate packages for $1 at $PACKAGE_REPOSITORY."
   fi
   check_root
-  need_pkg curl apt-transport-https
   curl -fsSL "https://$PACKAGE_REPOSITORY/repo/bigbluebutton.asc" | sudo tee /etc/apt/keyrings/bigbluebutton.asc
   echo "deb [signed-by=/etc/apt/keyrings/bigbluebutton.asc] https://$PACKAGE_REPOSITORY/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
 check_host() {
   if [ -z "$PROVIDED_CERTIFICATE" ] && [ -z "$HOST" ]; then
-    need_pkg dnsutils apt-transport-https
     DIG_IP=$(dig +short "$1" | grep '^[.0-9]*$' | tail -n1)
     if [ -z "$DIG_IP" ]; then err "Unable to resolve $1 to an IP address using DNS lookup.";  fi
     get_IP "$1"
@@ -592,10 +727,10 @@ check_coturn() {
   if [ -z "$COTURN_HOST" ];   then err "-c option must contain <hostname>"; fi
   if [ -z "$COTURN_SECRET" ]; then err "-c option must contain <secret>"; fi
 
-  if [ "$COTURN_HOST" == "turn.example.com" ]; then 
+  if [ "$COTURN_HOST" == "turn.example.com" ]; then
     err "You must specify a valid hostname (not the example given in the docs)"
   fi
-  if [ "$COTURN_SECRET" == "1234abcd" ]; then 
+  if [ "$COTURN_SECRET" == "1234abcd" ]; then
     err "You must specify a new password (not the example given in the docs)."
   fi
 
@@ -603,7 +738,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then 
+  if dpkg -l | grep -q apache2-bin; then
     echo "You must uninstall the Apache2 server first"
     if [ "$SKIP_APACHE_INSTALLED_CHECK" != true ]; then
       exit 1
@@ -664,13 +799,12 @@ check_nat() {
     xmlstarlet edit --inplace --update '//param[@name="ext-rtp-ip"]/@value' --value "\$\${external_rtp_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
     xmlstarlet edit --inplace --update '//param[@name="ext-sip-ip"]/@value' --value "\$\${external_sip_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
 
-    sed -i "s/$INTERNAL_IP:/$IP:/g" /usr/share/bigbluebutton/nginx/sip.nginx
     ip addr add "$IP" dev lo
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
     if ! grep -q "$IP" /lib/systemd/system/dummy-nic.service > /dev/null 2>&1; then
-      if [ -f /lib/systemd/system/dummy-nic.service ]; then 
-        DAEMON_RELOAD=true; 
+      if [ -f /lib/systemd/system/dummy-nic.service ]; then
+        DAEMON_RELOAD=true;
       fi
 
       cat > /lib/systemd/system/dummy-nic.service << HERE
@@ -702,7 +836,7 @@ check_LimitNOFILE() {
 
   if [ "$CPU" -ge 8 ]; then
     if [ -f /lib/systemd/system/bbb-web.service ]; then
-      # Let's create an override file to increase the number of LimitNOFILE 
+      # Let's create an override file to increase the number of LimitNOFILE
       mkdir -p /etc/systemd/system/bbb-web.service.d/
       cat > /etc/systemd/system/bbb-web.service.d/override.conf << HERE
 [Service]
@@ -763,7 +897,8 @@ defaults
 
 
 frontend nginx_or_turn
-  bind *:443,:::443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn h2,http/1.1,stun.turn
+  # Http2 is disabled, include h2 to the list if you want to enable it: h2,http/1.1,stun.turn
+  bind *:443,:::443 ssl crt /etc/haproxy/certbundle.pem ssl-min-ver TLSv1.2 alpn http/1.1,stun.turn
   mode tcp
   option tcplog
   tcp-request content capture req.payload(0,1) len 1
@@ -888,7 +1023,7 @@ install_greenlight_v3(){
     if [ ! -s $GL3_DIR/.env ]; then
       err "failed to create greenlight-v3 .env file - is docker running?"
     fi
- 
+
     say "greenlight-v3 .env file was created"
   fi
 
@@ -905,6 +1040,7 @@ install_greenlight_v3(){
   sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $GL3_DIR/.env # Do not overwrite the value if not empty.
   sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $GL3_DIR/.env # Do not overwrite the value if not empty.
   sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $GL3_DIR/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*URL_HOST=[ \t]*$|URL_HOST=$HOST|" $GL3_DIR/.env # Do not overwrite the value if not empty.
 
   # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your BigBlueButton frontend (bbb-fe).
   cp -v $NGINX_FILES_DEST/greenlight-v3.nginx $NGINX_FILES_DEST/greenlight-v3.nginx.old && say "old greenlight-v3 nginx config can be retrieved at $NGINX_FILES_DEST/greenlight-v3.nginx.old" #Backup
@@ -948,9 +1084,9 @@ install_greenlight_v3(){
   # Adding Keycloak
   if [ -n "$INSTALL_KC" ]; then
       # When attempting to install/update Keycloak let us attempt to create the database to resolve any issues caused by postgres false negatives.
-      docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
+      docker compose -f $GL3_DIR/docker-compose.yml up -d postgres && say "started postgres"
       wait_postgres_start
-      docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;'
+      docker compose -f $GL3_DIR/docker-compose.yml exec -T postgres psql -U postgres -c 'CREATE DATABASE keycloakdb;'
   fi
 
   if ! grep -q 'keycloak:' $GL3_DIR/docker-compose.yml; then
@@ -960,7 +1096,7 @@ install_greenlight_v3(){
       # Add Keycloak
       say "Adding Keycloak..."
 
-      docker-compose -f $GL3_DIR/docker-compose.yml down
+      docker compose -f $GL3_DIR/docker-compose.yml down
       cp -v $GL3_DIR/docker-compose.yml $GL3_DIR/docker-compose.base.yml # Persist working base compose file for admins as a Backup.
 
       docker run --rm --entrypoint sh $GL_IMG_REPO -c 'cat docker-compose.kc.yml' >> $GL3_DIR/docker-compose.yml
@@ -1016,17 +1152,17 @@ HERE
 
   # Eager pulling images.
   say "pulling latest greenlight-v3 services images..."
-  docker-compose -f $GL3_DIR/docker-compose.yml pull
+  docker compose -f $GL3_DIR/docker-compose.yml pull
 
   if check_container_running greenlight-v3; then
     # Restarting Greenlight-v3 services after updates.
     say "greenlight-v3 is updating..."
     say "shutting down greenlight-v3..."
-    docker-compose -f $GL3_DIR/docker-compose.yml down
+    docker compose -f $GL3_DIR/docker-compose.yml down
   fi
 
   say "starting greenlight-v3..."
-  docker-compose -f $GL3_DIR/docker-compose.yml up -d
+  docker compose -f $GL3_DIR/docker-compose.yml up -d
   sleep 5
   say "greenlight-v3 is now installed and accessible on: https://$HOST${GL_RELATIVE_URL_ROOT:-$GL_DEFAULT_PATH}"
   say "To create Greenlight administrator account, see: https://docs.bigbluebutton.org/greenlight/v3/install#creating-an-admin-account"
@@ -1111,17 +1247,17 @@ install_lti(){
 
   # Updating BBB LTI framework images.
   say "pulling latest BBB LTI framework services images..."
-  docker-compose -f $LTI_DIR/docker-compose.yml pull
+  docker compose -f $LTI_DIR/docker-compose.yml pull
 
   if check_container_running broker; then
     # Restarting BBB LTI framework services after updates.
     say "BBB LTI framework is updating..."
     say "shutting down BBB LTI framework services..."
-    docker-compose -f $LTI_DIR/docker-compose.yml down
+    docker compose -f $LTI_DIR/docker-compose.yml down
   fi
 
   say "starting BBB LTI framework services..."
-  docker-compose -f $LTI_DIR/docker-compose.yml up -d
+  docker compose -f $LTI_DIR/docker-compose.yml up -d
 
   wait_lti_broker_start
 
@@ -1130,9 +1266,9 @@ install_lti(){
 
   say "Setting/updating LTI credentials for LTI KEY: $LTI_KEY..."
 
-  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update["$LTI_KEY","$LTI_SECRET"] \
+  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update["$LTI_KEY","$LTI_SECRET"] \
     2> /dev/null 1>&2; then
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add["$LTI_KEY","$LTI_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add["$LTI_KEY","$LTI_SECRET"] \
       2> /dev/null 1>&2 || err "failed to set LTI credentials $LTI_KEY:$LTI_SECRET."
 
       say "New LTI credentials for LTI KEY: $LTI_KEY were added!"
@@ -1267,14 +1403,14 @@ register_lti_tools() {
 
 wait_lti_broker_start() {
   say "Waiting for the LTI broker to start..."
-  docker-compose -f $LTI_DIR/docker-compose.yml up -d broker || err "failed to register LTI framework apps due to LTI broker failling to start - retry to resolve"
+  docker compose -f $LTI_DIR/docker-compose.yml up -d broker || err "failed to register LTI framework apps due to LTI broker failling to start - retry to resolve"
 
   local tries=0
-  while ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:version 2> /dev/null 1>&2; do
+  while ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:version 2> /dev/null 1>&2; do
     echo -n .
     sleep 3
     if (( ++tries == 3 )); then
-      err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve" 
+      err "failed to register LTI framework apps due to reaching LTI broker waiting timeout - retry to resolve"
     fi
   done
 
@@ -1287,14 +1423,14 @@ wait_lti_broker_start() {
 
 wait_postgres_start() {
   say "Waiting for the Postgres DB to start..."
-  docker-compose -f $GL3_DIR/docker-compose.yml up -d postgres || err "failed to start Postgres service - retry to resolve"
+  docker compose -f $GL3_DIR/docker-compose.yml up -d postgres || err "failed to start Postgres service - retry to resolve"
 
   local tries=0
-  while ! docker-compose -f $GL3_DIR/docker-compose.yml exec -T postgres pg_isready 2> /dev/null 1>&2; do
+  while ! docker compose -f $GL3_DIR/docker-compose.yml exec -T postgres pg_isready 2> /dev/null 1>&2; do
     echo -n .
     sleep 3
     if (( ++tries == 3 )); then
-      err "failed to start Postgres due to reaching waiting timeout - retry to resolve" 
+      err "failed to start Postgres due to reaching waiting timeout - retry to resolve"
     fi
   done
 
@@ -1327,12 +1463,12 @@ register_lti_tool() {
     err "failed to register $LOG_NAME due to LTI broker not running - retry to resolve."
   fi
 
-  if ! docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show["$APP_NAME"] \
+  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show["$APP_NAME"] \
     2> /dev/null 1>&2; then
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully registered."
   else
-    docker-compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully updated."
   fi
 
@@ -1376,7 +1512,7 @@ install_ssl() {
   mkdir -p /etc/nginx/ssl
 
   if [ -z "$PROVIDED_CERTIFICATE" ]; then
-    apt-get update
+    apt_update
     need_pkg certbot
 
     if [[ -f "/etc/letsencrypt/live/$HOST/fullchain.pem" ]] && [[ -f "/etc/letsencrypt/renewal/$HOST.conf" ]] \
@@ -1463,8 +1599,12 @@ server {
   # Depending on the ALPN value traffic is redirected to either port 82 (HTTP2,
   # ALPN value h2) or 81 (HTTP 1.0 or HTTP 1.1, ALPN value http/1.1 or no value)
 
-  listen 127.0.0.1:82 http2 proxy_protocol;
-  listen [::1]:82 http2;
+  # Http2 is disabled, include http2 to the list if you want to enable it
+  # listen 127.0.0.1:82 http2 proxy_protocol;
+  # listen [::1]:82 http2;
+
+  listen 127.0.0.1:82 proxy_protocol;
+  listen [::1]:82;
   listen 127.0.0.1:81 proxy_protocol;
   listen [::1]:81;
   server_name $HOST;
@@ -1517,8 +1657,12 @@ server {
 }
 
 server {
-  listen 443 ssl http2;
-  listen [::]:443 ssl http2;
+  # Http2 is disabled, include http2 to the list if you want to enable it
+  # listen 443 ssl http2;
+  # listen [::]:443 ssl http2;
+
+  listen 443 ssl;
+  listen [::]:443 ssl;
   server_name $HOST;
 
     ssl_certificate /etc/letsencrypt/live/$HOST/fullchain.pem;
@@ -1528,7 +1672,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
     ssl_dhparam /etc/nginx/ssl/ffdhe2048.pem;
-    
+
     # HSTS (comment out to enable)
     #add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
@@ -1579,26 +1723,18 @@ HERE
 fi
 
   # Configure rest of BigBlueButton Configuration for SSL
-  xmlstarlet edit --inplace --update '//param[@name="wss-binding"]/@value' --value "$IP:7443" /opt/freeswitch/conf/sip_profiles/external.xml
- 
+
   # shellcheck disable=SC1091
   eval "$(source /etc/bigbluebutton/bigbluebutton-release && declare -p BIGBLUEBUTTON_RELEASE)"
-  if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
-    sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /usr/share/bigbluebutton/nginx/sip.nginx
-  else
-    # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-    yq e -i '.public.media.sipjsHackViaWs = true' /etc/bigbluebutton/bbb-html5.yml
-    sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /usr/share/bigbluebutton/nginx/sip.nginx
-    xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
-  fi
+  xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
 
   sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties"
   if [ -f "$BBB_WEB_ETC_CONFIG" ]; then
     sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$BBB_WEB_ETC_CONFIG"
   fi
 
-  yq e -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
-  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml 
+  yq-go e -i '.playback_protocol = "https"' /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
+  chmod 644 /usr/local/bigbluebutton/core/scripts/bigbluebutton.yml
 
   # Update Greenlight (if installed) to use SSL
   for gl_dir in ~/greenlight $GL3_DIR;do
@@ -1609,8 +1745,8 @@ fi
         fi
 
         sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
-        docker-compose -f "$gl_dir"/docker-compose.yml down
-        docker-compose -f "$gl_dir"/docker-compose.yml up -d
+        docker compose -f "$gl_dir"/docker-compose.yml down
+        docker compose -f "$gl_dir"/docker-compose.yml up -d
       fi
     fi
   done
@@ -1619,39 +1755,42 @@ fi
   TARGET=/etc/bigbluebutton/bbb-webrtc-sfu/production.yml
   touch $TARGET
 
-  yq e -i ".freeswitch.ip = \"$IP\"" $TARGET
+  yq-go e -i ".freeswitch.ip = \"$IP\"" $TARGET
 
   if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
     if [ -n "$INTERNAL_IP" ]; then
-      yq e -i ".freeswitch.sip_ip = \"$INTERNAL_IP\"" $TARGET
+      yq-go e -i ".freeswitch.sip_ip = \"$INTERNAL_IP\"" $TARGET
     else
-      yq e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
+      yq-go e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
     fi
   else
     # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-    yq e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
+    yq-go e -i ".freeswitch.sip_ip = \"$IP\"" $TARGET
   fi
   chown bigbluebutton:bigbluebutton $TARGET
   chmod 644 $TARGET
 
   # Configure mediasoup IPs, reference: https://raw.githubusercontent.com/bigbluebutton/bbb-webrtc-sfu/v2.7.2/docs/mediasoup.md
   # mediasoup IPs: WebRTC
-  yq e -i '.mediasoup.webrtc.listenIps[0].ip = "0.0.0.0"' $TARGET
-  yq e -i ".mediasoup.webrtc.listenIps[0].announcedIp = \"$IP\"" $TARGET
+  yq-go e -i '.mediasoup.webrtc.listenIps[0].ip = "0.0.0.0"' $TARGET
+  yq-go e -i ".mediasoup.webrtc.listenIps[0].announcedIp = \"$IP\"" $TARGET
 
   # mediasoup IPs: plain RTP (internal comms, FS <-> mediasoup)
-  yq e -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
-  yq e -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
+  yq-go e -i '.mediasoup.plainRtp.listenIp.ip = "0.0.0.0"' $TARGET
+  yq-go e -i ".mediasoup.plainRtp.listenIp.announcedIp = \"$IP\"" $TARGET
 
   systemctl reload nginx
 }
 
 configure_coturn() {
-  TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
 
   if [ -z "$COTURN" ]; then
     # the user didn't pass '-c', so use the local TURN server's host
     COTURN_HOST=$HOST
+    TURN_XML=/usr/share/bbb-web/WEB-INF/classes/spring/turn-stun-servers.xml
+  elif [[ "$COTURN" ]]; then
+    # the user passed '-c' with 'host:secret'
+    TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
   fi
 
   cat <<HERE > $TURN_XML
@@ -1661,12 +1800,12 @@ configure_coturn() {
         xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 
-    <!-- 
+    <!--
          We need turn0 for FireFox to workaround its limited ICE implementation.
          This is UDP connection.  Note that port 3478 must be open on this BigBlueButton
          and reachable by the client.
 
-         Also, in 2.5, we previously defined turn:\$HOST:443?transport=tcp (not 'turns') 
+         Also, in 2.5, we previously defined turn:\$HOST:443?transport=tcp (not 'turns')
          to workaround a bug in Safari's handling of Let's Encrypt. This bug is now fixed
          https://bugs.webkit.org/show_bug.cgi?id=219274, so we omit the 'turn' protocol over
          port 443.
@@ -1681,7 +1820,7 @@ configure_coturn() {
         <constructor-arg index="1" value="turns:$COTURN_HOST:443?transport=tcp"/>
         <constructor-arg index="2" value="86400"/>
     </bean>
-    
+
     <bean id="stunTurnService"
             class="org.bigbluebutton.web.services.turn.StunTurnService">
         <property name="stunServers">
@@ -1704,12 +1843,12 @@ HERE
 
 
 install_coturn() {
-  apt-get update
+  apt_update
   apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade
 
   need_pkg software-properties-common certbot
 
-  need_pkg coturn
+  need_pkg bbb-coturn
 
   if [ -n "$INTERNAL_IP" ]; then
     SECOND_ALLOWED_PEER_IP="allowed-peer-ip=$INTERNAL_IP"
@@ -1777,7 +1916,7 @@ HERE
 
   # Eanble coturn to bind to port 443 with CAP_NET_BIND_SERVICE
   mkdir -p /etc/systemd/system/coturn.service.d
-  rm -rf /etc/systemd/system/coturn.service.d/ansible.conf      # Remove previous file 
+  rm -rf /etc/systemd/system/coturn.service.d/ansible.conf      # Remove previous file
   cat > /etc/systemd/system/coturn.service.d/override.conf <<HERE
 [Service]
 LimitNOFILE=1048576
@@ -1790,6 +1929,7 @@ HERE
   systemctl daemon-reload
   systemctl restart coturn
   configure_coturn
+  systemctl enable --now coturn
 }
 
 
@@ -1807,5 +1947,40 @@ HERE
   fi
 }
 
-main "$@" || exit 1
+harden_ssh() {
+  say "Hardening SSH configuration..."
 
+  local SSH_HARDENING_FILE="/etc/ssh/sshd_config.d/99-hardened-ciphers.conf"
+
+  # Check if sshd_config includes the .d directory (Ubuntu 24.04 does by default)
+  if ! grep -q "^Include.*/etc/ssh/sshd_config.d/" /etc/ssh/sshd_config; then
+    say "Warning: /etc/ssh/sshd_config doesn't include sshd_config.d - adding include directive"
+    echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
+  fi
+
+  cat > "$SSH_HARDENING_FILE" <<HERE
+# SSH Hardening - Applied by bbb-install.sh
+# Modern ciphers, key exchange, and MACs only
+
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
+HERE
+
+  # Validate config before applying (binary is still sshd)
+  if sshd -t; then
+    # Ubuntu 24.04 uses ssh.service, older Ubuntu used sshd.service
+    if systemctl is-active --quiet ssh 2>/dev/null; then
+      systemctl restart ssh
+    else
+      systemctl restart sshd
+    fi
+    say "SSH hardening applied successfully"
+  else
+    say "SSH config validation failed - removing hardening file"
+    rm -f "$SSH_HARDENING_FILE"
+    err "SSH hardening failed - sshd config invalid"
+  fi
+}
+
+main "$@" || exit 1
