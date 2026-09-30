@@ -24,13 +24,13 @@
 #  Examples
 #
 #  Install BigBlueButton 4.1.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
-#  and email address info@example.com and apply a basic firewall
+#  and email address info@example.com (a basic firewall is applied by default)
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- -w -v noble-410 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- -v noble-410 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh  | bash -s -- -w -v noble-410 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh  | bash -s -- -v noble-410 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -48,7 +48,9 @@ CORE:
   -v <version>           BigBlueButton version (e.g. 'noble-410')
   -s <hostname>          Server FQDN (must resolve to this host's public IP)
   -e <email>             Email for Let's Encrypt certbot
-  -w                     Install UFW firewall (recommended)
+  -W                     Skip UFW firewall configuration (dangerous)
+                         A firewall is required to secure BBB services.
+  -w                     Does nothing (Previously: Install UFW firewall)
   -h                     Print this help
 
 SSL / CERTIFICATES:
@@ -90,19 +92,19 @@ EXAMPLES:
 
   # Install BigBlueButton 4.1 with firewall + Let's Encrypt SSL
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-410 -s bbb.example.com -e info@example.com -w
+    -v noble-410 -s bbb.example.com -e info@example.com
 
   # Same, plus Greenlight v3
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-410 -s bbb.example.com -e info@example.com -w -g
+    -v noble-410 -s bbb.example.com -e info@example.com -g
 
   # Same, plus Greenlight + Keycloak for external auth
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-410 -s bbb.example.com -e info@example.com -w -g -k
+    -v noble-410 -s bbb.example.com -e info@example.com -g -k
 
   # With LTI framework (MY_KEY/MY_SECRET must be random and kept private)
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-410 -s bbb.example.com -e info@example.com -w -t MY_KEY:MY_SECRET
+    -v noble-410 -s bbb.example.com -e info@example.com -t MY_KEY:MY_SECRET
 
   # Install coturn on a dedicated TURN host (note: no -v)
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
@@ -110,19 +112,19 @@ EXAMPLES:
 
   # Then point BigBlueButton at that external TURN server
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-410 -s bbb.example.com -e info@example.com -w -c turn.example.com:1234abcd
+    -v noble-410 -s bbb.example.com -e info@example.com -c turn.example.com:1234abcd
 
   # Private network: manual DNS challenge for Let's Encrypt
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-410 -s bbb.example.com -e info@example.com -w -x
+    -v noble-410 -s bbb.example.com -e info@example.com -x
 
   # Store recordings on a separate volume
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-410 -s bbb.example.com -e info@example.com -w -m /mnt/bbb
+    -v noble-410 -s bbb.example.com -e info@example.com -m /mnt/bbb
 
   # Everything at once: BBB + UFW + Greenlight + Keycloak + LTI
   wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- \\
-    -v noble-410 -s bbb.example.com -e info@example.com -w -g -k -t MY_KEY:MY_SECRET
+    -v noble-410 -s bbb.example.com -e info@example.com -g -k -t MY_KEY:MY_SECRET
 
 UPGRADING:
     Re-run the same command used at install time to upgrade to the latest iteration
@@ -151,7 +153,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwjikb" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwWjikb" opt "${@}"; do
 
     case $opt in
       h)
@@ -233,11 +235,11 @@ main() {
         PROVIDED_CERTIFICATE=true
         ;;
       w)
-        SSH_PORT=$(grep Port /etc/ssh/ssh_config | grep -v \# | sed 's/[^0-9]*//g')
-        if [[ -n "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
-          err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules."
-        fi
-        UFW=true
+        # Still accepted so existing commands keep working
+        say "WARNING: -w is deprecated -- the UFW firewall is now installed by default. To opt out, pass -W instead." >&2
+        ;;
+      W)
+        SKIP_UFW=true
         ;;
       j)
         SKIP_MIN_SERVER_REQUIREMENTS_CHECK=true
@@ -295,6 +297,9 @@ main() {
   check_cpus
   check_ipv6
 
+  if [ "$SKIP_UFW" != true ]; then
+    check_ssh_port
+  fi
 
   if [ "$DISTRO" != "noble" ]; then
     err "This version of BigBlueButton requires Ubuntu 24.04"
@@ -371,7 +376,7 @@ main() {
 
   systemctl restart systemd-journald
 
-  if [ -n "$UFW" ]; then
+  if [ "$SKIP_UFW" != true ]; then
     setup_ufw
   fi
 
@@ -565,6 +570,18 @@ check_cpus() {
     if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
       exit 1
     fi
+  fi
+}
+
+check_ssh_port() {
+  # setup_ufw leaves an existing apply-config.sh untouched, so there is nothing to guard
+  if [ -f /etc/bigbluebutton/bbb-conf/apply-config.sh ]; then return 0; fi
+
+  # The default UFW rules allow SSH only on port 22
+  local ssh_ports
+  ssh_ports=$(sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }')
+  if [ -n "$ssh_ports" ] && ! grep -qx 22 <<< "$ssh_ports"; then
+    err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules. Pass -W to skip the firewall."
   fi
 }
 

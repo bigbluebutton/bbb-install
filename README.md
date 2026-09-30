@@ -9,7 +9,7 @@
 Log in as root to a fresh Ubuntu server and run:
 
 ```
-wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- -v noble-410 -s bbb.example.com -e info@example.com -w
+wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v4.1.x-release/bbb-install.sh | bash -s -- -v noble-410 -s bbb.example.com -e info@example.com
 ```
 
 Substitute your own hostname and email. For the full list of flags and more example command lines:
@@ -53,7 +53,7 @@ If your server is behind an external firewall (AWS security group, Azure NSG, GC
 
 Amazon EC2 users should also assign an [Elastic IP](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html) so the server's address is stable across reboots.
 
-Even with an external firewall in place, pass `-w` to install UFW on the BigBlueButton host itself — defense in depth.
+Even with an external firewall in place, the script installs UFW on the BigBlueButton host itself — defense in depth. The default rules allow SSH only on port 22, so the script stops if sshd listens on another port. Pass `-W` to skip UFW and manage the host firewall yourself.
 
 <details>
 <summary>Screenshots: Azure and GCE firewall rules</summary>
