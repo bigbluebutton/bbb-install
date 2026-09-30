@@ -48,8 +48,9 @@ CORE:
   -v <version>           BigBlueButton version (e.g. 'noble-400')
   -s <hostname>          Server FQDN (must resolve to this host's public IP)
   -e <email>             Email for Let's Encrypt certbot
-  -W                     Skip the UFW firewall (installed by default)
-  -w                     Deprecated: the UFW firewall is now installed by default
+  -W                     Skip UFW firewall configuration (dangerous)
+                         A firewall is required to secure BBB services.
+  -w                     Does nothing (Previously: Install UFW firewall)
   -h                     Print this help
 
 SSL / CERTIFICATES:
