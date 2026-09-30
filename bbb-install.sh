@@ -24,13 +24,13 @@
 #  Examples
 #
 #  Install BigBlueButton 3.0.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
-#  and email address info@example.com and apply a basic firewall
+#  and email address info@example.com (a basic firewall is applied by default)
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh | bash -s -- -v jammy-300 -s bbb.example.com -e info@example.com
 #
 #  Install BigBlueButton with SSL + Greenlight + LiveKit
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com -g -L
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh  | bash -s -- -v jammy-300 -s bbb.example.com -e info@example.com -g -L
 #
 
 usage() {
@@ -67,7 +67,9 @@ OPTIONS (install BigBlueButton):
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
-  -w                     Install UFW firewall (recommended)
+  -W                     Skip UFW firewall configuration (dangerous)
+                         A firewall is required to secure BBB services.
+  -w                     Does nothing (Previously: Install UFW firewall)
 
   -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
                          Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
@@ -134,7 +136,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:t:Lxgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:LxgadwWjik" opt "${@}"; do
 
     case $opt in
       h)
@@ -220,11 +222,11 @@ main() {
         PROVIDED_CERTIFICATE=true
         ;;
       w)
-        SSH_PORT=$(grep Port /etc/ssh/ssh_config | grep -v \# | sed 's/[^0-9]*//g')
-        if [[ -n "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
-          err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules."
-        fi
-        UFW=true
+        # Still accepted so existing commands keep working
+        say "WARNING: -w is deprecated -- the UFW firewall is now installed by default. To opt out, pass -W instead." >&2
+        ;;
+      W)
+        SKIP_UFW=true
         ;;
       j)
         SKIP_MIN_SERVER_REQUIREMENTS_CHECK=true
@@ -278,6 +280,10 @@ main() {
   check_mem
   check_cpus
   check_ipv6
+
+  if [ "$SKIP_UFW" != true ]; then
+    check_ssh_port
+  fi
 
   need_pkg wget curl gpg-agent dirmngr apparmor-utils
 
@@ -375,7 +381,7 @@ main() {
 
   systemctl restart systemd-journald
 
-  if [ -n "$UFW" ]; then
+  if [ "$SKIP_UFW" != true ]; then
     setup_ufw
   fi
 
@@ -569,6 +575,18 @@ check_cpus() {
     if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
       exit 1
     fi
+  fi
+}
+
+check_ssh_port() {
+  # setup_ufw leaves an existing apply-config.sh untouched, so there is nothing to guard
+  if [ -f /etc/bigbluebutton/bbb-conf/apply-config.sh ]; then return 0; fi
+
+  # The default UFW rules allow SSH only on port 22
+  local ssh_ports
+  ssh_ports=$(sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }')
+  if [ -n "$ssh_ports" ] && ! grep -qx 22 <<< "$ssh_ports"; then
+    err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules. Pass -W to skip the firewall."
   fi
 }
 
