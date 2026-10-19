@@ -325,6 +325,8 @@ main() {
   install_docker		                     # needed for bbb-libreoffice-docker
 
   BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
+  BBB_ENV_FILE=/etc/bigbluebutton/bigbluebutton.env                   # Administrator's shared settings, never written by bbb-install
+  if [ -f "$BBB_ENV_FILE" ]; then source "$BBB_ENV_FILE"; fi
 
   update-java-alternatives -s java-1.21.0-openjdk-amd64
 
@@ -1008,9 +1010,9 @@ install_greenlight_v3(){
   say "checking the configuration of greenlight-v3..."
 
   local ROOT_URL BIGBLUEBUTTON_URL BIGBLUEBUTTON_SECRET
-  ROOT_URL=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
+  ROOT_URL=${BBB_URL:-$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )}
   BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+  BIGBLUEBUTTON_SECRET=${BBB_SECRET:-$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)}
 
   # Configuring Greenlight v3 docker-compose.yml (if configured no side effect will happen).
   sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $GL3_DIR/docker-compose.yml # Do not overwrite the value if not empty.
@@ -1239,9 +1241,9 @@ install_lti(){
   say "prepping the configuration of BBB LTI framework..."
 
   local ROOT_URL
-  ROOT_URL=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )
+  ROOT_URL=${BBB_URL:-$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )}
   BIGBLUEBUTTON_URL=$ROOT_URL/bigbluebutton/
-  BIGBLUEBUTTON_SECRET=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)
+  BIGBLUEBUTTON_SECRET=${BBB_SECRET:-$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | grep ^securitySalt | tail -n 1  | cut -d= -f2)}
 
   # Configuring BBB LTI docker-compose.yml (if configured no side effect will happen).
   sed -i "s|^\([ \t-]*POSTGRES_PASSWORD\)\(=[ \t]*\)$|\1=$(openssl rand -hex 24)|g" $LTI_DIR/docker-compose.yml # Do not overwrite the value if not empty.
@@ -1792,7 +1794,7 @@ fi
     if [ -f "$gl_dir"/.env ]; then
       if ! grep ^BIGBLUEBUTTON_ENDPOINT "$gl_dir"/.env | grep -q https; then
         if [[ -z $BIGBLUEBUTTON_URL ]]; then
-          BIGBLUEBUTTON_URL=$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )/bigbluebutton/
+          BIGBLUEBUTTON_URL=${BBB_URL:-$(cat "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" "$CR_TMPFILE" "$BBB_WEB_ETC_CONFIG" | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | tail -n 1 )}/bigbluebutton/
         fi
 
         sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
