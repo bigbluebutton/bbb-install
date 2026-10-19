@@ -326,7 +326,8 @@ main() {
 
   BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
   BBB_ENV_FILE=/etc/bigbluebutton/bigbluebutton.env                   # Administrator's shared settings, never written by bbb-install
-  if [ -f "$BBB_ENV_FILE" ]; then source "$BBB_ENV_FILE"; fi
+  BBB_URL=$(grep -s '^BBB_URL=' "$BBB_ENV_FILE" | tail -n 1 | cut -d= -f2-)
+  BBB_SECRET=$(grep -s '^BBB_SECRET=' "$BBB_ENV_FILE" | tail -n 1 | cut -d= -f2-)
 
   update-java-alternatives -s java-1.21.0-openjdk-amd64
 
