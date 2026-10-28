@@ -818,6 +818,8 @@ check_nat() {
     xmlstarlet edit --inplace --update '//param[@name="ext-rtp-ip"]/@value' --value "\$\${external_rtp_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
     xmlstarlet edit --inplace --update '//param[@name="ext-sip-ip"]/@value' --value "\$\${external_sip_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
 
+    configure_livekit_nat
+
     ip addr add "$IP" dev lo
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
@@ -848,6 +850,28 @@ HERE
       fi
     fi
   fi
+}
+
+# Without node_ip, LiveKit asks public STUN servers for its external address.
+# node_ip alone would stop LiveKit announcing the private address, which
+# advertise_internal_ip keeps. advertise_internal_ip needs livekit-server
+# 1.13.6: 1.13.0-1.13.5 ignore it when node_ip is set, and older versions
+# refuse to start with it.
+configure_livekit_nat() {
+  local lk_config=/etc/bigbluebutton/livekit.yaml
+  local lk_version
+  lk_version=$(/usr/bin/livekit-server --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+
+  if [ ! -f "$lk_config" ] || [ -z "$lk_version" ]; then
+    return 0
+  fi
+
+  if dpkg --compare-versions "$lk_version" lt 1.13.6; then
+    echo "  livekit-server $lk_version: not configuring LiveKit for NAT (advertise_internal_ip needs 1.13.6 or later)"
+    return 0
+  fi
+
+  IP=$IP yq-go e -i '.rtc.node_ip = strenv(IP) | .rtc.advertise_internal_ip = true' "$lk_config"
 }
 
 check_LimitNOFILE() {
