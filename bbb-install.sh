@@ -24,13 +24,13 @@
 #  Examples
 #
 #  Install BigBlueButton 3.0.x with a SSL certificate from Let's Encrypt using hostname bbb.example.com
-#  and email address info@example.com and apply a basic firewall
+#  and email address info@example.com (a basic firewall is applied by default)
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh | bash -s -- -v jammy-300 -s bbb.example.com -e info@example.com
 #
-#  Install BigBlueButton with SSL + Greenlight
+#  Install BigBlueButton with SSL + Greenlight + LiveKit
 #
-#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh  | bash -s -- -w -v jammy-300 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://raw.githubusercontent.com/bigbluebutton/bbb-install/v3.0.x-release/bbb-install.sh  | bash -s -- -v jammy-300 -s bbb.example.com -e info@example.com -g -L
 #
 
 usage() {
@@ -55,6 +55,7 @@ OPTIONS (install BigBlueButton):
 
   -g                     Install Greenlight version 3
   -k                     Install Keycloak version 20
+  -L                     Install LiveKit for BigBlueButton (optional)
 
   -t <key>:<secret>      Install BigBlueButton LTI framework tools and add/update LTI consumer credentials <key>:<secret>
 
@@ -66,7 +67,9 @@ OPTIONS (install BigBlueButton):
   -r <host>              Use alternative apt repository (such as packages-eu.bigbluebutton.org)
 
   -d                     Skip SSL certificates request (use provided certificates from mounted volume) in /local/certs/
-  -w                     Install UFW firewall (recommended)
+  -W                     Skip UFW firewall configuration (dangerous)
+                         A firewall is required to secure BBB services.
+  -w                     Does nothing (Previously: Install UFW firewall)
 
   -j                     Allows the installation of BigBlueButton to proceed even if not all requirements [for production use] are met.
                          Note that not all requirements can be ignored. This is useful in development / testing / ci scenarios.
@@ -133,7 +136,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:t:xgadwjik" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:t:LxgadwWjik" opt "${@}"; do
 
     case $opt in
       h)
@@ -191,6 +194,10 @@ main() {
       k)
         INSTALL_KC=true
         ;;
+
+      L)
+        INSTALL_LIVEKIT=true
+        ;;
       t)
         LTI_CREDS_STR=$OPTARG
 
@@ -215,11 +222,11 @@ main() {
         PROVIDED_CERTIFICATE=true
         ;;
       w)
-        SSH_PORT=$(grep Port /etc/ssh/ssh_config | grep -v \# | sed 's/[^0-9]*//g')
-        if [[ -n "$SSH_PORT" && "$SSH_PORT" != "22" ]]; then
-          err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules."
-        fi
-        UFW=true
+        # Still accepted so existing commands keep working
+        say "WARNING: -w is deprecated -- the UFW firewall is now installed by default. To opt out, pass -W instead." >&2
+        ;;
+      W)
+        SKIP_UFW=true
         ;;
       j)
         SKIP_MIN_SERVER_REQUIREMENTS_CHECK=true
@@ -274,6 +281,10 @@ main() {
   check_cpus
   check_ipv6
 
+  if [ "$SKIP_UFW" != true ]; then
+    check_ssh_port
+  fi
+
   need_pkg wget curl gpg-agent dirmngr apparmor-utils
 
   # need_pkg xmlstarlet
@@ -314,8 +325,8 @@ main() {
 
     BBB_WEB_ETC_CONFIG=/etc/bigbluebutton/bbb-web.properties            # Override file for local settings
 
-    need_pkg openjdk-17-jre
-    update-java-alternatives -s java-1.17.0-openjdk-amd64
+    need_pkg openjdk-21-jre
+    update-java-alternatives -s java-1.21.0-openjdk-amd64
   fi
 
   apt-get update
@@ -370,7 +381,7 @@ main() {
 
   systemctl restart systemd-journald
 
-  if [ -n "$UFW" ]; then
+  if [ "$SKIP_UFW" != true ]; then
     setup_ufw
   fi
 
@@ -391,6 +402,10 @@ main() {
 
   if [ -n "$GREENLIGHT" ]; then
     install_greenlight_v3
+  fi
+
+  if [ -n "$INSTALL_LIVEKIT" ]; then
+    install_livekit
   fi
 
   if [ "$OVERWRITE_IMAGE_MAGICK_POLICY" = true ]; then
@@ -560,6 +575,18 @@ check_cpus() {
     if [ "$SKIP_MIN_SERVER_REQUIREMENTS_CHECK" != true ]; then
       exit 1
     fi
+  fi
+}
+
+check_ssh_port() {
+  # setup_ufw leaves an existing apply-config.sh untouched, so there is nothing to guard
+  if [ -f /etc/bigbluebutton/bbb-conf/apply-config.sh ]; then return 0; fi
+
+  # The default UFW rules allow SSH only on port 22
+  local ssh_ports
+  ssh_ports=$(sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }')
+  if [ -n "$ssh_ports" ] && ! grep -qx 22 <<< "$ssh_ports"; then
+    err "Detected sshd not listening to standard port 22 -- unable to install default UFW firewall rules. Pass -W to skip the firewall."
   fi
 }
 
@@ -787,7 +814,6 @@ check_nat() {
     xmlstarlet edit --inplace --update '//param[@name="ext-rtp-ip"]/@value' --value "\$\${external_rtp_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
     xmlstarlet edit --inplace --update '//param[@name="ext-sip-ip"]/@value' --value "\$\${external_sip_ip}" /opt/freeswitch/conf/sip_profiles/external.xml
 
-    sed -i "s/$INTERNAL_IP:/$IP:/g" /usr/share/bigbluebutton/nginx/sip.nginx
     ip addr add "$IP" dev lo
 
     # If dummy NIC is not in dummy-nic.service (or the file does not exist), update/create it
@@ -1041,6 +1067,7 @@ install_greenlight_v3(){
   sed -i "s|^[# \t]*SECRET_KEY_BASE=[ \t]*$|SECRET_KEY_BASE=$SECRET_KEY_BASE|" $GL3_DIR/.env # Do not overwrite the value if not empty.
   sed -i "s|^[# \t]*DATABASE_URL=[ \t]*$|DATABASE_URL=$DATABASE_URL_ROOT/$PGDBNAME|" $GL3_DIR/.env # Do not overwrite the value if not empty.
   sed -i "s|^[# \t]*REDIS_URL=[ \t]*$|REDIS_URL=$REDIS_URL_ROOT/|" $GL3_DIR/.env # Do not overwrite the value if not empty.
+  sed -i "s|^[# \t]*URL_HOST=[ \t]*$|URL_HOST=$HOST|" $GL3_DIR/.env # Do not overwrite the value if not empty.
 
   # Placing greenlight-v3 nginx file, this will enable greenlight-v3 as your BigBlueButton frontend (bbb-fe).
   cp -v $NGINX_FILES_DEST/greenlight-v3.nginx $NGINX_FILES_DEST/greenlight-v3.nginx.old && say "old greenlight-v3 nginx config can be retrieved at $NGINX_FILES_DEST/greenlight-v3.nginx.old" #Backup
@@ -1266,9 +1293,9 @@ install_lti(){
 
   say "Setting/updating LTI credentials for LTI KEY: $LTI_KEY..."
 
-  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update["$LTI_KEY","$LTI_SECRET"] \
+  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake key:update["$LTI_KEY","$LTI_SECRET"] \
     2> /dev/null 1>&2; then
-    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add["$LTI_KEY","$LTI_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake key:new["$LTI_KEY","$LTI_SECRET"] \
       2> /dev/null 1>&2 || err "failed to set LTI credentials $LTI_KEY:$LTI_SECRET."
 
       say "New LTI credentials for LTI KEY: $LTI_KEY were added!"
@@ -1463,12 +1490,12 @@ register_lti_tool() {
     err "failed to register $LOG_NAME due to LTI broker not running - retry to resolve."
   fi
 
-  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show["$APP_NAME"] \
+  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake apps:show["$APP_NAME"] \
     2> /dev/null 1>&2; then
-    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully registered."
   else
-    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully updated."
   fi
 
@@ -1759,15 +1786,6 @@ fi
 
   # shellcheck disable=SC1091
   eval "$(source /etc/bigbluebutton/bigbluebutton-release && declare -p BIGBLUEBUTTON_RELEASE)"
-  if [[ $BIGBLUEBUTTON_RELEASE == 2.2.* ]] && [[ ${BIGBLUEBUTTON_RELEASE#*.*.} -lt 29 ]]; then
-    sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /usr/share/bigbluebutton/nginx/sip.nginx
-  else
-    # Use nginx as proxy for WSS -> WS (see https://github.com/bigbluebutton/bigbluebutton/issues/9667)
-    yq e -i '.public.media.sipjsHackViaWs = true' /etc/bigbluebutton/bbb-html5.yml
-    sed -i "s/proxy_pass .*/proxy_pass http:\/\/$IP:5066;/g" /usr/share/bigbluebutton/nginx/sip.nginx
-    xmlstarlet edit --inplace --update '//param[@name="ws-binding"]/@value' --value "$IP:5066" /opt/freeswitch/conf/sip_profiles/external.xml
-  fi
-
   sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties"
   if [ -f "$BBB_WEB_ETC_CONFIG" ]; then
     sed -i 's/^bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' "$BBB_WEB_ETC_CONFIG"
@@ -1823,14 +1841,47 @@ fi
 }
 
 configure_coturn() {
+  # Path for the TURN/STUN servers XML
   TURN_XML=/etc/bigbluebutton/turn-stun-servers.xml
 
-  if [ -z "$COTURN" ]; then
-    # the user didn't pass '-c', so use the local TURN server's host
-    COTURN_HOST=$HOST
-  fi
+  # If user explicitly supplied COTURN (format host[:secret]) we honor and overwrite.
+  if [ -n "$COTURN" ]; then
+    case "$COTURN" in
+      *:*)
+        COTURN_HOST="${COTURN%%:*}"
+        COTURN_SECRET="${COTURN#*:}"
+        ;;
+      *)
+        COTURN_HOST="$COTURN"
+        ;;
+    esac
+  else
+    # No explicit COTURN: use local host value
+    COTURN_HOST="$HOST"
 
-  cat <<HERE > $TURN_XML
+    # If file exists, check whether it points to a different TURN host.
+    if [ -f "$TURN_XML" ]; then
+      # Extract all turn:/turns: entries and normalize to hostnames only
+      existing_hosts=$(grep -Eo 'turns?:[^:]+(:[0-9]+)?' "$TURN_XML" 2>/dev/null | \
+                      sed -E 's/^turns?:([^:]+).*$/\1/' | sort -u)
+
+      for h in $existing_hosts; do
+        [ -z "$h" ] && continue
+        
+        # Treat unexpanded template placeholder '$HOST' as matching current host
+        if [ "$h" = "\$HOST" ] || [ "$h" = "$COTURN_HOST" ]; then
+          continue
+        fi
+
+        say "Warning: existing TURN host ($h) in $TURN_XML does not match current host ($COTURN_HOST). Leaving $TURN_XML unchanged."
+        return 0
+      done
+    fi
+  fi
+  
+  # At this point: either user provided COTURN (we should write), or file doesn't exist
+  # or existing file contains only our host — (re)write the XML.
+  cat <<HERE > "$TURN_XML"
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -1981,6 +2032,31 @@ enableUFWRules
 HERE
   chmod +x /etc/bigbluebutton/bbb-conf/apply-config.sh
   fi
+}
+
+install_livekit() {
+  apt-get update
+  need_pkg bbb-livekit
+
+  # Enable LiveKit
+  yq e -i '.livekit.enabled = true' /etc/bigbluebutton/bbb-webrtc-sfu/production.yml
+  systemctl restart bbb-webrtc-sfu
+
+  # Get main network interface and add it to LiveKit config.
+  interface=$(awk '$2 == 00000000 { print $1 }' /proc/net/route | head -1)
+  yq e -i ".rtc.interfaces.includes = [\"$interface\"]" /etc/bigbluebutton/livekit.yaml
+  systemctl restart livekit-server
+
+  # Enable LiveKit in bbb-web.properties
+  props_file=/etc/bigbluebutton/bbb-web.properties
+  for key in audioBridge cameraBridge screenShareBridge; do
+    if grep -q "^${key}=" "$props_file"; then
+      sed -i "s/^${key}=.*/${key}=livekit/" "$props_file"
+    else
+      echo "${key}=livekit" >> "$props_file"
+    fi
+  done
+  systemctl restart bbb-web
 }
 
 main "$@" || exit 1
