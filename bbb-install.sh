@@ -697,7 +697,7 @@ need_pkg() {
   fi
 
   if ! dpkg -s "${@}" >/dev/null 2>&1; then
-    LC_CTYPE=C.UTF-8 apt-get install -yq "${@}"
+    LC_CTYPE=C.UTF-8 apt-get install -yq "${@}" || err "Failed to install $*"
   fi
   while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do echo "Sleeping for 1 second because of dpkg/lock is in use"; sleep 1; done
   while lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do echo "Sleeping for 1 second because dpkg/lock-frontend in use"; sleep 1; done
