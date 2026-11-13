@@ -335,9 +335,9 @@ main() {
 
   if [ -f /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties ]; then
     SERVLET_DIR=/usr/share/bbb-web
+  else
+    err "bbb-web is not installed: /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties is missing"
   fi
-
-  while [ ! -f "$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties" ]; do sleep 1; echo -n '.'; done
 
   check_cap_sys_nice
   check_nat
