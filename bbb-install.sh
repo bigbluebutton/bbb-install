@@ -2042,14 +2042,17 @@ KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-grou
 MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
 HERE
 
+  # sshd -t refuses to run without the privilege-separation directory, and
+  # systemd removes it whenever socket-activated ssh.service is stopped
+  install -d -m 0755 -o root -g root /run/sshd
+
   # Validate config before applying (binary is still sshd)
   if sshd -t; then
-    # Ubuntu 24.04 uses ssh.service, older Ubuntu used sshd.service
-    if systemctl is-active --quiet ssh 2>/dev/null; then
-      systemctl restart ssh
-    else
-      systemctl restart sshd
-    fi
+    # The unit is ssh.service on every supported Ubuntu; sshd.service is an
+    # alias that only exists while ssh.service itself is enabled. try-restart
+    # is a no-op when sshd is socket-activated and idle: the next connection
+    # starts it with the new config.
+    systemctl try-restart ssh.service
     say "SSH hardening applied successfully"
   else
     say "SSH config validation failed - removing hardening file"
